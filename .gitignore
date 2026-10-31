@@ -11,7 +11,8 @@ TestResults/
 x64/
 x86/
 build/
-dist/
+/dist/
+!**/wwwroot/lib/**
 
 # Visual Studio
 .vs/

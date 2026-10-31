@@ -1,0 +1,97 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.MovieDetailViewModel
+@{
+    ViewData["Title"] = Model.Movie.Title;
+}
+
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Index">Phim đang chiếu</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Movie.Title</li>
+        </ol>
+    </nav>
+
+    <!-- Movie Banner Header -->
+    <div class="card shadow-sm border-0 mb-4 overflow-hidden">
+        <div class="row g-0">
+            <div class="col-md-4 col-lg-3">
+                <div class="movie-poster-placeholder h-100 py-5">
+                    <span class="badge bg-warning text-dark mb-2">@Model.Movie.GenreText</span>
+                    <h4 class="text-white px-3 fw-bold text-center">@Model.Movie.Title</h4>
+                </div>
+            </div>
+            <div class="col-md-8 col-lg-9">
+                <div class="card-body p-4 p-md-5 d-flex flex-column h-100">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-primary">Đang chiếu</span>
+                        <span class="badge bg-secondary">Thời lượng: @Model.Movie.DurationMin phút</span>
+                        <span class="badge bg-info text-dark">Thể loại: @Model.Movie.GenreText</span>
+                    </div>
+
+                    <h1 class="h2 fw-bold mb-3">@Model.Movie.Title</h1>
+                    <p class="text-muted lead mb-4">
+                        Tác phẩm điện ảnh đang được trình chiếu tại hệ thống phòng chiếu hiện đại của Beta Giải Phóng.
+                        Khán giả có thể theo dõi danh sách các suất chiếu dưới đây để xem sơ đồ chỗ ngồi.
+                    </p>
+
+                    <div class="mt-auto border-top pt-3 text-secondary small">
+                        <span>Lưu ý: Hệ thống đang vận hành ở giai đoạn <strong>BE-01 (Công bố lịch & Sơ đồ ghế Read-Only)</strong>. Tính năng đặt vé trực tuyến sẽ mở trong giai đoạn BE-02.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Showtimes by Date Section -->
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-white py-3">
+            <h3 class="h4 fw-bold mb-0">Lịch Chiếu & Suất Chiếu Khả Dụng</h3>
+        </div>
+        <div class="card-body p-4">
+            @if (Model.ShowtimesByDate.Count == 0)
+            {
+                <div class="alert alert-info text-center py-4 mb-0">
+                    Hiện chưa có suất chiếu nào sắp tới cho bộ phim này. Vui lòng quay lại sau!
+                </div>
+            }
+            else
+            {
+                @foreach (var (dateStr, showtimes) in Model.ShowtimesByDate)
+                {
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                            📅 Ngày chiếu: @dateStr
+                        </h5>
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                            @foreach (var st in showtimes)
+                            {
+                                <div class="col">
+                                    <div class="border rounded-3 p-3 bg-light h-100 d-flex flex-column">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="badge bg-dark">@st.RoomName</span>
+                                            <span class="badge @(st.AvailableSeatsCount > 0 ? "bg-success" : "bg-danger")">
+                                                @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
+                                            </span>
+                                        </div>
+                                        <div class="h5 fw-bold text-dark mb-1">
+                                            @st.StartVietnamText.Split(' ')[1]
+                                            <small class="text-muted fs-6 font-monospace">→ @st.EndVietnamText</small>
+                                        </div>
+                                        <div class="text-muted small mb-3">
+                                            Buffer dọn phòng: @st.BufferMinutes phút
+                                        </div>
+                                        <a class="btn btn-outline-primary btn-sm mt-auto w-100" asp-controller="Showtimes" asp-action="Seats" asp-route-id="@st.ShowtimeId">
+                                            Xem sơ đồ phòng & ghế &rarr;
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>

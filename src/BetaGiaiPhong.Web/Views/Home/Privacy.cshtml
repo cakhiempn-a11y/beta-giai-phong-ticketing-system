@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = "Giới thiệu & Quy chế học thuật";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4 p-md-5">
+            <span class="badge bg-secondary mb-2 text-uppercase">Tài liệu công bố</span>
+            <h1 class="h2 fw-bold mb-4">Giới Thiệu Đề Án & Tuyên Bố Học Thuật</h1>
+
+            <div class="alert alert-warning border-warning">
+                <h5 class="fw-bold mb-1">Tuyên bố miễn trừ trách nhiệm (Academic Disclaimer)</h5>
+                <p class="mb-0 small">
+                    Hệ thống này là sản phẩm đề án học thuật tốt nghiệp ngành <strong>Hệ thống thông tin quản lý (MIS)</strong>.
+                    Toàn bộ phim, lịch chiếu, giá vé và sơ đồ rạp là <strong>dữ liệu mô phỏng độc lập</strong>.
+                    Hệ thống <strong>không kết nối, không đại diện và không sử dụng bất kỳ hạ tầng hay tài sản thương mại nào của Beta Cinemas</strong>.
+                </p>
+            </div>
+
+            <h4 class="fw-bold mt-4 mb-3">1. Mục tiêu đề tài</h4>
+            <p class="text-muted">
+                Nghiên cứu, phân tích và hiện thực hóa kiến trúc phần mềm xử lý giao dịch bán vé trực tuyến có độ tin cậy cao,
+                giải quyết bài toán tranh chấp giữ ghế đồng thời (concurrency race conditions), xác thực thanh toán webhook phi trạng thái (stateless HMAC verification),
+                và mã hóa vé điện tử bảo mật chuẩn AES-256-GCM.
+            </p>
+
+            <h4 class="fw-bold mt-4 mb-3">2. Công nghệ nền tảng</h4>
+            <ul class="text-muted">
+                <li><strong>Backend:</strong> ASP.NET Core 10 MVC & Web API, .NET 10 LTS.</li>
+                <li><strong>ORM & Database:</strong> Entity Framework Core 10, Microsoft SQL Server (17 bảng nghiệp vụ, 22 khóa ngoại, 30 CHECK constraints).</li>
+                <li><strong>Bảo mật:</strong> Cookie Authentication, PasswordHasher, Rate Limiting, Anti-CSRF Tokens, AES-256-GCM, HMAC-SHA256.</li>
+            </ul>
+
+            <h4 class="fw-bold mt-4 mb-3">3. Thông tin học thuật</h4>
+            <p class="text-muted mb-0">
+                <strong>Nhóm nghiên cứu:</strong> <code>cakhiempn-a11y</code><br />
+                <strong>Kho lưu trữ mã nguồn:</strong> <code>cakhiempn-a11y/beta-giai-phong-ticketing-system</code>
+            </p>
+        </div>
+    </div>
+</div>

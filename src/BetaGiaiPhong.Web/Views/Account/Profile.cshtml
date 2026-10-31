@@ -1,0 +1,55 @@
+@model BetaGiaiPhong.Web.Models.Responses.UserProfileDto
+@{
+    ViewData["Title"] = "Hồ sơ tài khoản";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h3 class="h4 fw-bold mb-0">Hồ Sơ Người Dùng</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fs-2 fw-bold me-3" style="width: 64px; height: 64px;">
+                            @(string.IsNullOrEmpty(Model.DisplayName) ? "U" : Model.DisplayName[..1].ToUpperInvariant())
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-1">@(Model.DisplayName ?? Model.Email)</h4>
+                            <span class="text-muted small">Mã định danh (User ID): <strong>@Model.UserId</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Địa chỉ Email</label>
+                            <span class="fw-semibold">@Model.Email</span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Trạng thái tài khoản</label>
+                            <span class="badge bg-success">@Model.Status</span>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small d-block">Vai trò & Quyền hạn (Roles)</label>
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <span class="badge bg-dark px-3 py-2">@role</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-between">
+                        <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">&larr; Quay lại trang chủ</a>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger">Đăng xuất</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

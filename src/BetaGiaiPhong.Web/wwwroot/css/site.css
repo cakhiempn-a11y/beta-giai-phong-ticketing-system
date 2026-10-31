@@ -1,0 +1,152 @@
+/* Beta Giai Phong Cinema Stylesheet */
+
+:root {
+    --bgp-primary: #0d6efd;
+    --bgp-dark: #121824;
+    --bgp-gold: #f59e0b;
+    --bgp-standard-seat: #3b82f6;
+    --bgp-vip-seat: #ec4899;
+    --bgp-held-seat: #f59e0b;
+    --bgp-sold-seat: #9ca3af;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1f2937;
+}
+
+/* Hero Section */
+.hero-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    border-radius: 0.75rem;
+}
+
+/* Movie Card */
+.movie-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.movie-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.movie-poster-placeholder {
+    height: 260px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+    color: #ffffff;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+}
+
+/* Seat Map Component */
+.cinema-screen {
+    width: 80%;
+    max-width: 500px;
+    height: 12px;
+    background: linear-gradient(to bottom, #93c5fd, #cbd5e1);
+    border-radius: 4px;
+    margin: 0 auto 2rem auto;
+    box-shadow: 0 4px 15px rgba(147, 197, 253, 0.5);
+    text-align: center;
+    position: relative;
+}
+
+.cinema-screen-label {
+    position: absolute;
+    top: -24px;
+    left: 0;
+    right: 0;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.seat-grid-container {
+    overflow-x: auto;
+    padding: 1.5rem;
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+}
+
+.seat-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.seat-row-label {
+    width: 28px;
+    font-weight: 700;
+    color: #64748b;
+    text-align: center;
+}
+
+.seat-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: default;
+    user-select: none;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.seat-available-standard {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-color: #93c5fd;
+}
+
+.seat-available-vip {
+    background-color: #fce7f3;
+    color: #9d174d;
+    border-color: #f472b6;
+}
+
+.seat-held {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
+}
+
+.seat-sold {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+    border-color: #d1d5db;
+    text-decoration: line-through;
+}
+
+.seat-blocked {
+    background-color: #f3f4f6;
+    color: #d1d5db;
+    border-color: #e5e7eb;
+    opacity: 0.5;
+}
+
+/* Legend items */
+.legend-sample {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: middle;
+}

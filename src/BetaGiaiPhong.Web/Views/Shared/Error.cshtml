@@ -1,0 +1,31 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.ErrorViewModel
+@{
+    ViewData["Title"] = $"Lỗi hệ thống ({Model.StatusCode})";
+}
+
+<div class="container mt-5 mb-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0 p-4 p-md-5">
+                <div class="display-3 text-warning fw-bold mb-3">@Model.StatusCode</div>
+                <h2 class="h3 fw-bold mb-2">Đã Xảy Ra Sự Cố</h2>
+                <p class="text-muted mb-4">
+                    @Model.Message
+                </p>
+
+                @if (Model.ShowCorrelationId)
+                {
+                    <div class="alert alert-light border small text-start mb-4 font-monospace">
+                        <div><strong>Mã theo dõi (Correlation ID):</strong> <code>@Model.CorrelationId</code></div>
+                        @if (Model.ShowRequestId)
+                        {
+                            <div><strong>Request ID:</strong> <code>@Model.RequestId</code></div>
+                        }
+                    </div>
+                }
+
+                <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Quay lại trang chủ</a>
+            </div>
+        </div>
+    </div>
+</div>
