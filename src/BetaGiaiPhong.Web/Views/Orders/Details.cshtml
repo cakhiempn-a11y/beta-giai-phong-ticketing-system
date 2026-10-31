@@ -10,6 +10,7 @@
         "CANCELLED" => "bg-danger",
         "EXPIRED" => "bg-secondary",
         "FAILED" => "bg-danger",
+        "NEEDS_REVIEW" => "bg-warning text-dark",
         _ => "bg-info text-dark"
     };
 
@@ -17,11 +18,11 @@
     {
         "PENDING_PAYMENT" when !order.IsHoldExpired => "Chờ thanh toán",
         "PENDING_PAYMENT" when order.IsHoldExpired => "Hết hạn giữ chỗ",
-        "PAID" => "Đã thanh toán",
+        "PAID" => "Đã thanh toán (PAID)",
         "CANCELLED" => "Đã hủy",
         "EXPIRED" => "Hết hạn",
-        "FAILED" => "Thất bại",
-        "NEEDS_REVIEW" => "Cần đối soát",
+        "FAILED" => "Thất bại (FAILED)",
+        "NEEDS_REVIEW" => "Cần đối soát (NEEDS_REVIEW)",
         _ => order.OrderStatus
     };
 }
@@ -56,7 +57,7 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <div class="d-flex align-items-center gap-2 mb-1">
+                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                     <h1 class="h4 fw-bold mb-0">Đơn hàng: <span class="font-monospace text-primary">@order.OrderCode</span></h1>
                     <span class="badge @badgeClass fs-6">@statusText</span>
                 </div>
@@ -75,6 +76,14 @@
                     </span>
                 </div>
             }
+            else if (order.OrderStatus == "PAID")
+            {
+                <div>
+                    <a class="btn btn-success btn-lg shadow-sm px-4 fw-bold" asp-controller="Orders" asp-action="Tickets" asp-route-id="@order.OrderId">
+                        🎟️ Xem vé điện tử &amp; Mã QR
+                    </a>
+                </div>
+            }
             else if (order.OrderStatus == "PENDING_PAYMENT" && order.IsHoldExpired)
             {
                 <div class="border border-secondary bg-light rounded p-3 text-center">
@@ -90,7 +99,7 @@
         <div class="col-lg-7">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white border-bottom py-3">
-                    <h2 class="h5 fw-bold mb-0">Thông tin suất chiếu & Ghế ngồi</h2>
+                    <h2 class="h5 fw-bold mb-0">Thông tin suất chiếu &amp; Ghế ngồi</h2>
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-4">
@@ -167,12 +176,10 @@
 
                     @if (order.OrderStatus == "PENDING_PAYMENT" && !order.IsHoldExpired)
                     {
-                        <!-- Payment Notice for BE-02 -->
-                        <div class="alert alert-info border mb-3" role="alert">
-                            <h6 class="alert-heading fw-bold mb-1">💳 Thanh toán trực tuyến</h6>
-                            <p class="small mb-0">
-                                Chức năng thanh toán qua cổng điện tử và nhận vé điện tử QR Code sẽ được triển khai ở giai đoạn tiếp theo (BE-03).
-                            </p>
+                        <div class="d-grid gap-2 mb-3">
+                            <a class="btn btn-primary btn-lg fw-bold py-3 shadow-sm" asp-controller="Orders" asp-action="Checkout" asp-route-id="@order.OrderId">
+                                💳 Tiến hành thanh toán &rarr;
+                            </a>
                         </div>
 
                         <!-- Cancel Button Form -->
@@ -185,6 +192,16 @@
                                 </button>
                             </form>
                         }
+                    }
+                    else if (order.OrderStatus == "PAID")
+                    {
+                        <div class="alert alert-success border mb-3 text-center" role="alert">
+                            <h6 class="alert-heading fw-bold mb-1">🎉 Đã thanh toán thành công</h6>
+                            <p class="small mb-2">Vé điện tử của bạn đã được phát hành kèm mã QR.</p>
+                            <a class="btn btn-success fw-bold w-100 py-2" asp-controller="Orders" asp-action="Tickets" asp-route-id="@order.OrderId">
+                                🎟️ Xem vé điện tử &amp; Mã QR
+                            </a>
+                        </div>
                     }
                     else if (order.OrderStatus == "PENDING_PAYMENT" && order.IsHoldExpired)
                     {
@@ -201,10 +218,18 @@
                             <p class="small mb-0">Đơn hàng đã được hủy và toàn bộ ghế đã được giải phóng.</p>
                         </div>
                     }
-                    else if (order.OrderStatus == "PAID")
+                    else if (order.OrderStatus == "FAILED")
                     {
-                        <div class="alert alert-success border mb-0 text-center" role="alert">
-                            <p class="small mb-0">Đơn hàng đã được thanh toán thành công.</p>
+                        <div class="alert alert-danger border mb-0 text-center" role="alert">
+                            <h6 class="alert-heading fw-bold mb-1">❌ Thanh toán thất bại</h6>
+                            <p class="small mb-0">Giao dịch thanh toán bị từ chối hoặc lỗi. Toàn bộ ghế giữ đã được giải phóng.</p>
+                        </div>
+                    }
+                    else if (order.OrderStatus == "NEEDS_REVIEW")
+                    {
+                        <div class="alert alert-warning border mb-0 text-center" role="alert">
+                            <h6 class="alert-heading fw-bold mb-1">⚠️ Cần đối soát (NEEDS_REVIEW)</h6>
+                            <p class="small mb-0">Đơn hàng đã nhận khoản thanh toán sau khi hết hạn giữ chỗ. Vui lòng liên hệ ban quản trị để hoàn tiền.</p>
                         </div>
                     }
                 </div>

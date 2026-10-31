@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
 using BetaGiaiPhong.Web.Models.Responses;
+using BetaGiaiPhong.Web.Models.ViewModels;
 
 namespace BetaGiaiPhong.Web.Services;
 
@@ -12,6 +13,9 @@ public interface IBookingQueryService
 
     Task<OrderDetailDto?> GetCustomerOrderDetailAsync(
         long customerId, long orderId, CancellationToken ct = default);
+
+    Task<CheckoutViewModel?> GetCustomerOrderCheckoutAsync(
+        long customerId, long orderId, string? attemptKey = null, bool isSimulatorEnabled = false, CancellationToken ct = default);
 }
 
 public sealed class BookingQueryService(BetaDbContext db, ISystemClock clock) : IBookingQueryService
@@ -144,6 +148,36 @@ public sealed class BookingQueryService(BetaDbContext db, ISystemClock clock) : 
             remainingSeconds,
             isHoldExpired,
             canCancel
+        );
+    }
+
+    public async Task<CheckoutViewModel?> GetCustomerOrderCheckoutAsync(
+        long customerId, long orderId, string? attemptKey = null, bool isSimulatorEnabled = false, CancellationToken ct = default)
+    {
+        var detail = await GetCustomerOrderDetailAsync(customerId, orderId, ct);
+        if (detail is null) return null;
+
+        var resolvedAttemptKey = string.IsNullOrWhiteSpace(attemptKey)
+            ? "ATTEMPT-" + Guid.NewGuid().ToString("N")
+            : attemptKey;
+
+        return new CheckoutViewModel(
+            detail.OrderId,
+            detail.OrderCode,
+            detail.MovieTitle,
+            detail.RoomName,
+            detail.StartUtc,
+            detail.StartVietnamText,
+            detail.Seats,
+            detail.SubtotalVnd,
+            detail.FeeVnd,
+            detail.DiscountVnd,
+            detail.TotalVnd,
+            detail.ExpiresUtc,
+            detail.RemainingSeconds,
+            detail.IsHoldExpired,
+            resolvedAttemptKey,
+            isSimulatorEnabled
         );
     }
 }

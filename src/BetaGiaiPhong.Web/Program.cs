@@ -8,6 +8,21 @@ using BetaGiaiPhong.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 0. Cryptographic keys synchronization for prototype / demo stability
+var qrKey = builder.Configuration["BGP_QR_AES_KEY_B64"]
+    ?? Environment.GetEnvironmentVariable("BGP_QR_AES_KEY_B64");
+if (!string.IsNullOrEmpty(qrKey))
+{
+    Environment.SetEnvironmentVariable("BGP_QR_AES_KEY_B64", qrKey);
+}
+
+var hmacKey = builder.Configuration["BGP_MOCK_HMAC_KEY_B64"]
+    ?? Environment.GetEnvironmentVariable("BGP_MOCK_HMAC_KEY_B64");
+if (!string.IsNullOrEmpty(hmacKey))
+{
+    Environment.SetEnvironmentVariable("BGP_MOCK_HMAC_KEY_B64", hmacKey);
+}
+
 // 1. Connection string resolution
 var connectionString = builder.Configuration.GetConnectionString("BetaDb")
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__BetaDb")
@@ -20,6 +35,7 @@ builder.Services.AddBetaCinemaData(connectionString);
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IBookingQueryService, BookingQueryService>();
+builder.Services.AddScoped<ITicketQueryService, TicketQueryService>();
 
 // 4. Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

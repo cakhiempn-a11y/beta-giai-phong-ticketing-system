@@ -4,15 +4,22 @@
 }
 
 <div class="container mt-4 mb-5">
-    <!-- Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Đơn hàng của tôi</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h1 class="h3 fw-bold mb-1">Đơn hàng của tôi</h1>
-            <p class="text-muted mb-0">Quản lý lịch sử đặt vé và trạng thái giữ ghế tại Beta Giải Phóng.</p>
+            <h1 class="h3 fw-bold mb-1">📋 Đơn hàng của tôi</h1>
+            <p class="text-muted mb-0">Quản lý lịch sử đặt vé, thanh toán và xem vé điện tử tại rạp Beta Giải Phóng</p>
         </div>
         <div>
-            <a class="btn btn-outline-primary" asp-controller="Movies" asp-action="Index">
-                🎬 Đặt thêm vé mới
+            <a class="btn btn-primary" asp-controller="Home" asp-action="Index">
+                🎟️ Đặt vé phim khác
             </a>
         </div>
     </div>
@@ -35,25 +42,27 @@
 
     @if (Model.Orders.Count == 0)
     {
-        <div class="card shadow-sm border-0 p-5 text-center">
-            <div class="display-3 text-muted mb-3">🎟️</div>
-            <h2 class="h4 fw-bold mb-2">Bạn chưa có đơn đặt vé nào</h2>
-            <p class="text-muted mb-4">Hãy khám phá các bộ phim bom tấn đang chiếu và chọn cho mình chỗ ngồi ưng ý nhất!</p>
-            <div>
-                <a class="btn btn-primary px-4 py-2" asp-controller="Movies" asp-action="Index">Khám phá phim ngay</a>
+        <div class="card shadow-sm border-0 text-center py-5">
+            <div class="card-body">
+                <div class="display-4 text-muted mb-3">🎫</div>
+                <h2 class="h5 fw-bold text-secondary">Bạn chưa có đơn hàng nào</h2>
+                <p class="text-muted mb-4">Hãy khám phá các bộ phim bom tấn đang chiếu và đặt vé ngay hôm nay!</p>
+                <a class="btn btn-primary px-4 py-2" asp-controller="Home" asp-action="Index">
+                    Xem lịch chiếu phim &rarr;
+                </a>
             </div>
         </div>
     }
     else
     {
-        <div class="card shadow-sm border-0 overflow-hidden mb-4">
+        <div class="card shadow-sm border-0 mb-4">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">Mã đơn hàng</th>
+                            <th class="ps-4">Mã đơn</th>
                             <th>Phim</th>
-                            <th>Suất chiếu (VN)</th>
+                            <th>Suất chiếu</th>
                             <th class="text-center">Số ghế</th>
                             <th class="text-end">Tổng tiền</th>
                             <th class="text-center">Trạng thái</th>
@@ -71,6 +80,7 @@
                                 "CANCELLED" => "bg-danger",
                                 "EXPIRED" => "bg-secondary",
                                 "FAILED" => "bg-danger",
+                                "NEEDS_REVIEW" => "bg-warning text-dark",
                                 _ => "bg-info text-dark"
                             };
 
@@ -107,9 +117,23 @@
                                     <span class="badge @badgeClass">@statusText</span>
                                 </td>
                                 <td class="text-end pe-4">
-                                    <a class="btn btn-sm btn-outline-secondary" asp-controller="Orders" asp-action="Details" asp-route-id="@order.OrderId">
-                                        Chi tiết &rarr;
-                                    </a>
+                                    <div class="d-flex justify-content-end gap-1">
+                                        @if (order.Status == "PAID")
+                                        {
+                                            <a class="btn btn-sm btn-success" asp-controller="Orders" asp-action="Tickets" asp-route-id="@order.OrderId" title="Xem vé điện tử & Mã QR">
+                                                🎟️ Vé
+                                            </a>
+                                        }
+                                        else if (order.Status == "PENDING_PAYMENT" && !order.IsHoldExpired)
+                                        {
+                                            <a class="btn btn-sm btn-primary" asp-controller="Orders" asp-action="Checkout" asp-route-id="@order.OrderId" title="Thanh toán ngay">
+                                                💳 Trả
+                                            </a>
+                                        }
+                                        <a class="btn btn-sm btn-outline-secondary" asp-controller="Orders" asp-action="Details" asp-route-id="@order.OrderId">
+                                            Chi tiết &rarr;
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         }

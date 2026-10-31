@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "http": {
@@ -7,7 +7,10 @@
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5145",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BGP_ENABLE_MOCK_PAYMENT_SIMULATOR": "true",
+        "BGP_MOCK_HMAC_KEY_B64": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+        "BGP_QR_AES_KEY_B64": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
       }
     },
     "https": {
@@ -16,7 +19,10 @@
       "launchBrowser": true,
       "applicationUrl": "https://localhost:7097;http://localhost:5145",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BGP_ENABLE_MOCK_PAYMENT_SIMULATOR": "true",
+        "BGP_MOCK_HMAC_KEY_B64": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+        "BGP_QR_AES_KEY_B64": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
       }
     }
   }
