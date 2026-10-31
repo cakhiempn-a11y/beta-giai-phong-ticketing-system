@@ -19,6 +19,7 @@ if ([string]::IsNullOrWhiteSpace($env:ConnectionStrings__BetaDb)) {
 }
 
 $env:BGP_ALLOW_DEMO_SEED = 'true'
+$env:BGP_ALLOW_CHECKIN_DEMO = 'true'
 if ([string]::IsNullOrWhiteSpace($env:BGP_DEMO_PASSWORD)) {
     Write-Warning 'Set BGP_DEMO_PASSWORD with >= 12 characters before running seed-demo.'
 }
@@ -37,7 +38,8 @@ function New-SecureRandomBase64Key([int]$length = 32) {
 }
 
 # 1. Attempt to load stable keys from .NET User Secrets (src/BetaGiaiPhong.Web) to keep keys stable across sessions
-$keysFromSecrets = $false
+# Note: BetaGiaiPhong.Web automatically reads User Secrets in Development.
+# However, CLI tools (like BetaGiaiPhong.Runner) require keys to be exported to environment variables.
 if ([string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64) -or [string]::IsNullOrWhiteSpace($env:BGP_QR_AES_KEY_B64)) {
     try {
         $webProjectPath = Join-Path $PSScriptRoot "..\src\BetaGiaiPhong.Web"
@@ -45,46 +47,54 @@ if ([string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64) -or [string]::IsNul
         foreach ($line in $secretsOutput) {
             if ($line -match '^\s*BGP_MOCK_HMAC_KEY_B64\s*=\s*(.+)$' -and [string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64)) {
                 $env:BGP_MOCK_HMAC_KEY_B64 = $matches[1].Trim()
-                Write-Host 'Synchronized stable BGP_MOCK_HMAC_KEY_B64 from .NET User Secrets.'
+                Write-Host 'Synchronized stable BGP_MOCK_HMAC_KEY_B64 from .NET User Secrets to environment.'
             }
             if ($line -match '^\s*BGP_QR_AES_KEY_B64\s*=\s*(.+)$' -and [string]::IsNullOrWhiteSpace($env:BGP_QR_AES_KEY_B64)) {
                 $env:BGP_QR_AES_KEY_B64 = $matches[1].Trim()
-                Write-Host 'Synchronized stable BGP_QR_AES_KEY_B64 from .NET User Secrets.'
+                Write-Host 'Synchronized stable BGP_QR_AES_KEY_B64 from .NET User Secrets to environment.'
             }
-        }
-        if (-not [string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64) -and -not [string]::IsNullOrWhiteSpace($env:BGP_QR_AES_KEY_B64)) {
-            $keysFromSecrets = $true
         }
     } catch {
         # Fall back if dotnet CLI or project secrets are not available
     }
-} else {
-    $keysFromSecrets = $true
 }
 
-# 2. If keys are missing, explicitly warn and instruct developer on setting up .NET User Secrets
+# 2. Check whether stable keys are configured
 if ([string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64) -or [string]::IsNullOrWhiteSpace($env:BGP_QR_AES_KEY_B64)) {
-    Write-Warning @"
-Missing stable cryptographic keys in .NET User Secrets!
-To make keys persist across development sessions, run these commands:
-    `$hmac = [Convert]::ToBase64String((1..32 | ForEach-Object { [byte](Get-Random -Minimum 0 -Maximum 256) }))
-    `$aes  = [Convert]::ToBase64String((1..32 | ForEach-Object { [byte](Get-Random -Minimum 0 -Maximum 256) }))
+    if ($env:BGP_ALLOW_EPHEMERAL_KEYS -eq 'true') {
+        # Explicit opt-in for ephemeral keys in this session only
+        if ([string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64)) {
+            $env:BGP_MOCK_HMAC_KEY_B64 = New-SecureRandomBase64Key 32
+        }
+        if ([string]::IsNullOrWhiteSpace($env:BGP_QR_AES_KEY_B64)) {
+            $env:BGP_QR_AES_KEY_B64 = New-SecureRandomBase64Key 32
+        }
+        Write-Warning 'CAUTION: Session is using EPHEMERAL keys ($env:BGP_ALLOW_EPHEMERAL_KEYS=true). Previously issued tickets or webhook signatures will be INVALID across sessions.'
+    } else {
+        # Fail-closed: do not automatically generate ephemeral keys
+        $setupInstructions = @"
+[ERROR] Missing cryptographic keys in .NET User Secrets and environment!
+To generate stable 256-bit CSPRNG keys, run the following commands once:
+
+    `$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    `$hmacBytes = New-Object byte[] 32; `$rng.GetBytes(`$hmacBytes)
+    `$aesBytes = New-Object byte[] 32; `$rng.GetBytes(`$aesBytes)
+    `$hmac = [Convert]::ToBase64String(`$hmacBytes)
+    `$aes  = [Convert]::ToBase64String(`$aesBytes)
     dotnet user-secrets set "BGP_MOCK_HMAC_KEY_B64" "`$hmac" --project .\src\BetaGiaiPhong.Web
     dotnet user-secrets set "BGP_QR_AES_KEY_B64" "`$aes" --project .\src\BetaGiaiPhong.Web
-"@
+    Remove-Variable hmacBytes, aesBytes, hmac, aes -ErrorAction SilentlyContinue
 
-    # Fallback to ephemeral keys for the current shell only
-    if ([string]::IsNullOrWhiteSpace($env:BGP_MOCK_HMAC_KEY_B64)) {
-        $env:BGP_MOCK_HMAC_KEY_B64 = New-SecureRandomBase64Key 32
-        Write-Warning 'Generated ephemeral BGP_MOCK_HMAC_KEY_B64 for current shell process.'
+IMPORTANT:
+- NEVER rotate BGP_QR_AES_KEY_B64 if the database already contains issued tickets, as existing QR codes cannot be verified without the original key.
+- Web project uses User Secrets in Development, while Runner reads environment variables synchronized by this script.
+- To temporarily allow ephemeral keys for a single shell session, set `$env:BGP_ALLOW_EPHEMERAL_KEYS="true" before running this script.
+"@
+        Write-Error $setupInstructions
+        throw "Cryptographic keys are not configured. Run the setup instructions above or set `$env:BGP_ALLOW_EPHEMERAL_KEYS='true'."
     }
-    if ([string]::IsNullOrWhiteSpace($env:BGP_QR_AES_KEY_B64)) {
-        $env:BGP_QR_AES_KEY_B64 = New-SecureRandomBase64Key 32
-        Write-Warning 'Generated ephemeral BGP_QR_AES_KEY_B64 for current shell process.'
-    }
-    Write-Warning 'CAUTION: Session is using EPHEMERAL keys. Previously issued QR codes or webhook signatures will become INVALID once this shell closes.'
 } else {
-    Write-Host 'Local environment configured. Keys are stable across restarts via .NET User Secrets.'
+    Write-Host 'Local environment configured. Cryptographic keys are synchronized for this session.'
 }
 
 Write-Host 'App DB user is SA/Trusted for LOCAL DEV ONLY; create least-privilege credentials before non-local deployments.'

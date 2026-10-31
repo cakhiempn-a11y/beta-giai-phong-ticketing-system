@@ -189,17 +189,27 @@ dotnet ef migrations has-pending-model-changes --project .\src\BetaGiaiPhong.Dat
 
 ## 9. Local Development Setup
 
+> [!CAUTION]
+> **Key Stability Warning:** `BGP_QR_AES_KEY_B64` encrypts and decrypts QR tokens in `dbo.Tickets`. **NEVER** rotate or overwrite this key on a database containing active tickets, or existing QR codes will fail decryption during staff check-in.
+
 ### 9.1. Environment Configuration
 Cryptographic keys (`BGP_MOCK_HMAC_KEY_B64`, `BGP_QR_AES_KEY_B64`) and connection strings are managed via .NET User Secrets or environment variables to prevent accidental credential leakage into Git.
 
-To configure stable 256-bit keys that persist across shell restarts:
+To configure stable 256-bit CSPRNG keys that persist across shell restarts:
 ```powershell
 # Generate independent CSPRNG 32-byte keys and configure in .NET User Secrets
-$hmac = [Convert]::ToBase64String((1..32 | ForEach-Object { [byte](Get-Random -Minimum 0 -Maximum 256) }))
-$aes  = [Convert]::ToBase64String((1..32 | ForEach-Object { [byte](Get-Random -Minimum 0 -Maximum 256) }))
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$hmacBytes = New-Object byte[] 32; $rng.GetBytes($hmacBytes)
+$aesBytes = New-Object byte[] 32; $rng.GetBytes($aesBytes)
+$hmac = [Convert]::ToBase64String($hmacBytes)
+$aes  = [Convert]::ToBase64String($aesBytes)
 dotnet user-secrets set "BGP_MOCK_HMAC_KEY_B64" "$hmac" --project .\src\BetaGiaiPhong.Web
 dotnet user-secrets set "BGP_QR_AES_KEY_B64" "$aes" --project .\src\BetaGiaiPhong.Web
+Remove-Variable hmacBytes, aesBytes, hmac, aes -ErrorAction SilentlyContinue
 ```
+
+> [!NOTE]
+> `BetaGiaiPhong.Web` automatically loads `.NET User Secrets` in the `Development` environment. However, CLI utilities like `BetaGiaiPhong.Runner` run outside the Web host context and require environment variables. `scripts/01_prepare_dev_session.ps1` synchronizes keys from User Secrets directly into your PowerShell session.
 
 Execute `scripts/01_prepare_dev_session.ps1` in Windows PowerShell 5.1 or PowerShell 7+:
 ```powershell
@@ -234,7 +244,9 @@ dotnet run --project .\src\BetaGiaiPhong.Runner -- status
 # Seed synthetic reference catalog & demo users
 dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-demo
 
-# Seed an active showtime & generate a paid demo ticket for immediate staff scanning
+# Seed an active showtime & generate a paid demo ticket for staff check-in
+# Note: Requires BGP_ALLOW_CHECKIN_DEMO=true (set by 01_prepare_dev_session.ps1).
+# Raw QR token is masked by default; set BGP_SHOW_DEMO_QR_TOKEN=true to display raw plaintext token.
 dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-checkin-demo
 # Alternatively, run: .\scripts\03_seed_checkin_demo.ps1
 

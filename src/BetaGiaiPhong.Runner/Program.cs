@@ -200,6 +200,23 @@ internal static class Program
 
     private static async Task SeedCheckInDemoAsync(DbContextOptions<BetaDbContext> options)
     {
+        var optInCheckin = Environment.GetEnvironmentVariable("BGP_ALLOW_CHECKIN_DEMO");
+        var optInDemo = Environment.GetEnvironmentVariable("BGP_ALLOW_DEMO_SEED");
+        if (!string.Equals(optInCheckin, "true", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(optInDemo, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Set BGP_ALLOW_CHECKIN_DEMO=true to enable demo ticket generation.");
+            return;
+        }
+
+        var conn = Environment.GetEnvironmentVariable("ConnectionStrings__BetaDb") ?? string.Empty;
+        if (conn.Contains("production", StringComparison.OrdinalIgnoreCase) ||
+            conn.Contains("prod.database", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Connection string appears to point to a PRODUCTION database. Refusing execution.");
+            return;
+        }
+
         await using var db = new BetaDbContext(options);
 
         var customer = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID")
@@ -207,67 +224,63 @@ internal static class Program
         var manager = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID")
             ?? throw new InvalidOperationException("Demo user MANAGER@DEMO.INVALID not found. Run 'seed-demo' first.");
 
-        var movie = await db.Movies.FirstOrDefaultAsync()
-            ?? throw new InvalidOperationException("No movies found in database. Run 'seed-demo' first.");
-        var room = await db.Rooms.FirstOrDefaultAsync()
-            ?? throw new InvalidOperationException("No rooms found in database. Run 'seed-demo' first.");
+        var movie = await db.Movies.FirstOrDefaultAsync(m => m.Status == "PUBLISHED")
+            ?? throw new InvalidOperationException("No PUBLISHED movies found in database. Run 'seed-demo' first.");
 
         var now = DateTime.UtcNow;
 
+        // Look for an existing eligible showtime within check-in window (start_utc > now && start_utc <= now + 25m) with available seats
         var showtime = await db.Showtimes
             .Include(s => s.Movie)
             .Include(s => s.Room)
-            .Where(s => s.Status == "ON_SALE" && s.StartUtc >= now.AddMinutes(-15) && s.StartUtc <= now.AddMinutes(25)
+            .Where(s => s.Status == "ON_SALE" && s.StartUtc > now && s.StartUtc <= now.AddMinutes(25)
                 && db.ShowtimeSeats.Any(ss => ss.ShowtimeId == s.ShowtimeId && ss.State == SeatStates.Available))
             .OrderByDescending(s => s.ShowtimeId)
             .FirstOrDefaultAsync();
 
         if (showtime == null)
         {
-            var startUtc = now.AddMinutes(15);
-            var endUtc = startUtc.AddMinutes(120);
-            showtime = new Showtime
-            {
-                MovieId = movie.MovieId,
-                RoomId = room.RoomId,
-                StartUtc = startUtc,
-                EndUtc = endUtc,
-                BufferMinutes = 15,
-                Status = "ON_SALE",
-                SellableCapacitySnapshot = 10,
-                CreatedBy = manager.UserId,
-                CreatedUtc = now
-            };
-            db.Showtimes.Add(showtime);
-            await db.SaveChangesAsync();
+            // Publish a new showtime using ShowtimePublishingService to guarantee room schedule, buffer, and capacity rules
+            var activeRooms = await db.Rooms.Where(r => r.Status == "ACTIVE").ToListAsync();
+            Room? selectedRoom = null;
+            DateTime targetStartUtc = DateTime.SpecifyKind(now.AddMinutes(15), DateTimeKind.Utc);
+            var targetEndUtc = targetStartUtc.AddMinutes(movie.DurationMin);
+            const short bufferMinutes = 15;
 
-            var roomSeats = await db.Seats.Where(s => s.RoomId == room.RoomId && s.IsActive).ToListAsync();
-            foreach (var seat in roomSeats)
+            foreach (var r in activeRooms)
             {
-                db.ShowtimeSeats.Add(new ShowtimeSeat
+                var activeSeatsCount = await db.Seats.CountAsync(s => s.RoomId == r.RoomId && s.IsActive);
+                if (activeSeatsCount == 0) continue;
+
+                var hasOverlap = await db.Showtimes.AnyAsync(s => s.RoomId == r.RoomId && s.Status != "CANCELLED" &&
+                    targetStartUtc < s.EndUtc.AddMinutes(s.BufferMinutes) &&
+                    s.StartUtc < targetEndUtc.AddMinutes(bufferMinutes));
+
+                if (!hasOverlap)
                 {
-                    ShowtimeId = showtime.ShowtimeId,
-                    SeatId = seat.SeatId,
-                    RoomId = room.RoomId,
-                    State = SeatStates.Available
-                });
+                    selectedRoom = r;
+                    break;
+                }
             }
-            foreach (var st in await db.SeatTypes.ToListAsync())
+
+            if (selectedRoom == null)
             {
-                db.SeatPrices.Add(new SeatPrice
-                {
-                    ShowtimeId = showtime.ShowtimeId,
-                    SeatTypeCode = st.SeatTypeCode,
-                    AmountVnd = 75000,
-                    UpdatedUtc = now
-                });
+                throw new InvalidOperationException(
+                    "Cannot publish demo showtime: all active rooms have overlapping schedules within the check-in window. Wait for existing showtimes to complete or resolve schedule conflicts.");
             }
-            await db.SaveChangesAsync();
+
+            var activeRoomSeats = await db.Seats.Where(s => s.RoomId == selectedRoom.RoomId && s.IsActive).ToListAsync();
+            var seatTypesInRoom = activeRoomSeats.Select(s => s.SeatTypeCode).Distinct().ToList();
+            var priceInputs = seatTypesInRoom.Select(code => new SeatPriceInput(code, code == "VIP" ? 90000 : 75000)).ToList();
+
+            var publishingService = new ShowtimePublishingService(db, new SystemClock());
+            var newShowtimeId = await publishingService.PublishAsync(
+                manager.UserId, selectedRoom.RoomId, movie.MovieId, targetStartUtc, bufferMinutes, priceInputs);
 
             showtime = await db.Showtimes
                 .Include(s => s.Movie)
                 .Include(s => s.Room)
-                .SingleAsync(s => s.ShowtimeId == showtime.ShowtimeId);
+                .SingleAsync(s => s.ShowtimeId == newShowtimeId);
         }
 
         var availableSeat = await db.ShowtimeSeats
@@ -277,7 +290,7 @@ internal static class Program
 
         if (availableSeat == 0)
         {
-            throw new InvalidOperationException($"No AVAILABLE seats left in showtime #{showtime.ShowtimeId}. Seed a new showtime or run 'expire'.");
+            throw new InvalidOperationException($"No AVAILABLE seats left in showtime #{showtime.ShowtimeId}.");
         }
 
         var res = await new SeatReservationService(db, new SystemClock())
@@ -310,24 +323,38 @@ internal static class Program
 
         var rawToken = qrProtector.Unseal(ticket.QrTokenCipher);
 
+        var showRawToken = string.Equals(Environment.GetEnvironmentVariable("BGP_SHOW_DEMO_QR_TOKEN"), "true", StringComparison.OrdinalIgnoreCase);
+        var baseUrl = Environment.GetEnvironmentVariable("BGP_BASE_URL") ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS")?.Split(';').FirstOrDefault() ?? "";
+        if (!string.IsNullOrEmpty(baseUrl)) baseUrl = baseUrl.TrimEnd('/');
+        var checkinPath = $"/staff/check-in?showtimeId={showtime.ShowtimeId}";
+        var ticketPath = $"/tickets/order/{res.OrderCode}";
+
         Console.WriteLine();
         Console.WriteLine("======================================================================");
         Console.WriteLine("BETA GIAI PHONG — DEMO CHECK-IN TICKET GENERATED");
         Console.WriteLine("======================================================================");
         Console.WriteLine($"Showtime ID : {showtime.ShowtimeId}");
         Console.WriteLine($"Movie       : {showtime.Movie?.Title ?? movie.Title}");
-        Console.WriteLine($"Room        : {showtime.Room?.RoomName ?? room.RoomName}");
+        Console.WriteLine($"Room        : {showtime.Room?.RoomName}");
         Console.WriteLine($"Start Time  : {showtime.StartUtc:yyyy-MM-dd HH:mm:ss} UTC (Active check-in window)");
         Console.WriteLine($"Order Code  : {res.OrderCode}");
         Console.WriteLine($"Ticket Code : {ticket.TicketCode}");
         Console.WriteLine($"Seat        : {seatEntity.SeatCode} (Row {seatEntity.RowLabel}, Col {seatEntity.ColumnNo})");
         Console.WriteLine($"Customer    : {customer.DisplayName} ({customer.Email})");
         Console.WriteLine();
-        Console.WriteLine("RAW QR TOKEN (Copy & paste into Staff Manual Input):");
-        Console.WriteLine(rawToken);
+        Console.WriteLine($"Customer Ticket Route : {ticketPath}");
+        Console.WriteLine($"Staff Check-In Route  : {(string.IsNullOrEmpty(baseUrl) ? checkinPath : $"{baseUrl}{checkinPath}")}");
         Console.WriteLine();
-        Console.WriteLine("Direct Staff Check-In URL:");
-        Console.WriteLine($"http://localhost:5000/staff/check-in?showtimeId={showtime.ShowtimeId}");
+        if (showRawToken)
+        {
+            Console.WriteLine("[WARNING: BGP_SHOW_DEMO_QR_TOKEN=true] RAW QR TOKEN (Confidential — Development use only):");
+            Console.WriteLine(rawToken);
+        }
+        else
+        {
+            Console.WriteLine("Raw QR token is masked by default for security.");
+            Console.WriteLine("Set BGP_SHOW_DEMO_QR_TOKEN=true in your development shell to display raw token.");
+        }
         Console.WriteLine("======================================================================");
         Console.WriteLine();
     }
