@@ -150,3 +150,20 @@ body {
     display: inline-block;
     vertical-align: middle;
 }
+
+.seat-bookable {
+    cursor: pointer !important;
+}
+
+.seat-bookable:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.seat-selected {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    border-color: #059669 !important;
+    transform: scale(1.08);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}

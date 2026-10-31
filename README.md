@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-46%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-66%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -48,10 +48,10 @@ The solution adheres to clean data-driven and modular monolith design patterns:
                       └───────────────────────────────────────┘
 ```
 
-- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time read-only seat map). Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
+- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, and customer cancellation. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (46 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (66 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -292,9 +292,29 @@ Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_02_PostWithoutCs
 Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_03_UnhandledException_ReturnsProblemDetailsJsonWithoutStackTrace
 Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_04_CorrelationId_IsGeneratedAndPropagated
 Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_05_ApiRoute_NonExistentResource_ReturnsProblemDetails404
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_01_Guest_PostReserve_Returns401Unauthorized
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_02_NonCustomerRole_PostReserve_Returns403Forbidden
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_03_Customer_ReserveSingleSeat_Returns201Created
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_04_Customer_ReserveMultipleSeats_Returns201Created
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_05_ReserveMoreThan8Seats_Returns400BadRequest
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_06_ReserveDuplicateSeats_Returns400BadRequest
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_07_ReserveEmptySeatList_Returns400BadRequest
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_08_ReserveAlreadyHeldSeat_Returns409Conflict
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_09_ReserveSeatFromAnotherRoom_ReturnsConflict
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_10_CustomerA_CannotViewCustomerB_Order_Returns404NotFound
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_11_CustomerA_CannotCancelCustomerB_Order_Returns403Or404
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_12_CancelPendingOrder_Succeeds_MarksCancelledAndReleasesSeats
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_13_CancelPaidOrder_Returns422UnprocessableEntity
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_14_CancelExpiredOrder_TransitionsToEXPIRED_Returns409Conflict
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_15_GetOrder_IsReadOnly_DoesNotMutateDatabase
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_16_PostReserve_WithoutAntiforgeryToken_Returns400BadRequest
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_17_OrderTotalVnd_MatchesOrderSeatsSnapshot
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_18_MvcSeatSelectionFlow_RedirectsToOrderDetails
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_19_GetMyOrders_PaginationAndList_ReturnsAccurateOrders
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_20_OrderLifecycleService_ExpireDueAsync_CleansUpExpiredOrders
 
 Test Run Successful.
-Total tests: 46 | Passed: 46 | Failed: 0 | Total time: ~18 Seconds
+Total tests: 66 | Passed: 66 | Failed: 0 | Total time: ~38 Seconds
 ```
 
 ### 11.1. Running the Web Application
@@ -322,7 +342,7 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (46/46 tests passed: 28 Data/Domain tests + 18 Web integration tests).
+- **Test Suite Pass Rate:** 100% (66/66 tests passed: 28 Data/Domain tests + 38 Web integration tests).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
 
 ---
@@ -335,10 +355,16 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Public Catalog:** Server-rendered Razor views and RESTful JSON APIs for browsing published movies, showtime schedules, and read-only interactive seat maps.
 - **Security & Quality:** Anti-CSRF protection, HTTP security headers, login rate limiting, correlation ID tracking, RFC 7807 `ProblemDetails` error handling, and 18 automated Web integration tests.
 
-### 14.2. Upcoming Phases
-- **Phase BE-02 (Seat Booking & Checkout):** HTTP transactional seat reservation endpoints, mock payment gateway integration, and booking order lifecycle management.
-- **Phase BE-03 (Ticket Issuance & Scanning):** Secure ticket release, QR token rendering, high-speed staff scanning API, and door admission management.
-- **Phase BE-04 (Admin Management & Workers):** Administrative movie/showtime publishing dashboards, sales reporting views, and background worker for expired reservation cleanup.
+### 14.2. Phase BE-02 (Completed — Seat Booking & Order Management)
+- **Interactive Seat Selection:** Client-side selection on `/showtimes/{id}/seats` with dynamic chip rendering, pricing tally, 8-seat cap enforcement, and auto-submit.
+- **Transactional Seat Reservation:** `POST /api/bookings/reserve` & `POST /bookings/reserve` leveraging `SeatReservationService` (`Serializable` isolation + row-level showtime locking), 5-minute hold timeout, and immutable price snapshots (`dbo.OrderSeats`).
+- **Customer Order Management:** `GET /orders` & `GET /api/orders` (paged list), `GET /orders/{id}` & `GET /api/orders/{id}` (real-time countdown timer, seat snapshot), and strict ownership checks (`CUSTOMER` role + customer ID verification).
+- **Customer Cancellation & Expired Order Handling:** `POST /api/orders/{id}/cancel` & `POST /orders/{id}/cancel` transitioning pending orders to `CANCELLED` and releasing held seats; auto-transitioning expired orders (`expires_utc <= now`) to `EXPIRED` state with seat release and returning 409 Conflict.
+- **Security & Quality:** CSRF cookie token injection, authenticated claim protection, 20 dedicated integration tests (`TC_WEB_BOOK_01` to `TC_WEB_BOOK_20`).
+
+### 14.3. Upcoming Phases
+- **Phase BE-03 (Payment Processing & Ticket Issuance):** Mock payment gateway webhook, HMAC-SHA256 signature verification, AES-256-GCM encrypted QR token generation, and staff ticket scanning API.
+- **Phase BE-04 (Admin Dashboards & Background Workers):** Administrative movie/showtime publishing dashboards, sales reporting views, and hosted background worker for expired reservation cleanup.
 
 ---
 

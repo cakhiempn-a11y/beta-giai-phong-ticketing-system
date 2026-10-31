@@ -44,13 +44,16 @@ public sealed class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogg
 
         var (statusCode, title, detail, errorCode) = ex switch
         {
-            BusinessRuleException be when be.Code is "SHOWTIME_NOT_FOUND" or "MOVIE_NOT_FOUND" or "NOT_FOUND"
+            BusinessRuleException be when be.Code is "SHOWTIME_NOT_FOUND" or "MOVIE_NOT_FOUND" or "ORDER_NOT_FOUND" or "NOT_FOUND"
                 => (StatusCodes.Status404NotFound, "Resource Not Found", be.Message, be.Code),
+
+            BusinessRuleException be when be.Code is "FORBIDDEN"
+                => (StatusCodes.Status403Forbidden, "Forbidden", be.Message, be.Code),
 
             BusinessRuleException be when be.Code is "INVALID_SELECTION" or "INVALID_CALLBACK" or "INVALID_QR"
                 => (StatusCodes.Status400BadRequest, "Bad Request", be.Message, be.Code),
 
-            BusinessRuleException be when be.Code is "SEAT_NOT_AVAILABLE" or "NOT_ON_SALE" or "TICKET_ALREADY_USED"
+            BusinessRuleException be when be.Code is "SEAT_NOT_AVAILABLE" or "NOT_ON_SALE" or "SEAT_CONFLICT" or "TICKET_ALREADY_USED" or "ORDER_EXPIRED"
                 => (StatusCodes.Status409Conflict, "Business Conflict", be.Message, be.Code),
 
             BusinessRuleException be
