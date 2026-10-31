@@ -1,0 +1,16 @@
+# LOCAL DEVELOPMENT ONLY. Requires Docker Desktop (Linux containers) or Docker Engine.
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bgp-sqlserver-dev
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${BGP_SQL_SA_PASSWORD:?Set BGP_SQL_SA_PASSWORD in your shell before docker compose up}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "127.0.0.1:14333:1433"
+    volumes:
+      - bgp_sql_data:/var/opt/mssql
+    restart: unless-stopped
+volumes:
+  bgp_sql_data:

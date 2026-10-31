@@ -1,0 +1,67 @@
+# .gitignore for BetaGiaiPhong (.NET 10, EF Core, SQL Server)
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+TestResults/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+dist/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+*.opensdf
+*.sdf
+
+# Visual Studio Code & JetBrains Rider
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.DotSettings.user
+
+# Database files & backups
+*.mdf
+*.ldf
+*.ndf
+*.bak
+*.bacpac
+*.dacpac
+
+# Environment & Secret files
+.env
+.env.*
+!.env.example
+appsettings*.local.json
+appsettings.Secrets.json
+secrets.json
+local.settings.json
+
+# Operating System files
+Thumbs.db
+[Ee]hthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.Spotlight-V100
+.Trashes
+
+# Temporary & Crash files
+*.tmp
+*.temp
+*.log
+*.crash
+*.swp
+*~

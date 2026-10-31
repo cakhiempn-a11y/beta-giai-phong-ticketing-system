@@ -1,0 +1,1756 @@
+{
+  "tables": {
+    "Users": {
+      "cols": [
+        {
+          "name": "user_id",
+          "prop": "UserId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "email",
+          "prop": "Email",
+          "sql": "nvarchar(256)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "normalized_email",
+          "prop": "NormalizedEmail",
+          "sql": "nvarchar(256)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "password_hash",
+          "prop": "PasswordHash",
+          "sql": "nvarchar(512)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "display_name",
+          "prop": "DisplayName",
+          "sql": "nvarchar(120)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(12)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('ACTIVE')"
+        },
+        {
+          "name": "created_utc",
+          "prop": "CreatedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        }
+      ],
+      "pk": [
+        "PK_Users",
+        [
+          "user_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Users_01",
+          [
+            "normalized_email"
+          ]
+        ]
+      ],
+      "fks": [],
+      "checks": [
+        [
+          "CK_Users_01",
+          "(status IN ('ACTIVE','DISABLED'))"
+        ]
+      ]
+    },
+    "Roles": {
+      "cols": [
+        {
+          "name": "role_id",
+          "prop": "RoleId",
+          "sql": "int",
+          "cs": "int",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "role_code",
+          "prop": "RoleCode",
+          "sql": "varchar(20)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "role_name",
+          "prop": "RoleName",
+          "sql": "nvarchar(80)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_Roles",
+        [
+          "role_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Roles_01",
+          [
+            "role_code"
+          ]
+        ]
+      ],
+      "fks": [],
+      "checks": []
+    },
+    "UserRoles": {
+      "cols": [
+        {
+          "name": "user_id",
+          "prop": "UserId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "role_id",
+          "prop": "RoleId",
+          "sql": "int",
+          "cs": "int",
+          "null": false,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_UserRoles",
+        [
+          "user_id",
+          "role_id"
+        ]
+      ],
+      "uqs": [],
+      "fks": [
+        {
+          "name": "FK_UserRoles_Users_01",
+          "cols": [
+            "user_id"
+          ],
+          "to": "Users",
+          "to_cols": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "FK_UserRoles_Roles_02",
+          "cols": [
+            "role_id"
+          ],
+          "to": "Roles",
+          "to_cols": [
+            "role_id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    "Movies": {
+      "cols": [
+        {
+          "name": "movie_id",
+          "prop": "MovieId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "title",
+          "prop": "Title",
+          "sql": "nvarchar(250)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "duration_min",
+          "prop": "DurationMin",
+          "sql": "smallint",
+          "cs": "short",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "genre_text",
+          "prop": "GenreText",
+          "sql": "nvarchar(160)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "age_label",
+          "prop": "AgeLabel",
+          "sql": "nvarchar(24)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "synopsis",
+          "prop": "Synopsis",
+          "sql": "nvarchar(max)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "poster_url",
+          "prop": "PosterUrl",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(12)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('DRAFT')"
+        }
+      ],
+      "pk": [
+        "PK_Movies",
+        [
+          "movie_id"
+        ]
+      ],
+      "uqs": [],
+      "fks": [],
+      "checks": [
+        [
+          "CK_Movies_01",
+          "(duration_min BETWEEN 1 AND 480)"
+        ],
+        [
+          "CK_Movies_02",
+          "(status IN ('DRAFT','PUBLISHED','ARCHIVED'))"
+        ]
+      ]
+    },
+    "Rooms": {
+      "cols": [
+        {
+          "name": "room_id",
+          "prop": "RoomId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "room_code",
+          "prop": "RoomCode",
+          "sql": "varchar(24)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "room_name",
+          "prop": "RoomName",
+          "sql": "nvarchar(100)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(12)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('ACTIVE')"
+        }
+      ],
+      "pk": [
+        "PK_Rooms",
+        [
+          "room_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Rooms_01",
+          [
+            "room_code"
+          ]
+        ]
+      ],
+      "fks": [],
+      "checks": [
+        [
+          "CK_Rooms_01",
+          "(status IN ('ACTIVE','INACTIVE'))"
+        ]
+      ]
+    },
+    "SeatTypes": {
+      "cols": [
+        {
+          "name": "seat_type_code",
+          "prop": "SeatTypeCode",
+          "sql": "varchar(20)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "type_name",
+          "prop": "TypeName",
+          "sql": "nvarchar(80)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "is_active",
+          "prop": "IsActive",
+          "sql": "bit",
+          "cs": "bool",
+          "null": false,
+          "identity": false,
+          "default": "(1)"
+        }
+      ],
+      "pk": [
+        "PK_SeatTypes",
+        [
+          "seat_type_code"
+        ]
+      ],
+      "uqs": [],
+      "fks": [],
+      "checks": []
+    },
+    "Seats": {
+      "cols": [
+        {
+          "name": "seat_id",
+          "prop": "SeatId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "room_id",
+          "prop": "RoomId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_code",
+          "prop": "SeatCode",
+          "sql": "varchar(16)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_type_code",
+          "prop": "SeatTypeCode",
+          "sql": "varchar(20)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "row_label",
+          "prop": "RowLabel",
+          "sql": "varchar(8)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "column_no",
+          "prop": "ColumnNo",
+          "sql": "smallint",
+          "cs": "short",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "is_active",
+          "prop": "IsActive",
+          "sql": "bit",
+          "cs": "bool",
+          "null": false,
+          "identity": false,
+          "default": "(1)"
+        }
+      ],
+      "pk": [
+        "PK_Seats",
+        [
+          "seat_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Seats_01",
+          [
+            "room_id",
+            "seat_code"
+          ]
+        ],
+        [
+          "UQ_Seats_02",
+          [
+            "seat_id",
+            "room_id"
+          ]
+        ]
+      ],
+      "fks": [
+        {
+          "name": "FK_Seats_Rooms_01",
+          "cols": [
+            "room_id"
+          ],
+          "to": "Rooms",
+          "to_cols": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "FK_Seats_SeatTypes_02",
+          "cols": [
+            "seat_type_code"
+          ],
+          "to": "SeatTypes",
+          "to_cols": [
+            "seat_type_code"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_Seats_01",
+          "(column_no > 0)"
+        ]
+      ]
+    },
+    "Showtimes": {
+      "cols": [
+        {
+          "name": "showtime_id",
+          "prop": "ShowtimeId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "movie_id",
+          "prop": "MovieId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "room_id",
+          "prop": "RoomId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "start_utc",
+          "prop": "StartUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "end_utc",
+          "prop": "EndUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "buffer_minutes",
+          "prop": "BufferMinutes",
+          "sql": "smallint",
+          "cs": "short",
+          "null": false,
+          "identity": false,
+          "default": "(15)"
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(12)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('DRAFT')"
+        },
+        {
+          "name": "sellable_capacity_snapshot",
+          "prop": "SellableCapacitySnapshot",
+          "sql": "int",
+          "cs": "int",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "created_by",
+          "prop": "CreatedBy",
+          "sql": "bigint",
+          "cs": "long",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "created_utc",
+          "prop": "CreatedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        }
+      ],
+      "pk": [
+        "PK_Showtimes",
+        [
+          "showtime_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Showtimes_01",
+          [
+            "showtime_id",
+            "room_id"
+          ]
+        ]
+      ],
+      "fks": [
+        {
+          "name": "FK_Showtimes_Movies_01",
+          "cols": [
+            "movie_id"
+          ],
+          "to": "Movies",
+          "to_cols": [
+            "movie_id"
+          ]
+        },
+        {
+          "name": "FK_Showtimes_Rooms_02",
+          "cols": [
+            "room_id"
+          ],
+          "to": "Rooms",
+          "to_cols": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "FK_Showtimes_Users_03",
+          "cols": [
+            "created_by"
+          ],
+          "to": "Users",
+          "to_cols": [
+            "user_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_Showtimes_01",
+          "(start_utc < end_utc)"
+        ],
+        [
+          "CK_Showtimes_02",
+          "(buffer_minutes >= 0)"
+        ],
+        [
+          "CK_Showtimes_03",
+          "(sellable_capacity_snapshot IS NULL OR sellable_capacity_snapshot >= 0)"
+        ],
+        [
+          "CK_Showtimes_04",
+          "(status IN ('DRAFT','ON_SALE','CLOSED','CANCELLED'))"
+        ],
+        [
+          "CK_Showtimes_05",
+          "(status <> 'ON_SALE' OR sellable_capacity_snapshot IS NOT NULL)"
+        ]
+      ]
+    },
+    "SeatPrices": {
+      "cols": [
+        {
+          "name": "showtime_id",
+          "prop": "ShowtimeId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_type_code",
+          "prop": "SeatTypeCode",
+          "sql": "varchar(20)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "amount_vnd",
+          "prop": "AmountVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "updated_utc",
+          "prop": "UpdatedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        }
+      ],
+      "pk": [
+        "PK_SeatPrices",
+        [
+          "showtime_id",
+          "seat_type_code"
+        ]
+      ],
+      "uqs": [],
+      "fks": [
+        {
+          "name": "FK_SeatPrices_Showtimes_01",
+          "cols": [
+            "showtime_id"
+          ],
+          "to": "Showtimes",
+          "to_cols": [
+            "showtime_id"
+          ]
+        },
+        {
+          "name": "FK_SeatPrices_SeatTypes_02",
+          "cols": [
+            "seat_type_code"
+          ],
+          "to": "SeatTypes",
+          "to_cols": [
+            "seat_type_code"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_SeatPrices_01",
+          "(amount_vnd > 0)"
+        ]
+      ]
+    },
+    "Orders": {
+      "cols": [
+        {
+          "name": "order_id",
+          "prop": "OrderId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "order_code",
+          "prop": "OrderCode",
+          "sql": "varchar(40)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "user_id",
+          "prop": "UserId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "showtime_id",
+          "prop": "ShowtimeId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(20)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('PENDING_PAYMENT')"
+        },
+        {
+          "name": "seat_count",
+          "prop": "SeatCount",
+          "sql": "tinyint",
+          "cs": "byte",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "subtotal_vnd",
+          "prop": "SubtotalVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "fee_vnd",
+          "prop": "FeeVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": "(0)"
+        },
+        {
+          "name": "discount_vnd",
+          "prop": "DiscountVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": "(0)"
+        },
+        {
+          "name": "total_vnd",
+          "prop": "TotalVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "created_utc",
+          "prop": "CreatedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        },
+        {
+          "name": "expires_utc",
+          "prop": "ExpiresUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "paid_utc",
+          "prop": "PaidUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "row_ver",
+          "prop": "RowVer",
+          "sql": "rowversion",
+          "cs": "byte[]",
+          "null": false,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_Orders",
+        [
+          "order_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Orders_01",
+          [
+            "order_code"
+          ]
+        ],
+        [
+          "UQ_Orders_02",
+          [
+            "order_id",
+            "showtime_id"
+          ]
+        ]
+      ],
+      "fks": [
+        {
+          "name": "FK_Orders_Users_01",
+          "cols": [
+            "user_id"
+          ],
+          "to": "Users",
+          "to_cols": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "FK_Orders_Showtimes_02",
+          "cols": [
+            "showtime_id"
+          ],
+          "to": "Showtimes",
+          "to_cols": [
+            "showtime_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_Orders_01",
+          "(seat_count BETWEEN 1 AND 8)"
+        ],
+        [
+          "CK_Orders_02",
+          "(subtotal_vnd >= 0)"
+        ],
+        [
+          "CK_Orders_03",
+          "(fee_vnd >= 0)"
+        ],
+        [
+          "CK_Orders_04",
+          "(discount_vnd >= 0)"
+        ],
+        [
+          "CK_Orders_05",
+          "(total_vnd >= 0)"
+        ],
+        [
+          "CK_Orders_06",
+          "(total_vnd = subtotal_vnd + fee_vnd - discount_vnd)"
+        ],
+        [
+          "CK_Orders_07",
+          "(expires_utc > created_utc)"
+        ],
+        [
+          "CK_Orders_08",
+          "(status IN ('PENDING_PAYMENT','PAID','FAILED','CANCELLED','EXPIRED','NEEDS_REVIEW'))"
+        ],
+        [
+          "CK_Orders_09",
+          "(((status = 'PAID' AND paid_utc IS NOT NULL) OR (status <> 'PAID' AND paid_utc IS NULL)))"
+        ]
+      ]
+    },
+    "ShowtimeSeats": {
+      "cols": [
+        {
+          "name": "showtime_id",
+          "prop": "ShowtimeId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_id",
+          "prop": "SeatId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "room_id",
+          "prop": "RoomId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "state",
+          "prop": "State",
+          "sql": "varchar(12)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('AVAILABLE')"
+        },
+        {
+          "name": "owner_order_id",
+          "prop": "OwnerOrderId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "hold_expires_utc",
+          "prop": "HoldExpiresUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "row_ver",
+          "prop": "RowVer",
+          "sql": "rowversion",
+          "cs": "byte[]",
+          "null": false,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_ShowtimeSeats",
+        [
+          "showtime_id",
+          "seat_id"
+        ]
+      ],
+      "uqs": [],
+      "fks": [
+        {
+          "name": "FK_ShowtimeSeats_Showtimes_01",
+          "cols": [
+            "showtime_id",
+            "room_id"
+          ],
+          "to": "Showtimes",
+          "to_cols": [
+            "showtime_id",
+            "room_id"
+          ]
+        },
+        {
+          "name": "FK_ShowtimeSeats_Seats_02",
+          "cols": [
+            "seat_id",
+            "room_id"
+          ],
+          "to": "Seats",
+          "to_cols": [
+            "seat_id",
+            "room_id"
+          ]
+        },
+        {
+          "name": "FK_ShowtimeSeats_Orders_03",
+          "cols": [
+            "owner_order_id",
+            "showtime_id"
+          ],
+          "to": "Orders",
+          "to_cols": [
+            "order_id",
+            "showtime_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_ShowtimeSeats_01",
+          "(((state IN ('AVAILABLE','BLOCKED') AND owner_order_id IS NULL AND hold_expires_utc IS NULL) OR (state='HELD' AND owner_order_id IS NOT NULL AND hold_expires_utc IS NOT NULL) OR (state='SOLD' AND owner_order_id IS NOT NULL AND hold_expires_utc IS NULL)))"
+        ]
+      ]
+    },
+    "OrderSeats": {
+      "cols": [
+        {
+          "name": "order_id",
+          "prop": "OrderId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "showtime_id",
+          "prop": "ShowtimeId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_id",
+          "prop": "SeatId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_type_snapshot",
+          "prop": "SeatTypeSnapshot",
+          "sql": "varchar(20)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "unit_price_vnd",
+          "prop": "UnitPriceVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_OrderSeats",
+        [
+          "order_id",
+          "seat_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_OrderSeats_01",
+          [
+            "order_id",
+            "showtime_id",
+            "seat_id"
+          ]
+        ]
+      ],
+      "fks": [
+        {
+          "name": "FK_OrderSeats_Orders_01",
+          "cols": [
+            "order_id",
+            "showtime_id"
+          ],
+          "to": "Orders",
+          "to_cols": [
+            "order_id",
+            "showtime_id"
+          ]
+        },
+        {
+          "name": "FK_OrderSeats_ShowtimeSeats_02",
+          "cols": [
+            "showtime_id",
+            "seat_id"
+          ],
+          "to": "ShowtimeSeats",
+          "to_cols": [
+            "showtime_id",
+            "seat_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_OrderSeats_01",
+          "(unit_price_vnd > 0)"
+        ]
+      ]
+    },
+    "Payments": {
+      "cols": [
+        {
+          "name": "payment_id",
+          "prop": "PaymentId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "order_id",
+          "prop": "OrderId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "provider",
+          "prop": "Provider",
+          "sql": "varchar(40)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "attempt_key",
+          "prop": "AttemptKey",
+          "sql": "varchar(80)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "provider_transaction_ref",
+          "prop": "ProviderTransactionRef",
+          "sql": "varchar(120)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "amount_vnd",
+          "prop": "AmountVnd",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(16)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('CREATED')"
+        },
+        {
+          "name": "created_utc",
+          "prop": "CreatedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        },
+        {
+          "name": "resolved_utc",
+          "prop": "ResolvedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_Payments",
+        [
+          "payment_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Payments_01",
+          [
+            "order_id",
+            "attempt_key"
+          ]
+        ]
+      ],
+      "fks": [
+        {
+          "name": "FK_Payments_Orders_01",
+          "cols": [
+            "order_id"
+          ],
+          "to": "Orders",
+          "to_cols": [
+            "order_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_Payments_01",
+          "(amount_vnd > 0)"
+        ],
+        [
+          "CK_Payments_02",
+          "(status IN ('CREATED','PENDING','SUCCESS','FAILED','NEEDS_REVIEW'))"
+        ]
+      ]
+    },
+    "PaymentEvents": {
+      "cols": [
+        {
+          "name": "payment_event_id",
+          "prop": "PaymentEventId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "payment_id",
+          "prop": "PaymentId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "provider",
+          "prop": "Provider",
+          "sql": "varchar(40)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "provider_event_ref",
+          "prop": "ProviderEventRef",
+          "sql": "varchar(120)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "provider_transaction_ref",
+          "prop": "ProviderTransactionRef",
+          "sql": "varchar(120)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "auth_result",
+          "prop": "AuthResult",
+          "sql": "varchar(14)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "decision",
+          "prop": "Decision",
+          "sql": "varchar(24)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "payload_sha256",
+          "prop": "PayloadSha256",
+          "sql": "binary(32)",
+          "cs": "byte[]",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "received_utc",
+          "prop": "ReceivedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        }
+      ],
+      "pk": [
+        "PK_PaymentEvents",
+        [
+          "payment_event_id"
+        ]
+      ],
+      "uqs": [],
+      "fks": [
+        {
+          "name": "FK_PaymentEvents_Payments_01",
+          "cols": [
+            "payment_id"
+          ],
+          "to": "Payments",
+          "to_cols": [
+            "payment_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_PaymentEvents_01",
+          "(auth_result IN ('VERIFIED','REJECTED'))"
+        ],
+        [
+          "CK_PaymentEvents_02",
+          "(decision IN ('APPLIED','DUPLICATE','REJECTED','NEEDS_REVIEW','CONFLICT','FAILED_RECORDED'))"
+        ]
+      ]
+    },
+    "Tickets": {
+      "cols": [
+        {
+          "name": "ticket_id",
+          "prop": "TicketId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "ticket_code",
+          "prop": "TicketCode",
+          "sql": "varchar(50)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "order_id",
+          "prop": "OrderId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "showtime_id",
+          "prop": "ShowtimeId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "seat_id",
+          "prop": "SeatId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "prop": "Status",
+          "sql": "varchar(12)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": "('ISSUED')"
+        },
+        {
+          "name": "qr_token_hash",
+          "prop": "QrTokenHash",
+          "sql": "binary(32)",
+          "cs": "byte[]",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "qr_token_cipher",
+          "prop": "QrTokenCipher",
+          "sql": "varbinary(max)",
+          "cs": "byte[]",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "qr_key_id",
+          "prop": "QrKeyId",
+          "sql": "varchar(32)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "issued_utc",
+          "prop": "IssuedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        },
+        {
+          "name": "used_utc",
+          "prop": "UsedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_Tickets",
+        [
+          "ticket_id"
+        ]
+      ],
+      "uqs": [
+        [
+          "UQ_Tickets_01",
+          [
+            "ticket_code"
+          ]
+        ],
+        [
+          "UQ_Tickets_02",
+          [
+            "order_id",
+            "seat_id"
+          ]
+        ],
+        [
+          "UQ_Tickets_03",
+          [
+            "showtime_id",
+            "seat_id"
+          ]
+        ],
+        [
+          "UQ_Tickets_04",
+          [
+            "qr_token_hash"
+          ]
+        ]
+      ],
+      "fks": [
+        {
+          "name": "FK_Tickets_OrderSeats_01",
+          "cols": [
+            "order_id",
+            "showtime_id",
+            "seat_id"
+          ],
+          "to": "OrderSeats",
+          "to_cols": [
+            "order_id",
+            "showtime_id",
+            "seat_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_Tickets_01",
+          "(status IN ('ISSUED','USED'))"
+        ],
+        [
+          "CK_Tickets_02",
+          "(((status='ISSUED' AND used_utc IS NULL) OR (status='USED' AND used_utc IS NOT NULL)))"
+        ]
+      ]
+    },
+    "TicketScans": {
+      "cols": [
+        {
+          "name": "scan_id",
+          "prop": "ScanId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "ticket_id",
+          "prop": "TicketId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "staff_user_id",
+          "prop": "StaffUserId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "scanned_utc",
+          "prop": "ScannedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        },
+        {
+          "name": "outcome",
+          "prop": "Outcome",
+          "sql": "varchar(24)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        }
+      ],
+      "pk": [
+        "PK_TicketScans",
+        [
+          "scan_id"
+        ]
+      ],
+      "uqs": [],
+      "fks": [
+        {
+          "name": "FK_TicketScans_Tickets_01",
+          "cols": [
+            "ticket_id"
+          ],
+          "to": "Tickets",
+          "to_cols": [
+            "ticket_id"
+          ]
+        },
+        {
+          "name": "FK_TicketScans_Users_02",
+          "cols": [
+            "staff_user_id"
+          ],
+          "to": "Users",
+          "to_cols": [
+            "user_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_TicketScans_01",
+          "(outcome IN ('ACCEPTED','ALREADY_USED','WRONG_SHOWTIME','OUTSIDE_WINDOW','REJECTED'))"
+        ]
+      ]
+    },
+    "AuditLogs": {
+      "cols": [
+        {
+          "name": "audit_id",
+          "prop": "AuditId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": false,
+          "identity": true,
+          "default": null
+        },
+        {
+          "name": "actor_user_id",
+          "prop": "ActorUserId",
+          "sql": "bigint",
+          "cs": "long",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "event_type",
+          "prop": "EventType",
+          "sql": "varchar(60)",
+          "cs": "string",
+          "null": false,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "entity_type",
+          "prop": "EntityType",
+          "sql": "varchar(40)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "entity_key",
+          "prop": "EntityKey",
+          "sql": "nvarchar(120)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "correlation_id",
+          "prop": "CorrelationId",
+          "sql": "uniqueidentifier",
+          "cs": "Guid",
+          "null": false,
+          "identity": false,
+          "default": "(NEWID())"
+        },
+        {
+          "name": "details_json",
+          "prop": "DetailsJson",
+          "sql": "nvarchar(max)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "created_utc",
+          "prop": "CreatedUtc",
+          "sql": "datetime2(3)",
+          "cs": "DateTime",
+          "null": false,
+          "identity": false,
+          "default": "(SYSUTCDATETIME())"
+        }
+      ],
+      "pk": [
+        "PK_AuditLogs",
+        [
+          "audit_id"
+        ]
+      ],
+      "uqs": [],
+      "fks": [
+        {
+          "name": "FK_AuditLogs_Users_01",
+          "cols": [
+            "actor_user_id"
+          ],
+          "to": "Users",
+          "to_cols": [
+            "user_id"
+          ]
+        }
+      ],
+      "checks": [
+        [
+          "CK_AuditLogs_01",
+          "(details_json IS NULL OR ISJSON(details_json) = 1)"
+        ]
+      ]
+    }
+  },
+  "source": "BGP_SQL_Server_Schema_v1_0.sql"
+}

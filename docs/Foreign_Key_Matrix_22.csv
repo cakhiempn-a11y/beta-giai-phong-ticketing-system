@@ -1,0 +1,23 @@
+﻿FKName,ChildTable,ChildColumns,ParentTable,ParentColumns,OnDelete
+FK_UserRoles_Users_01,UserRoles,user_id,Users,user_id,NO ACTION
+FK_UserRoles_Roles_02,UserRoles,role_id,Roles,role_id,NO ACTION
+FK_Seats_Rooms_01,Seats,room_id,Rooms,room_id,NO ACTION
+FK_Seats_SeatTypes_02,Seats,seat_type_code,SeatTypes,seat_type_code,NO ACTION
+FK_Showtimes_Movies_01,Showtimes,movie_id,Movies,movie_id,NO ACTION
+FK_Showtimes_Rooms_02,Showtimes,room_id,Rooms,room_id,NO ACTION
+FK_Showtimes_Users_03,Showtimes,created_by,Users,user_id,NO ACTION
+FK_SeatPrices_Showtimes_01,SeatPrices,showtime_id,Showtimes,showtime_id,NO ACTION
+FK_SeatPrices_SeatTypes_02,SeatPrices,seat_type_code,SeatTypes,seat_type_code,NO ACTION
+FK_Orders_Users_01,Orders,user_id,Users,user_id,NO ACTION
+FK_Orders_Showtimes_02,Orders,showtime_id,Showtimes,showtime_id,NO ACTION
+FK_ShowtimeSeats_Showtimes_01,ShowtimeSeats,showtime_id+room_id,Showtimes,showtime_id+room_id,NO ACTION
+FK_ShowtimeSeats_Seats_02,ShowtimeSeats,seat_id+room_id,Seats,seat_id+room_id,NO ACTION
+FK_ShowtimeSeats_Orders_03,ShowtimeSeats,owner_order_id+showtime_id,Orders,order_id+showtime_id,NO ACTION
+FK_OrderSeats_Orders_01,OrderSeats,order_id+showtime_id,Orders,order_id+showtime_id,NO ACTION
+FK_OrderSeats_ShowtimeSeats_02,OrderSeats,showtime_id+seat_id,ShowtimeSeats,showtime_id+seat_id,NO ACTION
+FK_Payments_Orders_01,Payments,order_id,Orders,order_id,NO ACTION
+FK_PaymentEvents_Payments_01,PaymentEvents,payment_id,Payments,payment_id,NO ACTION
+FK_Tickets_OrderSeats_01,Tickets,order_id+showtime_id+seat_id,OrderSeats,order_id+showtime_id+seat_id,NO ACTION
+FK_TicketScans_Tickets_01,TicketScans,ticket_id,Tickets,ticket_id,NO ACTION
+FK_TicketScans_Users_02,TicketScans,staff_user_id,Users,user_id,NO ACTION
+FK_AuditLogs_Users_01,AuditLogs,actor_user_id,Users,user_id,NO ACTION
