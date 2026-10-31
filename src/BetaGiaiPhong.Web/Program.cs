@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using BetaGiaiPhong.Data;
 using BetaGiaiPhong.Web.Middleware;
 using BetaGiaiPhong.Web.Services;
+using BetaGiaiPhong.Web.Services.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +81,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IBookingQueryService, BookingQueryService>();
 builder.Services.AddScoped<ITicketQueryService, TicketQueryService>();
+builder.Services.AddHostedService<ReservationExpiryWorker>();
 
 // 4. Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

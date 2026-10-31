@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-104%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-127%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -15,7 +15,7 @@
 
 - **Project Title:** Analysis, Design, and Implementation of an Online Cinema Ticketing Management System for Beta Giải Phóng Cinema.
 - **Context:** MIS Graduation Capstone Project.
-- **Scope Boundary:** This repository encompasses the full backend ticketing management system: the foundational **Data Layer, Entity Framework Core Relational Modeling, Transactional Services, and Concurrency Verification Suite**, alongside the **ASP.NET Core Web Application** providing Cookie Authentication, Role Authorization, Public Catalog, Interactive Seat Map, Transactional Reservation (BE-01/BE-02), and **Mock Payment, Secure HMAC Webhooks, Electronic Tickets & QR Code Generation (BE-03)**. Real payment gateways and physical turnstile hardware are simulated using academic cryptographic contracts.
+- **Scope Boundary:** This repository encompasses the full backend ticketing management system: the foundational **Data Layer, Entity Framework Core Relational Modeling, Transactional Services, and Concurrency Verification Suite** (BE-01), **ASP.NET Core Web Application** providing Cookie Authentication, Role Authorization, Public Catalog, Interactive Seat Map, Transactional Reservation (BE-02), **Mock Payment, Secure HMAC Webhooks, Electronic Tickets & QR Code Generation** (BE-03), and **Staff QR Ticket Check-in, Web Scanner & Periodic Reservation Expiry Background Worker** (BE-04A). Real payment gateways and physical turnstile hardware are simulated using academic cryptographic contracts.
 
 ---
 
@@ -43,10 +43,10 @@ The solution adheres to clean data-driven and modular monolith design patterns:
                                                 └───────────────────────────────────────┘
 ```
 
-- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, and dynamic QR code generation. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
+- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, dynamic QR code generation, staff check-in portal with browser camera & USB 2D barcode scanning (`/staff/check-in`), check-in history audit log viewer (`/staff/check-in/history`), and a background worker (`ReservationExpiryWorker`) for automatic cleanup of expired reservations. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios. Directly references `BetaGiaiPhong.Data`.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (104 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (127 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
