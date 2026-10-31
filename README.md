@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-28%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-46%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -21,8 +21,15 @@
 
 ## 2. Architectural Overview
 
-The solution adheres to clean data-driven design patterns:
+The solution adheres to clean data-driven and modular monolith design patterns:
 ```
+                      ┌───────────────────────────────────────┐
+                      │          BetaGiaiPhong.Web            │
+                      │  (ASP.NET Core MVC & RESTful API,     │
+                      │   Cookie Auth, Catalog, Seat Map)     │
+                      └──────────────────┬────────────────────┘
+                                         │ references
+                                         ▼
                       ┌───────────────────────────────────────┐
                       │        BetaGiaiPhong.Runner           │
                       │  (CLI Migration, Seed & Verification) │
@@ -37,13 +44,14 @@ The solution adheres to clean data-driven design patterns:
                                          │ references
                       ┌──────────────────┴────────────────────┐
                       │         BetaGiaiPhong.Tests           │
-                      │  (xUnit: Unit & Concurrency Tests)    │
+                      │  (xUnit: Unit, Integration & Web)     │
                       └───────────────────────────────────────┘
 ```
 
+- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time read-only seat map). Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite covering unit tests and live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, and database integrity invariants).
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (46 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -85,6 +93,7 @@ BetaGiaiPhong/
 │   │   ├── ERD_Ghe_Don_Ve_v1.png
 │   │   └── ERD_TongQuan_v1.png
 │   └── quality/                           # Remediation & quality validation reports
+│       ├── BE_01_REPORT.md
 │       └── REFACTORING_REPORT.md
 ├── references/                            # Academic inception documents & UML specs
 │   ├── Beta_Giai_Phong_BPMN_TO_BE_v1_0.docx
@@ -103,9 +112,10 @@ BetaGiaiPhong/
 │   └── 04_integrity_checks.sql            # Cross-table multi-invariant integrity checks
 ├── src/
 │   ├── BetaGiaiPhong.Data/                # EF Core 10 data layer & domain services
-│   └── BetaGiaiPhong.Runner/              # Administrative CLI console application
+│   ├── BetaGiaiPhong.Runner/              # Administrative CLI console application
+│   └── BetaGiaiPhong.Web/                 # ASP.NET Core MVC & RESTful API host
 └── tests/
-    └── BetaGiaiPhong.Tests/               # xUnit unit & integration test suite
+    └── BetaGiaiPhong.Tests/               # xUnit unit, integration & web test suite
 ```
 
 ---
@@ -143,24 +153,26 @@ The data layer enforces core operational invariants:
 - **CR-01 (Late Payment Handling):** When a payment callback arrives after the booking order has expired (`Status = 'EXPIRED'` or `'CANCELLED'`), the system refuses to revive the order or issue tickets. The payment is recorded with `Status = 'NEEDS_REVIEW'` for manual administrative reconciliation.
 - **CR-02 (Seat Reservation Limit):** A single order may contain at most 8 seats.
 - **CR-03 (Lock Duration):** Default seat hold duration is 5 minutes from reservation time.
-- **CR-04 (Pessimistic Row Locking):** Seat reservation queries use `WITH (UPDLOCK, ROWLOCK)` within an explicit transaction to prevent duplicate holds.
+- **CR-04 (Pessimistic Row Locking):** Seat reservation executes under `IsolationLevel.Serializable` with an explicit showtime lock (`SELECT ... FROM dbo.Showtimes WITH (UPDLOCK, HOLDLOCK)`) to serialize concurrent seat allocations for the showtime and guarantee strict all-or-nothing atomicity.
 - **CR-05 (All-or-Nothing Atomicity):** If any requested seat is unavailable, the entire reservation transaction rolls back.
 - **CR-06 (Price Immutability):** Unit prices are captured in `dbo.OrderSeats` at reservation time and never updated even if showtime price tiers change.
 - **CR-07 (Webhook Idempotency):** Duplicate payment webhook deliveries are acknowledged without re-processing or duplicate ticket generation.
 - **CR-08 (QR Single-Use):** Ticket tokens can be redeemed exactly once. Concurrent scans result in at most one `ACCEPTED` outcome.
-- **CR-09 (Scan Time Window):** Tickets may only be scanned within a designated time window relative to showtime start (from 60 minutes before start up to 30 minutes after start).
+- **CR-09 (Scan Time Window):** Tickets may only be scanned within a designated time window relative to showtime start (from 30 minutes before showtime start up to 15 minutes after showtime end).
 
 ---
 
 ## 7. Security Architecture
 
 - **Dependency Hygiene:** `System.Security.Cryptography.Pkcs` is explicitly pinned to version `10.0.14`, completely resolving `NU1902`/`NU1903` vulnerabilities (GHSA-846f-f764-76mx).
+- **Authentication & Authorization:** Modular cookie authentication leveraging existing `dbo.Users` with PBKDF2 (`PasswordHasher<AppUser>`), role-based policies (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`), login rate limiting, and sliding session expiration.
+- **Anti-Forgery & Web Security:** Anti-CSRF protection across all forms (`ValidateAntiForgeryToken`), `SameSite=Lax` cookies, HTTP security headers (`nosniff`, `DENY` framing, `strict-origin-when-cross-origin`), and correlation ID tracing (`X-Correlation-ID`).
 - **Webhook Authentication:** Webhooks are authenticated via `HMAC-SHA256` signatures verified using constant-time comparison against an application secret.
 - **QR Token Cryptography:**
   - Plaintext tokens are never stored in the database.
   - Indexing: SHA-256 digest stored in `dbo.Tickets.qr_hash`.
   - Storage: Authenticated AES-256-GCM ciphertext in `dbo.Tickets.qr_token_cipher`.
-- **Secret Management:** Connection strings and cryptographic secrets are supplied exclusively via environment variables (`ConnectionStrings__BetaDb`, `BGP_HMAC_SECRET`, `BGP_DEMO_PASSWORD`). No production or development credentials are committed.
+- **Secret Management:** Connection strings and cryptographic secrets are supplied exclusively via environment variables (`ConnectionStrings__BetaDb`, `BGP_MOCK_HMAC_KEY_B64`, `BGP_QR_AES_KEY_B64`, `BGP_DEMO_PASSWORD`). No production or development credentials are committed.
 
 ---
 
@@ -262,9 +274,33 @@ Passed BetaGiaiPhong.Tests.IntegrationTests.BookingConcurrencyTests.TC_CON_01c_F
 Passed BetaGiaiPhong.Tests.IntegrationTests.BookingConcurrencyTests.TC_CON_03_OverlappingSeatRequests_MaintainsAllOrNothingAtomicity
 Passed BetaGiaiPhong.Tests.IntegrationTests.BookingConcurrencyTests.TC_CON_01b_TenConcurrentRequestsForSameSeat_ExactlyOneSucceeds
 Passed BetaGiaiPhong.Tests.IntegrationTests.BookingConcurrencyTests.TC_CON_05_InvalidSeatInRequest_RollsBackEntireTransaction
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_01_ValidCredentials_SignsInAndSetsCookie
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_02_InvalidPassword_ReturnsGenericErrorMessage_NoAuthCookie
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_03_NonExistentEmail_ReturnsGenericErrorMessage_NoLeakage
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_04_InactiveUser_IsRejectedWithAccountLockedMessage
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_05_UnauthenticatedUser_AccessingProfile_RedirectsToLogin
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_06_ApiMe_Unauthenticated_Returns401Unauthorized
+Passed BetaGiaiPhong.Tests.WebTests.AuthenticationAndAuthorizationWebTests.TC_WEB_AUTH_07_AuthenticatedSession_CanAccessProfileAndApiMe
+Passed BetaGiaiPhong.Tests.WebTests.PublicCatalogWebTests.TC_WEB_CAT_01_HomePage_Returns200AndRendersHeroAndCatalog
+Passed BetaGiaiPhong.Tests.WebTests.PublicCatalogWebTests.TC_WEB_CAT_02_MoviesPage_OnlyDisplaysPublishedMovies
+Passed BetaGiaiPhong.Tests.WebTests.PublicCatalogWebTests.TC_WEB_CAT_03_MovieDetails_ShowsMetadataAndGroupedShowtimes
+Passed BetaGiaiPhong.Tests.WebTests.PublicCatalogWebTests.TC_WEB_CAT_04_SeatMap_RendersVisualLayoutAndPricingTiers
+Passed BetaGiaiPhong.Tests.WebTests.PublicCatalogWebTests.TC_WEB_CAT_05_ApiMovies_ReturnsPublishedMoviesJson
+Passed BetaGiaiPhong.Tests.WebTests.PublicCatalogWebTests.TC_WEB_CAT_06_ApiShowtimeSeats_CalculatesHeldAndAvailableStatesAccurately
+Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_01_ResponseIncludesSecurityHeaders
+Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_02_PostWithoutCsrfToken_IsRejected
+Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_03_UnhandledException_ReturnsProblemDetailsJsonWithoutStackTrace
+Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_04_CorrelationId_IsGeneratedAndPropagated
+Passed BetaGiaiPhong.Tests.WebTests.WebSecurityTests.TC_WEB_SEC_05_ApiRoute_NonExistentResource_ReturnsProblemDetails404
 
 Test Run Successful.
-Total tests: 28 | Passed: 28 | Failed: 0 | Total time: ~36 Seconds
+Total tests: 46 | Passed: 46 | Failed: 0 | Total time: ~18 Seconds
+```
+
+### 11.1. Running the Web Application
+```powershell
+# Launch the ASP.NET Core Web server (http://localhost:5000 / https://localhost:5001)
+dotnet run --project .\src\BetaGiaiPhong.Web
 ```
 
 ---
@@ -283,21 +319,26 @@ Total tests: 28 | Passed: 28 | Failed: 0 | Total time: ~36 Seconds
 
 ## 13. Quality Verification Evidence
 
-- **Compilation:** 0 errors, 0 warnings across all 3 projects.
+- **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (28/28 tests passed).
+- **Test Suite Pass Rate:** 100% (46/46 tests passed: 28 Data/Domain tests + 18 Web integration tests).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
 
 ---
 
-## 14. Future Roadmap: ASP.NET Core Backend
+## 14. Implementation Status & Roadmap
 
-With the data and concurrency foundation verified, the proposed next implementation phase includes:
-1. **Clean Architecture Separation:** Introduce `BetaGiaiPhong.Core` (DTOs, domain interfaces) and `BetaGiaiPhong.Web` (ASP.NET Core Web API / Minimal Endpoints).
-2. **ASP.NET Core Identity Integration:** Wire authentication cookies/tokens against existing `dbo.Users`, `dbo.Roles`, and `dbo.UserRoles`.
-3. **RESTful Web API Endpoints:** Expose public and staff endpoints for movie listings, seat layout visualization, booking reservations, mock payment checkout, and high-speed QR ticket scanning.
-4. **Interactive Customer Web UI:** Responsive booking frontend built with Razor Pages or modern SPA client.
+### 14.1. Phase BE-01 (Completed)
+- **Host & Architecture:** Modular monolith host in `src/BetaGiaiPhong.Web` targeting .NET 10.
+- **Identity & Authentication:** Custom PBKDF2 Cookie Authentication and Role Authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped directly to existing relational tables `dbo.Users`, `dbo.Roles`, `dbo.UserRoles`.
+- **Public Catalog:** Server-rendered Razor views and RESTful JSON APIs for browsing published movies, showtime schedules, and read-only interactive seat maps.
+- **Security & Quality:** Anti-CSRF protection, HTTP security headers, login rate limiting, correlation ID tracking, RFC 7807 `ProblemDetails` error handling, and 18 automated Web integration tests.
+
+### 14.2. Upcoming Phases
+- **Phase BE-02 (Seat Booking & Checkout):** HTTP transactional seat reservation endpoints, mock payment gateway integration, and booking order lifecycle management.
+- **Phase BE-03 (Ticket Issuance & Scanning):** Secure ticket release, QR token rendering, high-speed staff scanning API, and door admission management.
+- **Phase BE-04 (Admin Management & Workers):** Administrative movie/showtime publishing dashboards, sales reporting views, and background worker for expired reservation cleanup.
 
 ---
 

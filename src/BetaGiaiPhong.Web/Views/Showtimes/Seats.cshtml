@@ -1,0 +1,142 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.SeatMapViewModel
+@{
+    ViewData["Title"] = $"Sơ đồ ghế - {Model.SeatMap.MovieTitle}";
+}
+
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Index">Phim đang chiếu</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Details" asp-route-id="@Model.SeatMap.MovieId">@Model.SeatMap.MovieTitle</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Sơ đồ ghế</li>
+        </ol>
+    </nav>
+
+    <!-- Showtime Info Header -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge bg-primary mb-1">@Model.SeatMap.RoomName</span>
+                <h1 class="h3 fw-bold mb-1">@Model.SeatMap.MovieTitle</h1>
+                <p class="text-muted mb-0">
+                    🕒 Giờ chiếu (VN): <strong>@Model.SeatMap.StartVietnamText</strong> |
+                    Sức chứa: <strong>@Model.SeatMap.TotalCapacity</strong> ghế
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 text-center">
+                <div class="border rounded px-3 py-2 bg-light">
+                    <span class="d-block h5 fw-bold text-success mb-0">@Model.SeatMap.AvailableCount</span>
+                    <small class="text-muted">Ghế trống</small>
+                </div>
+                <div class="border rounded px-3 py-2 bg-light">
+                    <span class="d-block h5 fw-bold text-warning mb-0">@Model.SeatMap.HeldCount</span>
+                    <small class="text-muted">Đang giữ</small>
+                </div>
+                <div class="border rounded px-3 py-2 bg-light">
+                    <span class="d-block h5 fw-bold text-secondary mb-0">@Model.SeatMap.SoldCount</span>
+                    <small class="text-muted">Đã bán</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice Banner -->
+    <div class="alert alert-secondary border d-flex align-items-center gap-2 mb-4" role="alert">
+        <span class="fs-4">ℹ️</span>
+        <div>
+            <strong>Chế độ xem sơ đồ ghế Read-Only (Giai đoạn BE-01):</strong>
+            Sơ đồ hiển thị tình trạng ghế thực tế từ cơ sở dữ liệu. Tính năng chọn ghế và tạo giao dịch đặt vé trực tuyến sẽ được kích hoạt ở giai đoạn BE-02.
+        </div>
+    </div>
+
+    <!-- Seat Map Container -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4 p-md-5 text-center">
+            <!-- Cinema Screen -->
+            <div class="cinema-screen">
+                <span class="cinema-screen-label">MÀN HÌNH CHIẾU</span>
+            </div>
+
+            <!-- Seat Grid -->
+            <div class="seat-grid-container mb-4">
+                @foreach (var row in Model.DistinctRows)
+                {
+                    var seatsInRow = Model.SeatMap.Seats
+                        .Where(s => s.RowLabel == row)
+                        .OrderBy(s => s.ColumnNo)
+                        .ToList();
+
+                    <div class="seat-row">
+                        <span class="seat-row-label">@row</span>
+                        @foreach (var seat in seatsInRow)
+                        {
+                            var seatClass = seat.DisplayState switch
+                            {
+                                "AVAILABLE" when seat.SeatTypeCode == "VIP" => "seat-available-vip",
+                                "AVAILABLE" => "seat-available-standard",
+                                "HELD" => "seat-held",
+                                "SOLD" => "seat-sold",
+                                _ => "seat-blocked"
+                            };
+
+                            var tooltipText = $"{seat.SeatCode} ({seat.SeatTypeName}): {seat.PriceVnd:N0} đ [{seat.DisplayState}]";
+
+                            <div class="seat-box @seatClass"
+                                 title="@tooltipText"
+                                 data-bs-toggle="tooltip"
+                                 data-bs-placement="top">
+                                @seat.SeatCode
+                            </div>
+                        }
+                        <span class="seat-row-label">@row</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Legend & Price List -->
+            <div class="border-top pt-4">
+                <div class="row justify-content-center text-center g-3">
+                    <div class="col-6 col-md-3">
+                        <span class="legend-sample seat-available-standard me-1"></span>
+                        <span class="small">Ghế thường (Standard)</span>
+                        @if (Model.SeatMap.PriceTiersVnd.TryGetValue("STANDARD", out var standardPrice))
+                        {
+                            <strong class="d-block text-primary small">@standardPrice.ToString("N0") đ</strong>
+                        }
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <span class="legend-sample seat-available-vip me-1"></span>
+                        <span class="small">Ghế VIP</span>
+                        @if (Model.SeatMap.PriceTiersVnd.TryGetValue("VIP", out var vipPrice))
+                        {
+                            <strong class="d-block text-danger small">@vipPrice.ToString("N0") đ</strong>
+                        }
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <span class="legend-sample seat-held me-1"></span>
+                        <span class="small">Đang giữ chỗ</span>
+                        <span class="d-block text-muted small">Tạm khóa 5p</span>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <span class="legend-sample seat-sold me-1"></span>
+                        <span class="small">Đã bán</span>
+                        <span class="d-block text-muted small">Không thể đặt</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+}

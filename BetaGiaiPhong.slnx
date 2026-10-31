@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/BetaGiaiPhong.Data/BetaGiaiPhong.Data.csproj" />
   <Project Path="src/BetaGiaiPhong.Runner/BetaGiaiPhong.Runner.csproj" />
+  <Project Path="src/BetaGiaiPhong.Web/BetaGiaiPhong.Web.csproj" />
   <Project Path="tests/BetaGiaiPhong.Tests/BetaGiaiPhong.Tests.csproj" />
 </Solution>

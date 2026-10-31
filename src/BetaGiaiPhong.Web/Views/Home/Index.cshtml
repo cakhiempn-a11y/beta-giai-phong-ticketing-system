@@ -1,0 +1,134 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.HomeViewModel
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<div class="container mt-4">
+    <!-- Hero Banner -->
+    <div class="hero-banner p-4 p-md-5 mb-5 shadow-sm text-center text-md-start">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="badge bg-warning text-dark px-3 py-2 mb-2 text-uppercase fw-bold">Beta Giải Phóng Prototype</span>
+                <h1 class="display-5 fw-bold mb-3">Hệ Thống Quản Lý Bán Vé Trực Tuyến</h1>
+                <p class="lead text-light opacity-75 mb-4">
+                    Nền tảng tra cứu lịch chiếu, kiểm tra sơ đồ ghế thời gian thực và quản lý vé xem phim tại rạp Beta Giải Phóng.
+                </p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
+                    <a class="btn btn-primary btn-lg px-4" href="#movies-section">Xem phim đang chiếu</a>
+                    <a class="btn btn-outline-light btn-lg px-4" asp-controller="Home" asp-action="Privacy">Quy chế học thuật</a>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center mt-4 mt-lg-0">
+                <div class="p-3 bg-white bg-opacity-10 rounded-3 border border-white border-opacity-25">
+                    <h5 class="fw-bold text-warning mb-1">Rạp Beta Giải Phóng</h5>
+                    <p class="small text-light mb-2">Đường Giải Phóng, Hai Bà Trưng, Hà Nội</p>
+                    <div class="d-flex justify-content-around text-center mt-3">
+                        <div>
+                            <div class="h4 fw-bold mb-0">@Model.FeaturedMovies.Count</div>
+                            <small class="text-white-50">Phim đang chiếu</small>
+                        </div>
+                        <div>
+                            <div class="h4 fw-bold mb-0">@Model.UpcomingShowtimes.Count</div>
+                            <small class="text-white-50">Suất chiếu sắp tới</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Published Movies Section -->
+    <div id="movies-section" class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="h3 fw-bold mb-1">Phim Đang Chiếu</h2>
+                <p class="text-muted mb-0">Danh sách phim hiện đang mở lịch chiếu tại rạp</p>
+            </div>
+            <a class="btn btn-outline-primary btn-sm" asp-controller="Movies" asp-action="Index">Tất cả phim &rarr;</a>
+        </div>
+
+        @if (Model.FeaturedMovies.Count == 0)
+        {
+            <div class="alert alert-info text-center py-4">
+                Hiện tại chưa có phim nào được xuất bản. Vui lòng quay lại sau!
+            </div>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+                @foreach (var movie in Model.FeaturedMovies)
+                {
+                    <div class="col">
+                        <div class="card h-100 shadow-sm movie-card">
+                            <div class="movie-poster-placeholder">
+                                <span class="badge bg-light text-dark mb-2">@movie.GenreText</span>
+                                <h5 class="card-title fw-bold text-white px-2 mb-0">@movie.Title</h5>
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between text-muted small mb-2">
+                                    <span>Thời lượng:</span>
+                                    <strong class="text-dark">@movie.DurationMin phút</strong>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted small mb-3">
+                                    <span>Suất chiếu khả dụng:</span>
+                                    <span class="badge bg-success">@movie.UpcomingShowtimesCount suất</span>
+                                </div>
+                                <a class="btn btn-primary mt-auto w-100" asp-controller="Movies" asp-action="Details" asp-route-id="@movie.MovieId">
+                                    Xem lịch chiếu & sơ đồ
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Upcoming Showtimes Quick Schedule -->
+    @if (Model.UpcomingShowtimes.Count > 0)
+    {
+        <div class="mb-5">
+            <h2 class="h3 fw-bold mb-3">Lịch Chiếu Sắp Diễn Ra</h2>
+            <div class="table-responsive bg-white rounded-3 shadow-sm border">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="py-3 ps-3">Giờ chiếu (VN)</th>
+                            <th scope="col">Tên phim</th>
+                            <th scope="col">Phòng chiếu</th>
+                            <th scope="col">Ghế trống</th>
+                            <th scope="col" class="text-end pe-3">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var st in Model.UpcomingShowtimes)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    <span class="fw-bold text-primary">@st.StartVietnamText</span>
+                                    <small class="text-muted d-block">kết thúc: @st.EndVietnamText</small>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold">@st.MovieTitle</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@st.RoomName</span>
+                                </td>
+                                <td>
+                                    <span class="badge @(st.AvailableSeatsCount > 0 ? "bg-success" : "bg-danger")">
+                                        @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn btn-sm btn-outline-primary" asp-controller="Showtimes" asp-action="Seats" asp-route-id="@st.ShowtimeId">
+                                        Xem sơ đồ ghế
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
