@@ -1,0 +1,227 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.CheckoutViewModel
+@{
+    ViewData["Title"] = $"Thanh toán đơn hàng #{Model.OrderCode}";
+}
+
+<div class="container mt-4 mb-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId">@Model.OrderCode</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Thanh toán</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="card shadow-sm border-0 mb-4 bg-primary text-white">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h1 class="h3 fw-bold mb-1">💳 Xác nhận &amp; Thanh toán đơn hàng</h1>
+                <p class="mb-0 opacity-75">
+                    Mã đơn hàng: <span class="font-monospace fw-bold text-warning">@Model.OrderCode</span> |
+                    Suất chiếu: <strong>@Model.FormattedStartUtc</strong>
+                </p>
+            </div>
+            <div class="bg-white text-dark rounded p-3 text-center shadow-sm">
+                <span class="d-block small text-muted fw-bold">THỜI GIAN GIỮ CHỖ CÒN LẠI</span>
+                <span id="countdownTimer" class="h3 fw-bold text-danger font-monospace mb-0" data-remaining="@Model.RemainingSeconds">
+                    --:--
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Academic Disclaimer Banner -->
+    <div class="alert alert-warning border border-warning shadow-sm mb-4" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-4">⚠️</span>
+            <div>
+                <strong class="d-block">LƯU Ý HỌC THUẬT QUAN TRỌNG:</strong>
+                <span class="small">
+                    Đây là cổng thanh toán mô phỏng (MOCK) phục vụ đề án nghiên cứu Hệ thống thông tin quản lý (MIS).
+                    Hệ thống <strong>KHÔNG</strong> thu tiền thật, <strong>KHÔNG</strong> yêu cầu số thẻ ngân hàng thật, và <strong>KHÔNG</strong> liên kết với bất kỳ tổ chức tín dụng thực tế nào.
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Order & Seat Details -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0">Chi tiết vé đặt</h2>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <span class="badge bg-primary mb-1">@Model.RoomName</span>
+                        <h3 class="h4 fw-bold text-dark mb-1">@Model.MovieTitle</h3>
+                        <p class="text-muted mb-0">🕒 Giờ chiếu: <strong>@Model.FormattedStartUtc</strong></p>
+                    </div>
+
+                    <h4 class="h6 fw-bold text-uppercase text-secondary mb-3">Ghế đã chọn (@Model.Seats.Count ghế)</h4>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã ghế</th>
+                                    <th>Hạng ghế</th>
+                                    <th class="text-end">Đơn giá</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var seat in Model.Seats)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-dark font-monospace px-2 py-1 fs-6">@seat.SeatCode</span>
+                                        </td>
+                                        <td>
+                                            @if (seat.SeatTypeSnapshot == "VIP")
+                                            {
+                                                <span class="badge bg-danger">VIP</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-primary">Thường</span>
+                                            }
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                            @seat.UnitPriceVnd.ToString("N0") đ
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-light rounded p-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tạm tính:</span>
+                            <span class="fw-semibold">@Model.SubtotalVnd.ToString("N0") đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Phí tiện ích:</span>
+                            <span class="fw-semibold">@Model.FeeVnd.ToString("N0") đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Khuyến mãi:</span>
+                            <span class="text-success fw-semibold">-@Model.DiscountVnd.ToString("N0") đ</span>
+                        </div>
+                        <hr class="my-2" />
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 fw-bold mb-0">Tổng tiền thanh toán:</span>
+                            <span class="h3 fw-bold text-primary mb-0">@Model.TotalVnd.ToString("N0") đ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Actions & Simulator -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0">Phương thức thanh toán</h2>
+                </div>
+                <div class="card-body p-4">
+                    <div class="border rounded p-3 mb-4 bg-light">
+                        <div class="form-check d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="radio" name="paymentProvider" id="mockProvider" checked disabled>
+                            <label class="form-check-label fw-bold text-dark" for="mockProvider">
+                                🏦 Cổng giả lập mô phỏng (Mock Gateway)
+                            </label>
+                        </div>
+                        <p class="small text-muted mb-0 mt-2 ms-4">
+                            Giao thức mô phỏng phản hồi thanh toán có xác thực chữ ký HMAC-SHA256 chuẩn kiến trúc bảo mật rạp chiếu phim.
+                        </p>
+                    </div>
+
+                    @if (Model.IsSimulatorEnabled)
+                    {
+                        <h3 class="h6 fw-bold text-uppercase text-secondary mb-3">Thao tác thanh toán trực tiếp (Môi trường Development)</h3>
+
+                        <!-- Successful Demo Payment -->
+                        <form asp-controller="Orders" asp-action="DemoPay" asp-route-id="@Model.OrderId" method="post" class="mb-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="outcome" value="SUCCESS" />
+                            <button type="submit" class="btn btn-success btn-lg w-100 py-3 fw-bold shadow-sm" id="btnPaySuccess">
+                                ✅ Thanh toán thành công (Mô phỏng SUCCESS)
+                            </button>
+                        </form>
+
+                        <!-- Failed Demo Payment -->
+                        <form asp-controller="Orders" asp-action="DemoPay" asp-route-id="@Model.OrderId" method="post" class="mb-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="outcome" value="FAILED" />
+                            <button type="submit" class="btn btn-outline-danger w-100 py-2" id="btnPayFailed" onclick="return confirm('Mô phỏng thanh toán thất bại? Đơn hàng sẽ bị hủy và ghế sẽ được giải phóng.')">
+                                ❌ Mô phỏng thanh toán thất bại (FAILED)
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary border mb-3">
+                            <p class="small mb-0">
+                                Thanh toán trực tiếp trên trình duyệt chỉ khả dụng khi cấu hình <code>BGP_ENABLE_MOCK_PAYMENT_SIMULATOR=true</code> trong môi trường Development.
+                            </p>
+                        </div>
+                    }
+
+                    <hr class="my-4" />
+
+                    <!-- Cancel / Return Buttons -->
+                    <div class="d-flex flex-column gap-2">
+                        <form asp-controller="Orders" asp-action="Cancel" asp-route-id="@Model.OrderId" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary w-100 py-2" onclick="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
+                                Hủy đơn hàng và quay lại
+                            </button>
+                        </form>
+
+                        <a class="btn btn-link text-decoration-none text-center" asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId">
+                            &larr; Xem lại chi tiết đơn hàng
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var timerEl = document.getElementById('countdownTimer');
+            if (!timerEl) return;
+
+            var remaining = parseInt(timerEl.getAttribute('data-remaining'), 10) || 0;
+
+            function updateTimer() {
+                if (remaining <= 0) {
+                    timerEl.textContent = '00:00 (Hết hạn)';
+                    timerEl.classList.remove('text-danger');
+                    timerEl.classList.add('text-muted');
+                    var payBtn = document.getElementById('btnPaySuccess');
+                    if (payBtn) payBtn.disabled = true;
+                    var failBtn = document.getElementById('btnPayFailed');
+                    if (failBtn) failBtn.disabled = true;
+                    return;
+                }
+
+                var m = Math.floor(remaining / 60);
+                var s = remaining % 60;
+                var mStr = m < 10 ? '0' + m : m;
+                var sStr = s < 10 ? '0' + s : s;
+
+                timerEl.textContent = mStr + ':' + sStr;
+                remaining--;
+                setTimeout(updateTimer, 1000);
+            }
+
+            updateTimer();
+        });
+    </script>
+}

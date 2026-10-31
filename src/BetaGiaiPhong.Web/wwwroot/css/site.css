@@ -167,3 +167,16 @@ body {
     transform: scale(1.08);
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
 }
+
+
+/* Ticket styling */
+.ticket-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease-in-out;
+}
+
+.ticket-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
