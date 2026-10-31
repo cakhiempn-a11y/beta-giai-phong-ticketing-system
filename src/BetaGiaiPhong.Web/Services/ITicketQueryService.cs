@@ -12,5 +12,5 @@ public interface ITicketQueryService
         long customerId, long orderId, CancellationToken ct = default);
 
     Task<byte[]?> GenerateQrCodePngBytesAsync(
-        long ticketId, long? customerId, bool isStaffOrHigher = false, CancellationToken ct = default);
+        long ticketId, long customerId, CancellationToken ct = default);
 }

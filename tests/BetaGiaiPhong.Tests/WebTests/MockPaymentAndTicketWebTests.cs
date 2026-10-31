@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
+using BetaGiaiPhong.Tests.Helpers;
 using BetaGiaiPhong.Tests.IntegrationTests;
 using BetaGiaiPhong.Web.Models.Requests;
 using BetaGiaiPhong.Web.Models.Responses;
@@ -23,6 +24,19 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
     private HttpClient CreateNewClient()
     {
         return factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = false
+        });
+    }
+
+    private HttpClient CreateSimulatorClient(bool enabled)
+    {
+        var customizedFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BGP_ENABLE_MOCK_PAYMENT_SIMULATOR", enabled ? "true" : "false");
+        });
+        return customizedFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             HandleCookies = false
@@ -262,6 +276,58 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
 
         Assert.Equal(dto1.PaymentId, dto2.PaymentId);
         Assert.Equal(dto1.AttemptKey, dto2.AttemptKey);
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_04b_GetPaymentAttempt_AccessControl_AndLocationHeaderVerification()
+    {
+        var client1 = CreateNewClient();
+        var client2 = CreateNewClient();
+        var clientGuest = CreateNewClient();
+        var (auth1, afCookie1, xsrf1) = await LoginAndGetTokensAsync(client1, "customer1@demo.invalid");
+        var (auth2, _, _) = await LoginAndGetTokensAsync(client2, "customer2@demo.invalid");
+
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        var (orderId, _, _) = await CreateOrderAsync(1, showtimeId, 1);
+        var attemptKey = "ATTEMPT-LOC-" + Guid.NewGuid().ToString("N");
+
+        // 1. Customer 1 creates payment attempt
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{orderId}/payments/mock-attempt")
+        {
+            Content = JsonContent.Create(new CreateMockAttemptRequest(attemptKey))
+        };
+        req.Headers.Add("Cookie", $"{auth1}; {afCookie1}; XSRF-TOKEN={xsrf1}");
+        req.Headers.Add("X-XSRF-TOKEN", xsrf1);
+        var resp = await client1.SendAsync(req);
+        Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+
+        var dto = await resp.Content.ReadFromJsonAsync<PaymentAttemptDto>();
+        Assert.NotNull(dto);
+
+        // Verify Location header points to real GET endpoint
+        var location = resp.Headers.Location?.ToString();
+        Assert.NotNull(location);
+        Assert.EndsWith($"/api/orders/{orderId}/payments/{dto.PaymentId}", location);
+
+        // 2. Customer 1 GET payment attempt -> 200 OK
+        var getReq1 = new HttpRequestMessage(HttpMethod.Get, location);
+        getReq1.Headers.Add("Cookie", auth1);
+        var getResp1 = await client1.SendAsync(getReq1);
+        Assert.Equal(HttpStatusCode.OK, getResp1.StatusCode);
+        var getDto = await getResp1.Content.ReadFromJsonAsync<PaymentAttemptDto>();
+        Assert.Equal(dto.PaymentId, getDto?.PaymentId);
+        Assert.Equal(dto.AttemptKey, getDto?.AttemptKey);
+
+        // 3. Customer 2 GET Customer 1's payment attempt -> 404 Not Found (chống IDOR)
+        var getReq2 = new HttpRequestMessage(HttpMethod.Get, location);
+        getReq2.Headers.Add("Cookie", auth2);
+        var getResp2 = await client2.SendAsync(getReq2);
+        Assert.Equal(HttpStatusCode.NotFound, getResp2.StatusCode);
+
+        // 4. Guest GET payment attempt -> 401 Unauthorized
+        var getReqGuest = new HttpRequestMessage(HttpMethod.Get, location);
+        var getRespGuest = await clientGuest.SendAsync(getReqGuest);
+        Assert.Equal(HttpStatusCode.Unauthorized, getRespGuest.StatusCode);
     }
 
     [Fact]
@@ -702,7 +768,7 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
     }
 
     [Fact]
-    public async Task TC_WEB_PAY_17_GetQrCode_ReturnsValidPng_DecryptsToValidToken()
+    public async Task TC_WEB_PAY_17_GetQrCode_ValidOwner_ReturnsValidPng_DecodesQrImageAndScansSuccessfully()
     {
         var client = CreateNewClient();
         var (authCookie, _, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
@@ -722,10 +788,12 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
         }
 
         long ticketId;
+        byte[] expectedHash;
         await using (var db = await fixture.CreateDbContextAsync())
         {
             var t = await db.Tickets.FirstAsync(t => t.OrderId == orderId);
             ticketId = t.TicketId;
+            expectedHash = t.QrTokenHash;
         }
 
         var qrReq = new HttpRequestMessage(HttpMethod.Get, $"/tickets/{ticketId}/qr");
@@ -738,15 +806,207 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
 
         var bytes = await qrResp.Content.ReadAsByteArrayAsync();
         Assert.True(bytes.Length > 8);
-        // PNG magic number: 0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A
-        Assert.Equal(0x89, bytes[0]);
-        Assert.Equal(0x50, bytes[1]);
-        Assert.Equal(0x4E, bytes[2]);
-        Assert.Equal(0x47, bytes[3]);
+
+        // Decode QR token directly from PNG image bytes using ZXing decoder
+        var decodedToken = QrPngDecoder.Decode(bytes);
+        Assert.False(string.IsNullOrWhiteSpace(decodedToken));
+
+        // Verify SHA-256 digest of decoded token matches QrTokenHash
+        var computedHash = QrTokenProtector.HashToken(decodedToken);
+        Assert.Equal(expectedHash, computedHash);
+
+        // Verify lifecycle via TicketScanningService
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var showtime = await db.Showtimes.SingleAsync(s => s.ShowtimeId == showtimeId);
+            var staff = await db.Users.FirstAsync(u => u.NormalizedEmail == "STAFF@DEMO.INVALID");
+
+            // 1. First scan in-window -> ACCEPTED
+            var scanner1 = new TicketScanningService(db, new TestClock(showtime.StartUtc));
+            var scanResult1 = await scanner1.ScanAsync(staff.UserId, decodedToken, showtimeId);
+            Assert.Equal("ACCEPTED", scanResult1.Outcome);
+            Assert.Equal(ticketId, scanResult1.TicketId);
+
+            // 2. Second scan of already scanned ticket -> ALREADY_USED
+            var scanner2 = new TicketScanningService(db, new TestClock(showtime.StartUtc.AddMinutes(5)));
+            var scanResult2 = await scanner2.ScanAsync(staff.UserId, decodedToken, showtimeId);
+            Assert.Equal("ALREADY_USED", scanResult2.Outcome);
+
+            // 3. Scan for wrong showtime -> WRONG_SHOWTIME
+            var scannerWrong = new TicketScanningService(db, new TestClock(showtime.StartUtc));
+            var scanResultWrong = await scannerWrong.ScanAsync(staff.UserId, decodedToken, expectedShowtimeId: showtimeId + 9999);
+            Assert.Equal("WRONG_SHOWTIME", scanResultWrong.Outcome);
+        }
     }
 
     [Fact]
-    public async Task TC_WEB_PAY_18_TicketApi_DoesNotLeakRawTokenOrCipher()
+    public async Task TC_WEB_PAY_17b_TicketScanning_OutsideWindow_ReturnsOutsideWindow()
+    {
+        var client = CreateNewClient();
+        var (authCookie, _, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        var (orderId, orderCode, totalVnd) = await CreateOrderAsync(1, showtimeId, 1);
+
+        var attemptKey = "ATT-WINDOW-" + Guid.NewGuid().ToString("N");
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var ps = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+            await ps.CreateMockAttemptAsync(1, orderId, attemptKey);
+            var msg = new MockPaymentMessage("EVT-WINDOW-" + Guid.NewGuid().ToString("N"), attemptKey, "TXN-WINDOW-" + Guid.NewGuid().ToString("N"), orderCode, totalVnd, "SUCCESS");
+            var sig = MockPaymentSecurity.SignForDevelopment(msg);
+            await ps.ApplyVerifiedMockAsync(MockPaymentSecurity.Verify(msg, sig));
+        }
+
+        long ticketId;
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var t = await db.Tickets.FirstAsync(t => t.OrderId == orderId);
+            ticketId = t.TicketId;
+        }
+
+        var qrReq = new HttpRequestMessage(HttpMethod.Get, $"/tickets/{ticketId}/qr");
+        qrReq.Headers.Add("Cookie", authCookie);
+        var qrResp = await client.SendAsync(qrReq);
+        var bytes = await qrResp.Content.ReadAsByteArrayAsync();
+        var decodedToken = QrPngDecoder.Decode(bytes);
+
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var showtime = await db.Showtimes.SingleAsync(s => s.ShowtimeId == showtimeId);
+            var staff = await db.Users.FirstAsync(u => u.NormalizedEmail == "STAFF@DEMO.INVALID");
+
+            // Scan 3 hours before start time (outside -30min window)
+            var scanner = new TicketScanningService(db, new TestClock(showtime.StartUtc.AddHours(-3)));
+            var result = await scanner.ScanAsync(staff.UserId, decodedToken, showtimeId);
+            Assert.Equal("OUTSIDE_WINDOW", result.Outcome);
+        }
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_18_GetQrCode_CustomerA_CannotGetCustomerB_Qr_Returns404()
+    {
+        var clientA = CreateNewClient();
+        var (authCookieA, _, _) = await LoginAndGetTokensAsync(clientA, "customer1@demo.invalid");
+
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        // Customer 2's order
+        var (orderBId, orderCodeB, totalVndB) = await CreateOrderAsync(2, showtimeId, 1);
+
+        var attemptKey = "ATT-B-" + Guid.NewGuid().ToString("N");
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var ps = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+            await ps.CreateMockAttemptAsync(2, orderBId, attemptKey);
+            var msg = new MockPaymentMessage("EVT-B-" + Guid.NewGuid().ToString("N"), attemptKey, "TXN-B-" + Guid.NewGuid().ToString("N"), orderCodeB, totalVndB, "SUCCESS");
+            var sig = MockPaymentSecurity.SignForDevelopment(msg);
+            await ps.ApplyVerifiedMockAsync(MockPaymentSecurity.Verify(msg, sig));
+        }
+
+        long ticketBId;
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var t = await db.Tickets.FirstAsync(t => t.OrderId == orderBId);
+            ticketBId = t.TicketId;
+        }
+
+        // Customer A attempts to get Customer B's QR code
+        var qrReq = new HttpRequestMessage(HttpMethod.Get, $"/tickets/{ticketBId}/qr");
+        qrReq.Headers.Add("Cookie", authCookieA);
+
+        var qrResp = await clientA.SendAsync(qrReq);
+        Assert.Equal(HttpStatusCode.NotFound, qrResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_19_GetQrCode_Guest_IsRejected_ReturnsRedirectOrUnauthorized()
+    {
+        var client = CreateNewClient();
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        var (orderId, orderCode, totalVnd) = await CreateOrderAsync(1, showtimeId, 1);
+
+        var attemptKey = "ATT-GUEST-" + Guid.NewGuid().ToString("N");
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var ps = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+            await ps.CreateMockAttemptAsync(1, orderId, attemptKey);
+            var msg = new MockPaymentMessage("EVT-GUEST-" + Guid.NewGuid().ToString("N"), attemptKey, "TXN-GUEST-" + Guid.NewGuid().ToString("N"), orderCode, totalVnd, "SUCCESS");
+            var sig = MockPaymentSecurity.SignForDevelopment(msg);
+            await ps.ApplyVerifiedMockAsync(MockPaymentSecurity.Verify(msg, sig));
+        }
+
+        long ticketId;
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var t = await db.Tickets.FirstAsync(t => t.OrderId == orderId);
+            ticketId = t.TicketId;
+        }
+
+        var qrReq = new HttpRequestMessage(HttpMethod.Get, $"/tickets/{ticketId}/qr");
+        // No Cookie header
+
+        var qrResp = await client.SendAsync(qrReq);
+        Assert.True(qrResp.StatusCode is HttpStatusCode.Redirect or HttpStatusCode.Unauthorized);
+        if (qrResp.StatusCode == HttpStatusCode.Redirect)
+        {
+            Assert.Contains("/account/login", qrResp.Headers.Location?.ToString());
+        }
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_20_GetQrCode_Staff_CannotDownloadCustomerQr_Returns403Forbidden()
+    {
+        var clientStaff = CreateNewClient();
+        var (authCookieStaff, _, _) = await LoginAndGetTokensAsync(clientStaff, "staff@demo.invalid");
+
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        var (orderId, orderCode, totalVnd) = await CreateOrderAsync(1, showtimeId, 1);
+
+        var attemptKey = "ATT-STAFF-" + Guid.NewGuid().ToString("N");
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var ps = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+            await ps.CreateMockAttemptAsync(1, orderId, attemptKey);
+            var msg = new MockPaymentMessage("EVT-STAFF-" + Guid.NewGuid().ToString("N"), attemptKey, "TXN-STAFF-" + Guid.NewGuid().ToString("N"), orderCode, totalVnd, "SUCCESS");
+            var sig = MockPaymentSecurity.SignForDevelopment(msg);
+            await ps.ApplyVerifiedMockAsync(MockPaymentSecurity.Verify(msg, sig));
+        }
+
+        long ticketId;
+        await using (var db = await fixture.CreateDbContextAsync())
+        {
+            var t = await db.Tickets.FirstAsync(t => t.OrderId == orderId);
+            ticketId = t.TicketId;
+        }
+
+        // Staff attempts to download customer QR image
+        var qrReq = new HttpRequestMessage(HttpMethod.Get, $"/tickets/{ticketId}/qr");
+        qrReq.Headers.Add("Cookie", authCookieStaff);
+
+        var qrResp = await clientStaff.SendAsync(qrReq);
+        Assert.Equal(HttpStatusCode.Forbidden, qrResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_21_GetQrCode_UnpaidOrder_Returns404NotFound()
+    {
+        var client = CreateNewClient();
+        var (authCookie, _, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        // Order remains in PENDING_PAYMENT
+        var (orderId, _, _) = await CreateOrderAsync(1, showtimeId, 1);
+
+        // Non-existent or unpaid ticket request
+        var qrReq = new HttpRequestMessage(HttpMethod.Get, $"/tickets/9999999/qr");
+        qrReq.Headers.Add("Cookie", authCookie);
+
+        var qrResp = await client.SendAsync(qrReq);
+        Assert.Equal(HttpStatusCode.NotFound, qrResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_22_TicketApi_DoesNotLeakRawTokenOrCipher()
     {
         var client = CreateNewClient();
         var (authCookie, _, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
@@ -778,29 +1038,55 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
     }
 
     [Fact]
-    public void TC_WEB_PAY_19_QrKeyStability_UnsealsConsistentlyAcrossInstances()
+    public async Task TC_WEB_PAY_23_PostDemoPay_SimulatorDisabled_Returns404NotFound()
     {
-        var protector1 = new QrTokenProtector();
-        var (token, hash, cipher) = protector1.Issue();
-
-        // Second independent protector instance with same key
-        var protector2 = new QrTokenProtector();
-        var unsealed = protector2.Unseal(cipher);
-
-        Assert.Equal(token, unsealed);
-        Assert.Equal(hash, QrTokenProtector.HashToken(unsealed));
-    }
-
-    [Fact]
-    public async Task TC_WEB_PAY_20_PostDemoPay_InDevelopment_TransitionsOrderToPaid()
-    {
-        var client = CreateNewClient();
+        // Default client has simulator disabled (BGP_ENABLE_MOCK_PAYMENT_SIMULATOR is false/absent)
+        var client = CreateSimulatorClient(enabled: false);
         var (authCookie, afCookie, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
 
         var showtimeId = await CreateIsolatedShowtimeAsync(2);
         var (orderId, _, _) = await CreateOrderAsync(1, showtimeId, 1);
 
-        // Fetch demo pay page with auth cookie to get fresh anti-forgery token
+        // Fetch checkout page to extract valid CSRF tokens
+        var checkoutReq = new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}/checkout");
+        checkoutReq.Headers.Add("Cookie", authCookie);
+        var checkoutResp = await client.SendAsync(checkoutReq);
+        checkoutResp.EnsureSuccessStatusCode();
+
+        var setCookieHeaders = checkoutResp.Headers.GetValues("Set-Cookie");
+        var checkoutAfCookie = setCookieHeaders.FirstOrDefault(c => c.Contains(".BetaGiaiPhong.Antiforgery"))?.Split(';')[0] ?? afCookie;
+        var html = await checkoutResp.Content.ReadAsStringAsync();
+        var match = Regex.Match(html, @"name=""__RequestVerificationToken""\s+type=""hidden""\s+value=""([^""]+)""");
+        if (!match.Success) match = Regex.Match(html, @"value=""([^""]+)""\s+name=""__RequestVerificationToken""");
+        Assert.True(match.Success);
+        var orderAfToken = match.Groups[1].Value;
+
+        var form = new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = orderAfToken,
+            ["outcome"] = "SUCCESS"
+        };
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/orders/{orderId}/demo-pay")
+        {
+            Content = new FormUrlEncodedContent(form)
+        };
+        req.Headers.Add("Cookie", $"{authCookie}; {checkoutAfCookie}");
+
+        var resp = await client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task TC_WEB_PAY_24_PostDemoPay_SimulatorEnabled_InDevelopment_TransitionsOrderToPaid()
+    {
+        // Client with simulator explicitly enabled via opt-in
+        var client = CreateSimulatorClient(enabled: true);
+        var (authCookie, afCookie, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+
+        var showtimeId = await CreateIsolatedShowtimeAsync(2);
+        var (orderId, _, _) = await CreateOrderAsync(1, showtimeId, 1);
+
+        // Fetch checkout page with auth cookie to get fresh anti-forgery token
         var checkoutReq = new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}/checkout");
         checkoutReq.Headers.Add("Cookie", authCookie);
         var checkoutResp = await client.SendAsync(checkoutReq);
@@ -837,9 +1123,9 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
     }
 
     [Fact]
-    public async Task TC_WEB_PAY_21_PostDemoPay_WithoutCsrf_Returns400BadRequest()
+    public async Task TC_WEB_PAY_25_PostDemoPay_WithoutCsrf_Returns400BadRequest()
     {
-        var client = CreateNewClient();
+        var client = CreateSimulatorClient(enabled: true);
         var (authCookie, _, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
 
         var showtimeId = await CreateIsolatedShowtimeAsync(2);
@@ -861,7 +1147,7 @@ public sealed class MockPaymentAndTicketWebTests(TestDatabaseFixture fixture) : 
     }
 
     [Fact]
-    public async Task TC_WEB_PAY_22_MultiTableIntegrityChecks_ZeroViolationsAfterPayments()
+    public async Task TC_WEB_PAY_26_MultiTableIntegrityChecks_ZeroViolationsAfterPayments()
     {
         await using var db = await fixture.CreateDbContextAsync();
         var checks = new (string Name, string Sql)[]

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BetaGiaiPhong.Data.Persistence;
+using BetaGiaiPhong.Data.Services;
 using BetaGiaiPhong.Web.Models.Responses;
 using BetaGiaiPhong.Web.Services;
 
@@ -32,15 +33,15 @@ public sealed class TicketsApiController(
             });
         }
 
-        // Verify order exists and belongs to current customer
+        // Verify order exists, belongs to current customer, and is PAID
         var order = await db.Orders.AsNoTracking().SingleOrDefaultAsync(o => o.OrderId == id, ct);
-        if (order is null || order.UserId != customerId)
+        if (order is null || order.UserId != customerId || order.Status != OrderStates.Paid)
         {
             return NotFound(new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
                 Title = "ORDER_NOT_FOUND",
-                Detail = "Không tìm thấy đơn hàng yêu cầu."
+                Detail = "Không tìm thấy đơn hàng yêu cầu hoặc đơn hàng chưa hoàn tất thanh toán."
             });
         }
 

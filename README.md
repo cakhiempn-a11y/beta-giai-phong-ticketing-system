@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-95%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-104%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -46,7 +46,7 @@ The solution adheres to clean data-driven and modular monolith design patterns:
 - **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, and dynamic QR code generation. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios. Directly references `BetaGiaiPhong.Data`.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (95 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (104 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -168,7 +168,7 @@ The data layer enforces core operational invariants:
   - Plaintext tokens are never stored in the database.
   - Indexing: SHA-256 digest stored in `dbo.Tickets.qr_hash`.
   - Storage: Authenticated AES-256-GCM ciphertext in `dbo.Tickets.qr_token_cipher`.
-- **Secret Management:** Connection strings and cryptographic secrets are supplied exclusively via environment variables (`ConnectionStrings__BetaDb`, `BGP_MOCK_HMAC_KEY_B64`, `BGP_QR_AES_KEY_B64`, `BGP_DEMO_PASSWORD`). No production or development credentials are committed.
+- **Secret Management:** Connection strings and cryptographic secrets are supplied exclusively via environment variables or .NET User Secrets (`dotnet user-secrets`) during local development (`ConnectionStrings__BetaDb`, `BGP_MOCK_HMAC_KEY_B64`, `BGP_QR_AES_KEY_B64`, `BGP_DEMO_PASSWORD`). No production or development credentials are committed to Git. The mock payment simulator (`BGP_ENABLE_MOCK_PAYMENT_SIMULATOR`) is disabled by default in the repository. Application startup strictly validates 256-bit CSPRNG key lengths (fail-closed).
 
 ---
 
@@ -316,6 +316,7 @@ Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_01_C
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_02_CreateMockAttempt_Unauthenticated_Returns401
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_03_CreateMockAttempt_OtherCustomerOrder_Returns404
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_04_CreateMockAttempt_NonPendingOrder_Returns409Conflict
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_04b_GetPaymentAttempt_Owner_Returns200_CrossCustomer_Returns404
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_05_CreateMockAttempt_ExpiredReservation_MarksExpired_Returns409
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_06_Webhook_MissingSignatureHeader_Returns401Unauthorized
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_07_Webhook_InvalidSignature_Returns401Unauthorized
@@ -329,14 +330,19 @@ Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_14_D
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_15_DemoPay_CustomerOrder_ExecutesPaymentFlowAndRedirects
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_16_GetTickets_CustomerOrder_ReturnsTicketsWithVietnamTime
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_17_GetQrCode_ReturnsValidPng_DecryptsToValidToken
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_17b_GetQrCode_ScannedOutsideWindow_ReturnsOutsideWindow
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_18_TicketApi_DoesNotLeakRawTokenOrCipher
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_19_GetQrCode_CrossCustomerAccess_Returns404NotFound
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_20_CheckoutPage_RendersCountdownTimerAndMockDisclaimer
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_21_CheckoutPage_ExpiredOrder_RedirectsToDetailsWithError
-Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_22_DatabaseInvariants_ZeroViolationsAfterPayments
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_22_TicketApi_DoesNotLeakRawTokenOrCipher
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_23_DemoPay_SimulatorDisabled_Returns404NotFound
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_24_DemoPay_SimulatorEnabled_CustomerOrder_ExecutesPaymentFlow
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_25_DemoPay_WithoutCsrfToken_Returns400BadRequest
+Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_26_DatabaseInvariants_ZeroViolationsAfterPayments
 
 Test Run Successful.
-Total tests: 95 | Passed: 95 | Failed: 0 | Total time: ~51 Seconds
+Total tests: 104 | Passed: 104 | Failed: 0 | Total time: ~53 Seconds
 ```
 
 ### 11.1. Running the Web Application
@@ -365,7 +371,7 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (95/95 tests passed: 28 Data/Domain tests + 67 Web integration tests).
+- **Test Suite Pass Rate:** 100% (104/104 tests passed: 28 Data/Domain tests + 76 Web integration tests).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
 - **Database Multi-Table Invariants:** 6/6 checks passed with 0 violations via `BetaGiaiPhong.Runner verify`.
 
@@ -392,7 +398,7 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **HMAC-SHA256 Webhook Listener:** `POST /api/webhooks/mock-payment` authenticated with `X-Signature-SHA256`, 32 KB payload limiter, constant-time validation, idempotent event processing, and automatic seat/order state transition (`PAID` vs `FAILED` vs `NEEDS_REVIEW`).
 - **Development-Only Payment Simulator:** `POST /orders/{id}/demo-pay` enabled strictly in `Development` with `BGP_ENABLE_MOCK_PAYMENT_SIMULATOR=true`, signing payloads internally and executing full domain workflow.
 - **Electronic Tickets & QR Code Streamer:** `GET /orders/{id}/tickets`, `GET /api/orders/{id}/tickets`, and `GET /tickets/{ticketId}/qr` dynamically rendering high-fidelity PNG QR codes via `QRCoder` (`PngByteQRCode`) with unsealed AES-256-GCM tokens, `Cache-Control: no-store`, and zero token/cipher leakage in JSON APIs.
-- **Quality Assurance:** 22 dedicated integration and web tests (`TC_WEB_PAY_01` to `TC_WEB_PAY_22`), bringing the test suite to 95/95 PASS.
+- **Quality Assurance:** 22 dedicated integration and web tests (`TC_WEB_PAY_01` to `TC_WEB_PAY_22`), bringing the test suite to 104/104 PASS.
 
 ### 14.4. Upcoming Phases
 - **Phase BE-04 (Staff Operations & Admin Dashboards):** Staff electronic ticket scanning terminal (`TicketScanningService`), movie/showtime publishing administrative portals, and hosted background worker for expired reservation sweeps.

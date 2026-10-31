@@ -36,7 +36,7 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
             })
             .SingleOrDefaultAsync(ct);
 
-        if (order is null) return null;
+        if (order is null || order.Status != OrderStates.Paid) return null;
 
         var dtos = await GetCustomerTicketDtosAsync(customerId, orderId, ct);
 
@@ -65,7 +65,7 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
                     join s in db.Seats.AsNoTracking() on t.SeatId equals s.SeatId
                     join os in db.OrderSeats.AsNoTracking() on new { t.OrderId, t.SeatId } equals new { os.OrderId, os.SeatId } into orderSeats
                     from os in orderSeats.DefaultIfEmpty()
-                    where t.OrderId == orderId && o.UserId == customerId
+                    where t.OrderId == orderId && o.UserId == customerId && o.Status == OrderStates.Paid
                     orderby s.RowLabel, s.ColumnNo
                     select new
                     {
@@ -110,23 +110,25 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
     }
 
     public async Task<byte[]?> GenerateQrCodePngBytesAsync(
-        long ticketId, long? customerId, bool isStaffOrHigher = false, CancellationToken ct = default)
+        long ticketId, long customerId, CancellationToken ct = default)
     {
+        // Fail-closed: Customer ID must be positive and valid
+        if (customerId <= 0) return null;
+
         var ticket = await db.Tickets
             .AsNoTracking()
-            .Include(t => t.OrderSeat)
             .SingleOrDefaultAsync(t => t.TicketId == ticketId, ct);
 
         if (ticket is null) return null;
 
-        // If not staff, enforce customer ownership of the ticket's order
-        if (!isStaffOrHigher && customerId.HasValue)
-        {
-            var isOwner = await db.Orders
-                .AsNoTracking()
-                .AnyAsync(o => o.OrderId == ticket.OrderId && o.UserId == customerId.Value, ct);
+        // Fail-closed: Enforce that the ticket's order belongs to customerId and is PAID
+        var order = await db.Orders
+            .AsNoTracking()
+            .SingleOrDefaultAsync(o => o.OrderId == ticket.OrderId && o.UserId == customerId, ct);
 
-            if (!isOwner) return null;
+        if (order is null || order.Status != OrderStates.Paid)
+        {
+            return null;
         }
 
         // Only generate QR for valid active/used tickets

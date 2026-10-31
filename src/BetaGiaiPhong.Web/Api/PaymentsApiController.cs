@@ -72,7 +72,7 @@ public sealed class PaymentsApiController(
                 payment.CreatedUtc
             );
 
-            return Created($"/api/orders/{id}/payments/{paymentId}", dto);
+            return CreatedAtAction(nameof(GetPaymentAttempt), new { id, paymentId }, dto);
         }
         catch (BusinessRuleException ex)
         {
@@ -91,5 +91,54 @@ public sealed class PaymentsApiController(
                 Detail = ex.Message
             });
         }
+    }
+
+    [HttpGet("{paymentId:long}")]
+    [ProducesResponseType(typeof(PaymentAttemptDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPaymentAttempt(
+        [FromRoute] long id,
+        [FromRoute] long paymentId,
+        CancellationToken ct)
+    {
+        var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!long.TryParse(rawUserId, out var customerId) || customerId <= 0)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "UNAUTHORIZED",
+                Detail = "Vui lòng đăng nhập để xem thông tin thanh toán."
+            });
+        }
+
+        var payment = await db.Payments
+            .AsNoTracking()
+            .Include(p => p.Order)
+            .SingleOrDefaultAsync(p => p.PaymentId == paymentId && p.OrderId == id, ct);
+
+        if (payment is null || payment.Order is null || payment.Order.UserId != customerId)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Status = StatusCodes.Status404NotFound,
+                Title = "PAYMENT_NOT_FOUND",
+                Detail = "Không tìm thấy thông tin giao dịch thanh toán yêu cầu."
+            });
+        }
+
+        var dto = new PaymentAttemptDto(
+            payment.PaymentId,
+            payment.OrderId,
+            payment.Order.OrderCode,
+            payment.AttemptKey,
+            payment.AmountVnd,
+            payment.Provider,
+            payment.Status,
+            payment.CreatedUtc
+        );
+
+        return Ok(dto);
     }
 }

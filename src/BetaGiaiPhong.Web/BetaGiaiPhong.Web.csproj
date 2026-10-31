@@ -12,6 +12,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>beta-giai-phong-web-8c9f1a2b</UserSecretsId>
   </PropertyGroup>
 
 </Project>

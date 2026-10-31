@@ -8,19 +8,63 @@ using BetaGiaiPhong.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 0. Cryptographic keys synchronization for prototype / demo stability
+// 0. Cryptographic keys resolution and validation
 var qrKey = builder.Configuration["BGP_QR_AES_KEY_B64"]
     ?? Environment.GetEnvironmentVariable("BGP_QR_AES_KEY_B64");
-if (!string.IsNullOrEmpty(qrKey))
+
+if (string.IsNullOrWhiteSpace(qrKey))
 {
-    Environment.SetEnvironmentVariable("BGP_QR_AES_KEY_B64", qrKey);
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        throw new InvalidOperationException(
+            "Cấu hình BGP_QR_AES_KEY_B64 bị thiếu. Vui lòng cung cấp chuỗi Base64 của 32 byte ngẫu nhiên qua .NET User Secrets hoặc biến môi trường.");
+    }
+}
+else
+{
+    try
+    {
+        var rawAes = Convert.FromBase64String(qrKey);
+        if (rawAes.Length != 32)
+        {
+            throw new InvalidOperationException(
+                $"Khóa BGP_QR_AES_KEY_B64 phải có độ dài giải mã chính xác 32 byte (nhận được {rawAes.Length} byte).");
+        }
+        Environment.SetEnvironmentVariable("BGP_QR_AES_KEY_B64", qrKey);
+    }
+    catch (FormatException)
+    {
+        throw new InvalidOperationException("BGP_QR_AES_KEY_B64 không phải là chuỗi Base64 hợp lệ.");
+    }
 }
 
 var hmacKey = builder.Configuration["BGP_MOCK_HMAC_KEY_B64"]
     ?? Environment.GetEnvironmentVariable("BGP_MOCK_HMAC_KEY_B64");
-if (!string.IsNullOrEmpty(hmacKey))
+
+if (string.IsNullOrWhiteSpace(hmacKey))
 {
-    Environment.SetEnvironmentVariable("BGP_MOCK_HMAC_KEY_B64", hmacKey);
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        throw new InvalidOperationException(
+            "Cấu hình BGP_MOCK_HMAC_KEY_B64 bị thiếu. Vui lòng cung cấp chuỗi Base64 của tối thiểu 32 byte ngẫu nhiên qua .NET User Secrets hoặc biến môi trường.");
+    }
+}
+else
+{
+    try
+    {
+        var rawHmac = Convert.FromBase64String(hmacKey);
+        if (rawHmac.Length < 32)
+        {
+            throw new InvalidOperationException(
+                $"Khóa BGP_MOCK_HMAC_KEY_B64 phải có độ dài giải mã tối thiểu 32 byte (nhận được {rawHmac.Length} byte).");
+        }
+        Environment.SetEnvironmentVariable("BGP_MOCK_HMAC_KEY_B64", hmacKey);
+    }
+    catch (FormatException)
+    {
+        throw new InvalidOperationException("BGP_MOCK_HMAC_KEY_B64 không phải là chuỗi Base64 hợp lệ.");
+    }
 }
 
 // 1. Connection string resolution
@@ -53,7 +97,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin = context =>
         {
-            if (context.Request.Path.StartsWithSegments("/api"))
+            if (context.Request.Path.StartsWithSegments("/api") ||
+                (context.Request.Path.StartsWithSegments("/tickets") && context.Request.Path.Value?.EndsWith("/qr") == true))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
@@ -63,7 +108,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         };
         options.Events.OnRedirectToAccessDenied = context =>
         {
-            if (context.Request.Path.StartsWithSegments("/api"))
+            if (context.Request.Path.StartsWithSegments("/api") ||
+                (context.Request.Path.StartsWithSegments("/tickets") && context.Request.Path.Value?.EndsWith("/qr") == true))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;

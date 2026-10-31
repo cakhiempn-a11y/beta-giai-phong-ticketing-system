@@ -5,7 +5,7 @@ using BetaGiaiPhong.Web.Services;
 
 namespace BetaGiaiPhong.Web.Controllers;
 
-[Authorize]
+[Authorize(Roles = "CUSTOMER")]
 public sealed class TicketsController(ITicketQueryService ticketQueryService) : Controller
 {
     [HttpGet("tickets/{ticketId:long}/qr")]
@@ -13,12 +13,12 @@ public sealed class TicketsController(ITicketQueryService ticketQueryService) : 
     public async Task<IActionResult> GetQrCode([FromRoute] long ticketId, CancellationToken ct)
     {
         var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        long.TryParse(rawUserId, out var customerId);
-        var isStaffOrHigher = User.IsInRole("STAFF") || User.IsInRole("MANAGER") || User.IsInRole("ADMIN");
+        if (!long.TryParse(rawUserId, out var customerId) || customerId <= 0)
+        {
+            return NotFound();
+        }
 
-        var pngBytes = await ticketQueryService.GenerateQrCodePngBytesAsync(
-            ticketId, customerId > 0 ? customerId : null, isStaffOrHigher, ct);
-
+        var pngBytes = await ticketQueryService.GenerateQrCodePngBytesAsync(ticketId, customerId, ct);
         if (pngBytes is null)
         {
             return NotFound();
