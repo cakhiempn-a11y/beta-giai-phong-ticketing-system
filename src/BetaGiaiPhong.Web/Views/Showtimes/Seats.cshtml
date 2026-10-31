@@ -1,18 +1,34 @@
 @model BetaGiaiPhong.Web.Models.ViewModels.SeatMapViewModel
 @{
-    ViewData["Title"] = $"Sơ đồ ghế - {Model.SeatMap.MovieTitle}";
+    ViewData["Title"] = $"Chọn ghế - {Model.SeatMap.MovieTitle}";
 }
 
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
             <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Index">Phim đang chiếu</a></li>
             <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Details" asp-route-id="@Model.SeatMap.MovieId">@Model.SeatMap.MovieTitle</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Sơ đồ ghế</li>
+            <li class="breadcrumb-item active" aria-current="page">Chọn ghế</li>
         </ol>
     </nav>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <strong>⚠️ Lỗi:</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <strong>✅ Thành công:</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
     <!-- Showtime Info Header -->
     <div class="card shadow-sm border-0 mb-4">
@@ -27,7 +43,7 @@
             </div>
             <div class="d-flex flex-wrap gap-2 text-center">
                 <div class="border rounded px-3 py-2 bg-light">
-                    <span class="d-block h5 fw-bold text-success mb-0">@Model.SeatMap.AvailableCount</span>
+                    <span class="d-block h5 fw-bold text-success mb-0" id="statAvailable">@Model.SeatMap.AvailableCount</span>
                     <small class="text-muted">Ghế trống</small>
                 </div>
                 <div class="border rounded px-3 py-2 bg-light">
@@ -42,14 +58,16 @@
         </div>
     </div>
 
-    <!-- Notice Banner -->
-    <div class="alert alert-secondary border d-flex align-items-center gap-2 mb-4" role="alert">
-        <span class="fs-4">ℹ️</span>
-        <div>
-            <strong>Chế độ xem sơ đồ ghế Read-Only (Giai đoạn BE-01):</strong>
-            Sơ đồ hiển thị tình trạng ghế thực tế từ cơ sở dữ liệu. Tính năng chọn ghế và tạo giao dịch đặt vé trực tuyến sẽ được kích hoạt ở giai đoạn BE-02.
+    @if (!Model.SeatMap.IsOpenForBooking)
+    {
+        <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+            <span class="fs-3 me-3">⚠️</span>
+            <div>
+                <h5 class="alert-heading mb-1 fw-bold">Thông báo suất chiếu</h5>
+                <p class="mb-0">@(Model.SeatMap.IneligibleReason ?? "Suất chiếu hiện không mở bán vé trực tuyến hoặc đã bắt đầu.")</p>
+            </div>
         </div>
-    </div>
+    }
 
     <!-- Seat Map Container -->
     <div class="card shadow-sm border-0 mb-4">
@@ -72,10 +90,11 @@
                         <span class="seat-row-label">@row</span>
                         @foreach (var seat in seatsInRow)
                         {
+                            var isBookable = seat.IsBookable;
                             var seatClass = seat.DisplayState switch
                             {
-                                "AVAILABLE" when seat.SeatTypeCode == "VIP" => "seat-available-vip",
-                                "AVAILABLE" => "seat-available-standard",
+                                "AVAILABLE" when seat.SeatTypeCode == "VIP" => "seat-available-vip seat-bookable",
+                                "AVAILABLE" => "seat-available-standard seat-bookable",
                                 "HELD" => "seat-held",
                                 "SOLD" => "seat-sold",
                                 _ => "seat-blocked"
@@ -84,7 +103,13 @@
                             var tooltipText = $"{seat.SeatCode} ({seat.SeatTypeName}): {seat.PriceVnd:N0} đ [{seat.DisplayState}]";
 
                             <div class="seat-box @seatClass"
+                                 id="seat-@seat.SeatId"
                                  title="@tooltipText"
+                                 data-seat-id="@seat.SeatId"
+                                 data-seat-code="@seat.SeatCode"
+                                 data-seat-type="@seat.SeatTypeName"
+                                 data-price="@seat.PriceVnd"
+                                 data-bookable="@(isBookable ? "true" : "false")"
                                  data-bs-toggle="tooltip"
                                  data-bs-placement="top">
                                 @seat.SeatCode
@@ -115,27 +140,152 @@
                         }
                     </div>
                     <div class="col-6 col-md-3">
-                        <span class="legend-sample seat-held me-1"></span>
-                        <span class="small">Đang giữ chỗ</span>
-                        <span class="d-block text-muted small">Tạm khóa 5p</span>
+                        <span class="legend-sample seat-selected me-1"></span>
+                        <span class="small">Ghế bạn đang chọn</span>
+                        <span class="d-block text-success small">Tối đa 8 ghế</span>
                     </div>
                     <div class="col-6 col-md-3">
                         <span class="legend-sample seat-sold me-1"></span>
-                        <span class="small">Đã bán</span>
+                        <span class="small">Đã bán / Đang giữ</span>
                         <span class="d-block text-muted small">Không thể đặt</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Booking Summary & Submission Card -->
+    @if (!Model.SeatMap.IsOpenForBooking)
+    {
+        <div class="card shadow border-0 bg-light p-4 text-center">
+            <h5 class="text-danger fw-bold mb-2">
+                ⛔ @(Model.SeatMap.IneligibleReason ?? "Suất chiếu này không mở đặt vé trực tuyến.")
+            </h5>
+            <p class="text-muted small mb-3">Vui lòng quay lại danh sách để chọn suất chiếu khác đang mở bán.</p>
+            <div>
+                <a asp-controller="Movies" asp-action="Details" asp-route-id="@Model.SeatMap.MovieId" class="btn btn-outline-primary px-4">
+                    ← Quay lại chọn suất chiếu khác
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow border-0 bg-white sticky-bottom">
+            <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="w-100 w-md-auto text-center text-md-start">
+                    <div class="d-flex align-items-center gap-2 mb-1 justify-content-center justify-content-md-start">
+                        <span class="fw-bold">Ghế đã chọn:</span>
+                        <span id="selectedSeatsBadges" class="d-inline-flex flex-wrap gap-1">
+                            <span class="text-muted small fst-italic">Chưa có ghế nào được chọn</span>
+                        </span>
+                    </div>
+                    <div class="text-muted small">
+                        Số lượng: <strong id="selectedCount">0</strong>/8 ghế |
+                        Tạm tính: <strong id="selectedTotal" class="text-primary fs-5">0 đ</strong>
+                    </div>
+                </div>
+
+                <div class="w-100 w-md-auto">
+                    <form asp-controller="Bookings" asp-action="Reserve" method="post" id="formReserve">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="showtimeId" value="@Model.SeatMap.ShowtimeId" />
+                        <input type="hidden" name="seatIdsCsv" id="seatIdsCsv" value="" />
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <button type="submit" class="btn btn-primary btn-lg w-100 px-4 py-2 fw-bold" id="btnSubmit" disabled>
+                                Tiếp tục đặt vé
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn btn-warning btn-lg w-100 px-4 py-2 fw-bold" id="btnSubmit" disabled>
+                                Đăng nhập để đặt vé
+                            </button>
+                        }
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Initialize Bootstrap Tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            var selectedSeats = new Map(); // seatId -> { code, price }
+            var maxSeats = 8;
+
+            var badgesContainer = document.getElementById('selectedSeatsBadges');
+            var countEl = document.getElementById('selectedCount');
+            var totalEl = document.getElementById('selectedTotal');
+            var csvInput = document.getElementById('seatIdsCsv');
+            var submitBtn = document.getElementById('btnSubmit');
+            var form = document.getElementById('formReserve');
+
+            document.querySelectorAll('.seat-box[data-bookable="true"]').forEach(function (box) {
+                box.addEventListener('click', function () {
+                    var seatId = parseInt(this.getAttribute('data-seat-id'), 10);
+                    var seatCode = this.getAttribute('data-seat-code');
+                    var price = parseInt(this.getAttribute('data-price'), 10) || 0;
+
+                    if (selectedSeats.has(seatId)) {
+                        selectedSeats.delete(seatId);
+                        this.classList.remove('seat-selected');
+                    } else {
+                        if (selectedSeats.size >= maxSeats) {
+                            alert('Quý khách chỉ được chọn tối đa ' + maxSeats + ' ghế trong một đơn hàng.');
+                            return;
+                        }
+                        selectedSeats.set(seatId, { code: seatCode, price: price });
+                        this.classList.add('seat-selected');
+                    }
+
+                    updateSelectionUI();
+                });
+            });
+
+            function updateSelectionUI() {
+                var size = selectedSeats.size;
+                countEl.textContent = size;
+
+                var total = 0;
+                var ids = [];
+                badgesContainer.innerHTML = '';
+
+                if (size === 0) {
+                    badgesContainer.innerHTML = '<span class="text-muted small fst-italic">Chưa có ghế nào được chọn</span>';
+                    totalEl.textContent = '0 đ';
+                    csvInput.value = '';
+                    submitBtn.disabled = true;
+                    return;
+                }
+
+                selectedSeats.forEach(function (val, id) {
+                    ids.push(id);
+                    total += val.price;
+
+                    var badge = document.createElement('span');
+                    badge.className = 'badge bg-success';
+                    badge.textContent = val.code;
+                    badgesContainer.appendChild(badge);
+                });
+
+                totalEl.textContent = total.toLocaleString('vi-VN') + ' đ';
+                csvInput.value = ids.join(',');
+                submitBtn.disabled = false;
+            }
+
+            form.addEventListener('submit', function () {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang giữ chỗ...';
             });
         });
     </script>

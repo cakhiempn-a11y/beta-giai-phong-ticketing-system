@@ -24,4 +24,6 @@ public sealed record SeatMapDto(
     int SoldCount,
     int HeldCount,
     IReadOnlyDictionary<string, long> PriceTiersVnd,
-    IReadOnlyList<SeatDto> Seats);
+    IReadOnlyList<SeatDto> Seats,
+    bool IsOpenForBooking = true,
+    string? IneligibleReason = null);

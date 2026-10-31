@@ -252,6 +252,17 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
                                   ss.HoldExpiresUtc
                               }).ToListAsync(ct);
 
+        var isOpenForBooking = showtime.Status == "ON_SALE" && showtime.StartUtc > now;
+        string? ineligibleReason = null;
+        if (showtime.Status != "ON_SALE")
+        {
+            ineligibleReason = "Suất chiếu hiện không mở bán vé trực tuyến.";
+        }
+        else if (showtime.StartUtc <= now)
+        {
+            ineligibleReason = "Suất chiếu đã bắt đầu hoặc đã qua thời gian mở bán vé.";
+        }
+
         var seatDtos = new List<SeatDto>(seatData.Count);
         int availableCount = 0;
         int soldCount = 0;
@@ -279,10 +290,10 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             {
                 if (item.HoldExpiresUtc.HasValue && item.HoldExpiresUtc.Value <= now)
                 {
-                    // Expired hold: practically available for re-reservation
+                    // Expired hold: practically available for re-reservation if showtime is open
                     displayState = "AVAILABLE";
-                    isBookable = true;
-                    availableCount++;
+                    isBookable = isOpenForBooking;
+                    if (isBookable) availableCount++;
                 }
                 else
                 {
@@ -294,8 +305,8 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             else
             {
                 displayState = "AVAILABLE";
-                isBookable = true;
-                availableCount++;
+                isBookable = isOpenForBooking;
+                if (isBookable) availableCount++;
             }
 
             seatDtos.Add(new SeatDto(
@@ -324,7 +335,9 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             soldCount,
             heldCount,
             priceMap,
-            seatDtos
+            seatDtos,
+            isOpenForBooking,
+            ineligibleReason
         );
     }
 }

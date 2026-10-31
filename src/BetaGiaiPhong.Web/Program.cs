@@ -19,6 +19,7 @@ builder.Services.AddBetaCinemaData(connectionString);
 // 3. Application Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<IBookingQueryService, BookingQueryService>();
 
 // 4. Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -58,7 +59,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 // 5. Role-based Authorization Policies
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("RequireCustomer", policy => policy.RequireRole("CUSTOMER", "STAFF", "MANAGER", "ADMIN"))
+    .AddPolicy("RequireCustomer", policy => policy.RequireRole("CUSTOMER"))
     .AddPolicy("RequireStaff", policy => policy.RequireRole("STAFF", "MANAGER", "ADMIN"))
     .AddPolicy("RequireManager", policy => policy.RequireRole("MANAGER", "ADMIN"))
     .AddPolicy("RequireAdmin", policy => policy.RequireRole("ADMIN"));
@@ -93,7 +94,6 @@ var app = builder.Build();
 
 // 9. Middleware Pipeline
 app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -104,6 +104,8 @@ else
 {
     app.UseDeveloperExceptionPage();
 }
+
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 app.UseStatusCodePagesWithReExecute("/error", "?statusCode={0}");
 
@@ -128,6 +130,19 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Provide XSRF-TOKEN cookie for JavaScript fetch / AJAX clients
+app.Use(async (context, next) =>
+{
+    var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
+    var tokens = antiforgery.GetAndStoreTokens(context);
+    if (!string.IsNullOrEmpty(tokens.RequestToken))
+    {
+        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken,
+            new CookieOptions { HttpOnly = false, SameSite = SameSiteMode.Lax, Path = "/" });
+    }
+    await next();
+});
 
 app.MapControllers();
 app.MapDefaultControllerRoute();

@@ -1,0 +1,61 @@
+namespace BetaGiaiPhong.Web.Models.Responses;
+
+public sealed record ReservationResponseDto(
+    long OrderId,
+    string OrderCode,
+    long ShowtimeId,
+    IReadOnlyList<long> SeatIds,
+    long TotalVnd,
+    DateTime ExpiresUtc,
+    string Status
+);
+
+public sealed record OrderSummaryDto(
+    long OrderId,
+    string OrderCode,
+    long ShowtimeId,
+    string MovieTitle,
+    DateTime StartUtc,
+    string StartVietnamText,
+    byte SeatCount,
+    long TotalVnd,
+    string Status,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc,
+    bool IsHoldExpired,
+    bool CanCancel
+);
+
+public sealed record OrderSeatItemDto(
+    long SeatId,
+    string SeatCode,
+    string SeatTypeSnapshot,
+    long UnitPriceVnd
+);
+
+public sealed record OrderDetailDto(
+    long OrderId,
+    string OrderCode,
+    string OrderStatus,
+    long ShowtimeId,
+    string MovieTitle,
+    string RoomName,
+    DateTime StartUtc,
+    string StartVietnamText,
+    IReadOnlyList<OrderSeatItemDto> Seats,
+    long SubtotalVnd,
+    long FeeVnd,
+    long DiscountVnd,
+    long TotalVnd,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc,
+    int RemainingSeconds,
+    bool IsHoldExpired,
+    bool CanCancel
+);
+
+public sealed record CancelOrderResultDto(
+    long OrderId,
+    string Status,
+    string Message
+);
