@@ -12,16 +12,29 @@ public sealed class BookingsController(SeatReservationService reservationService
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reserve(long showtimeId, string? seatIdsCsv, CancellationToken ct)
     {
-        var seatIds = (seatIdsCsv ?? "")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(s => long.TryParse(s, out var id) ? id : 0)
-            .Where(id => id > 0)
-            .Distinct()
-            .ToList();
-
-        if (seatIds.Count is < 1 or > 8)
+        if (string.IsNullOrWhiteSpace(seatIdsCsv))
         {
-            TempData["Error"] = "Vui lòng chọn từ 1 đến 8 ghế hợp lệ.";
+            TempData["Error"] = "Vui lòng chọn từ 1 đến 8 ghế hợp lệ và không trùng lặp.";
+            return RedirectToAction("Seats", "Showtimes", new { id = showtimeId });
+        }
+
+        var tokens = seatIdsCsv.Split(',', StringSplitOptions.TrimEntries);
+        var seatIds = new List<long>();
+        bool hasInvalidToken = false;
+
+        foreach (var token in tokens)
+        {
+            if (string.IsNullOrEmpty(token) || !long.TryParse(token, out var id) || id <= 0)
+            {
+                hasInvalidToken = true;
+                break;
+            }
+            seatIds.Add(id);
+        }
+
+        if (hasInvalidToken || seatIds.Count is < 1 or > 8 || seatIds.Distinct().Count() != seatIds.Count)
+        {
+            TempData["Error"] = "Vui lòng chọn từ 1 đến 8 ghế hợp lệ và không trùng lặp.";
             return RedirectToAction("Seats", "Showtimes", new { id = showtimeId });
         }
 

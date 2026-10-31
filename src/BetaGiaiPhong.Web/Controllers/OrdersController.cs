@@ -66,25 +66,29 @@ public sealed class OrdersController(
             var success = await orderLifecycleService.CancelAsync(customerId, id, ct);
             if (!success)
             {
-                TempData["Error"] = "Không thể hủy đơn hàng do đơn không tồn tại hoặc đã thay đổi trạng thái.";
+                TempData["Error"] = "Không tìm thấy đơn hàng yêu cầu hoặc đơn hàng không thuộc về bạn.";
+                return RedirectToAction(nameof(Index));
             }
-            else
-            {
-                TempData["Success"] = "Đã hủy đơn hàng và giải phóng ghế thành công.";
-            }
+
+            TempData["Success"] = "Đã hủy đơn hàng và giải phóng ghế thành công.";
+            return RedirectToAction(nameof(Details), new { id });
         }
         catch (BusinessRuleException ex)
         {
+            if (ex.Code == "ORDER_NOT_FOUND")
+            {
+                TempData["Error"] = "Không tìm thấy đơn hàng yêu cầu hoặc đơn hàng không thuộc về bạn.";
+                return RedirectToAction(nameof(Index));
+            }
+
             TempData["Error"] = ex.Code switch
             {
                 "ORDER_EXPIRED" => "Đơn hàng đã hết thời gian giữ ghế và đã được đánh dấu hết hạn (EXPIRED).",
                 "INVALID_ORDER_STATE" => "Không thể hủy đơn hàng vì đơn không ở trạng thái chờ thanh toán.",
-                "FORBIDDEN" => "Bạn không có quyền thao tác trên đơn hàng này.",
                 _ => ex.Message
             };
+            return RedirectToAction(nameof(Details), new { id });
         }
-
-        return RedirectToAction(nameof(Details), new { id });
     }
 
     private long GetCurrentCustomerId()

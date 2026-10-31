@@ -58,6 +58,17 @@
         </div>
     </div>
 
+    @if (!Model.SeatMap.IsOpenForBooking)
+    {
+        <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+            <span class="fs-3 me-3">⚠️</span>
+            <div>
+                <h5 class="alert-heading mb-1 fw-bold">Thông báo suất chiếu</h5>
+                <p class="mb-0">@(Model.SeatMap.IneligibleReason ?? "Suất chiếu hiện không mở bán vé trực tuyến hoặc đã bắt đầu.")</p>
+            </div>
+        </div>
+    }
+
     <!-- Seat Map Container -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-4 p-md-5 text-center">
@@ -144,43 +155,60 @@
     </div>
 
     <!-- Booking Summary & Submission Card -->
-    <div class="card shadow border-0 bg-white sticky-bottom">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-            <div class="w-100 w-md-auto text-center text-md-start">
-                <div class="d-flex align-items-center gap-2 mb-1 justify-content-center justify-content-md-start">
-                    <span class="fw-bold">Ghế đã chọn:</span>
-                    <span id="selectedSeatsBadges" class="d-inline-flex flex-wrap gap-1">
-                        <span class="text-muted small fst-italic">Chưa có ghế nào được chọn</span>
-                    </span>
-                </div>
-                <div class="text-muted small">
-                    Số lượng: <strong id="selectedCount">0</strong>/8 ghế |
-                    Tạm tính: <strong id="selectedTotal" class="text-primary fs-5">0 đ</strong>
-                </div>
-            </div>
-
-            <div class="w-100 w-md-auto">
-                <form asp-controller="Bookings" asp-action="Reserve" method="post" id="formReserve">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="showtimeId" value="@Model.SeatMap.ShowtimeId" />
-                    <input type="hidden" name="seatIdsCsv" id="seatIdsCsv" value="" />
-
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <button type="submit" class="btn btn-primary btn-lg w-100 px-4 py-2 fw-bold" id="btnSubmit" disabled>
-                            Tiếp tục đặt vé
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="submit" class="btn btn-warning btn-lg w-100 px-4 py-2 fw-bold" id="btnSubmit" disabled>
-                            Đăng nhập để đặt vé
-                        </button>
-                    }
-                </form>
+    @if (!Model.SeatMap.IsOpenForBooking)
+    {
+        <div class="card shadow border-0 bg-light p-4 text-center">
+            <h5 class="text-danger fw-bold mb-2">
+                ⛔ @(Model.SeatMap.IneligibleReason ?? "Suất chiếu này không mở đặt vé trực tuyến.")
+            </h5>
+            <p class="text-muted small mb-3">Vui lòng quay lại danh sách để chọn suất chiếu khác đang mở bán.</p>
+            <div>
+                <a asp-controller="Movies" asp-action="Details" asp-route-id="@Model.SeatMap.MovieId" class="btn btn-outline-primary px-4">
+                    ← Quay lại chọn suất chiếu khác
+                </a>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="card shadow border-0 bg-white sticky-bottom">
+            <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="w-100 w-md-auto text-center text-md-start">
+                    <div class="d-flex align-items-center gap-2 mb-1 justify-content-center justify-content-md-start">
+                        <span class="fw-bold">Ghế đã chọn:</span>
+                        <span id="selectedSeatsBadges" class="d-inline-flex flex-wrap gap-1">
+                            <span class="text-muted small fst-italic">Chưa có ghế nào được chọn</span>
+                        </span>
+                    </div>
+                    <div class="text-muted small">
+                        Số lượng: <strong id="selectedCount">0</strong>/8 ghế |
+                        Tạm tính: <strong id="selectedTotal" class="text-primary fs-5">0 đ</strong>
+                    </div>
+                </div>
+
+                <div class="w-100 w-md-auto">
+                    <form asp-controller="Bookings" asp-action="Reserve" method="post" id="formReserve">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="showtimeId" value="@Model.SeatMap.ShowtimeId" />
+                        <input type="hidden" name="seatIdsCsv" id="seatIdsCsv" value="" />
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <button type="submit" class="btn btn-primary btn-lg w-100 px-4 py-2 fw-bold" id="btnSubmit" disabled>
+                                Tiếp tục đặt vé
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn btn-warning btn-lg w-100 px-4 py-2 fw-bold" id="btnSubmit" disabled>
+                                Đăng nhập để đặt vé
+                            </button>
+                        }
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @section Scripts {

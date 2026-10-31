@@ -99,7 +99,7 @@ public sealed class OrdersApiController(
             {
                 Status = StatusCodes.Status404NotFound,
                 Title = "Resource Not Found",
-                Detail = "Không tìm thấy đơn hàng hoặc không thể hủy.",
+                Detail = "Không tìm thấy đơn hàng yêu cầu.",
                 Extensions = { ["errorCode"] = "ORDER_NOT_FOUND" }
             });
         }

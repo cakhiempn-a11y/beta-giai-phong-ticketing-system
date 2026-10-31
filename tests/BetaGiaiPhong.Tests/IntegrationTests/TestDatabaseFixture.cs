@@ -52,6 +52,13 @@ END;";
         {
             await DemoSeeder.SeedAsync(db);
         }
+
+        // Clean up any historical dangling held seats from interrupted test runs to guarantee test isolation
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE dbo.ShowtimeSeats 
+            SET state = 'AVAILABLE', owner_order_id = NULL, hold_expires_utc = NULL 
+            WHERE state = 'HELD' 
+              AND owner_order_id IN (SELECT order_id FROM dbo.Orders WHERE status IN ('CANCELLED', 'EXPIRED', 'FAILED'));");
     }
 
     public async Task<BetaDbContext> CreateDbContextAsync()

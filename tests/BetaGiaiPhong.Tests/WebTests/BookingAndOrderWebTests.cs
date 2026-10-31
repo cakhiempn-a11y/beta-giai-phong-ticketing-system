@@ -374,7 +374,7 @@ public sealed class BookingAndOrderWebTests(TestDatabaseFixture fixture) : IClas
         var order1 = await resp1.Content.ReadFromJsonAsync<ReservationResponseDto>();
         Assert.NotNull(order1);
 
-        // Customer 2 attempts to CANCEL Customer 1's order
+        // Customer 2 attempts to CANCEL Customer 1's order -> Must return 404 NotFound (does not disclose order existence)
         var client2 = CreateNewClient();
         var (auth2, af2Cookie, af2Token) = await LoginAndGetTokensAsync(client2, "customer2@demo.invalid");
         var req2 = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{order1.OrderId}/cancel");
@@ -382,7 +382,23 @@ public sealed class BookingAndOrderWebTests(TestDatabaseFixture fixture) : IClas
         req2.Headers.Add("X-XSRF-TOKEN", af2Token);
 
         var resp2 = await client2.SendAsync(req2);
-        Assert.True(resp2.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound);
+        Assert.Equal(HttpStatusCode.NotFound, resp2.StatusCode);
+
+        // Customer 1 attempts to CANCEL non-existent order -> Must also return 404 NotFound
+        var nonExistentReq = new HttpRequestMessage(HttpMethod.Post, "/api/orders/99999999/cancel");
+        nonExistentReq.Headers.Add("Cookie", $"{auth1}; {af1Cookie}");
+        nonExistentReq.Headers.Add("X-XSRF-TOKEN", af1Token);
+        var nonExistentResp = await client1.SendAsync(nonExistentReq);
+        Assert.Equal(HttpStatusCode.NotFound, nonExistentResp.StatusCode);
+
+        // Verify in database: Order 1 status remains PENDING_PAYMENT and seat remains HELD
+        await using var verifyDb = await fixture.CreateDbContextAsync();
+        var dbOrder = await verifyDb.Orders.SingleAsync(o => o.OrderId == order1.OrderId);
+        Assert.Equal(OrderStates.Pending, dbOrder.Status);
+
+        var dbSeat = await verifyDb.ShowtimeSeats.SingleAsync(s => s.ShowtimeId == showtimeId && s.SeatId == seat.SeatId);
+        Assert.Equal(SeatStates.Held, dbSeat.State);
+        Assert.Equal(order1.OrderId, dbSeat.OwnerOrderId);
     }
 
     [Fact]
@@ -427,6 +443,7 @@ public sealed class BookingAndOrderWebTests(TestDatabaseFixture fixture) : IClas
     {
         var showtimeId = await CreateIsolatedShowtimeAsync(5);
         await using var db = await fixture.CreateDbContextAsync();
+        var customer = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
         var seat = await db.ShowtimeSeats.Where(s => s.ShowtimeId == showtimeId).FirstAsync();
 
         var client = CreateNewClient();
@@ -442,32 +459,57 @@ public sealed class BookingAndOrderWebTests(TestDatabaseFixture fixture) : IClas
         var order = await reserveResp.Content.ReadFromJsonAsync<ReservationResponseDto>();
         Assert.NotNull(order);
 
-        // Mutate order in DB to PAID
-        await using var updateDb = await fixture.CreateDbContextAsync();
-        var dbOrder = await updateDb.Orders.SingleAsync(o => o.OrderId == order.OrderId);
-        dbOrder.Status = OrderStates.Paid;
-        dbOrder.PaidUtc = DateTime.UtcNow;
-        await updateDb.SaveChangesAsync();
+        // Perform legitimate payment via PaymentService and mock payment security
+        await using var payDb = await fixture.CreateDbContextAsync();
+        var paymentService = new PaymentService(payDb, new SystemClock(), new QrTokenProtector());
+        var attemptKey = Guid.NewGuid().ToString("N");
+        await paymentService.CreateMockAttemptAsync(customer.UserId, order.OrderId, attemptKey);
 
-        try
-        {
-            // Customer attempts to cancel PAID order
-            var cancelReq = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{order.OrderId}/cancel");
-            cancelReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
-            cancelReq.Headers.Add("X-XSRF-TOKEN", afToken);
-            var cancelResp = await client.SendAsync(cancelReq);
+        var msg = new MockPaymentMessage(Guid.NewGuid().ToString("N"), attemptKey, "TXN-" + Guid.NewGuid().ToString("N"), order.OrderCode, order.TotalVnd, "SUCCESS");
+        var verified = MockPaymentSecurity.Verify(msg, MockPaymentSecurity.SignForDevelopment(msg));
+        var payResult = await paymentService.ApplyVerifiedMockAsync(verified);
+        Assert.Equal("APPLIED", payResult.Decision);
+        Assert.Equal("PAID", payResult.OrderStatus);
 
-            Assert.Equal(HttpStatusCode.UnprocessableEntity, cancelResp.StatusCode);
-        }
-        finally
-        {
-            // Revert test order status so shared database integrity checks pass
-            await using var cleanupDb = await fixture.CreateDbContextAsync();
-            var cleanOrder = await cleanupDb.Orders.SingleAsync(o => o.OrderId == order.OrderId);
-            cleanOrder.Status = OrderStates.Cancelled;
-            cleanOrder.PaidUtc = null;
-            await cleanupDb.SaveChangesAsync();
-        }
+        // Verify initial state: PAID, SOLD, ISSUED
+        await using var preCancelDb = await fixture.CreateDbContextAsync();
+        var paidOrder = await preCancelDb.Orders.SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal(OrderStates.Paid, paidOrder.Status);
+        Assert.NotNull(paidOrder.PaidUtc);
+
+        var soldSeat = await preCancelDb.ShowtimeSeats.SingleAsync(s => s.ShowtimeId == showtimeId && s.SeatId == seat.SeatId);
+        Assert.Equal(SeatStates.Sold, soldSeat.State);
+
+        var ticket = await preCancelDb.Tickets.SingleAsync(t => t.OrderId == order.OrderId);
+        Assert.Equal("ISSUED", ticket.Status);
+
+        // Customer attempts to cancel PAID order via API -> Must return 422 UnprocessableEntity
+        var cancelReq = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{order.OrderId}/cancel");
+        cancelReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
+        cancelReq.Headers.Add("X-XSRF-TOKEN", afToken);
+        var cancelResp = await client.SendAsync(cancelReq);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, cancelResp.StatusCode);
+
+        // Verify database: PAID order remains untouched, seat remains SOLD, ticket remains ISSUED
+        await using var verifyDb = await fixture.CreateDbContextAsync();
+        var dbOrderAfter = await verifyDb.Orders.SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal(OrderStates.Paid, dbOrderAfter.Status);
+        Assert.NotNull(dbOrderAfter.PaidUtc);
+
+        var dbSeatAfter = await verifyDb.ShowtimeSeats.SingleAsync(s => s.ShowtimeId == showtimeId && s.SeatId == seat.SeatId);
+        Assert.Equal(SeatStates.Sold, dbSeatAfter.State);
+        Assert.Equal(order.OrderId, dbSeatAfter.OwnerOrderId);
+
+        var dbTicketAfter = await verifyDb.Tickets.SingleAsync(t => t.OrderId == order.OrderId);
+        Assert.Equal("ISSUED", dbTicketAfter.Status);
+
+        // Integrity invariant check: No cancelled/expired/failed orders hold any HELD seats
+        await verifyDb.Database.OpenConnectionAsync();
+        await using var cmd = verifyDb.Database.GetDbConnection().CreateCommand();
+        cmd.CommandText = "SELECT COUNT_BIG(*) FROM dbo.ShowtimeSeats ss JOIN dbo.Orders o ON o.order_id=ss.owner_order_id WHERE ss.state='HELD' AND o.status IN ('CANCELLED','EXPIRED','FAILED')";
+        var deadHolds = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+        Assert.Equal(0, deadHolds);
     }
 
     [Fact]
@@ -674,5 +716,225 @@ public sealed class BookingAndOrderWebTests(TestDatabaseFixture fixture) : IClas
         await using var verifyDb = await fixture.CreateDbContextAsync();
         var verifiedOrder = await verifyDb.Orders.SingleAsync(o => o.OrderId == res.OrderId);
         Assert.Equal(OrderStates.Expired, verifiedOrder.Status);
+    }
+
+    [Theory]
+    [InlineData("1,1")] // Duplicate
+    [InlineData("1,abc")] // Non-numeric
+    [InlineData("0,2")] // Zero/Negative
+    [InlineData("1,,2")] // Empty token
+    [InlineData("")] // Empty string
+    [InlineData("1,2,3,4,5,6,7,8,9")] // More than 8 seats
+    public async Task TC_WEB_BOOK_21_MvcReserve_InvalidOrDuplicateSeatInput_RejectsWithFlashError(string invalidSeatCsv)
+    {
+        var showtimeId = await CreateIsolatedShowtimeAsync(10);
+        var client = CreateNewClient();
+        var (auth, afCookie, afToken) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+
+        var form = new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = afToken,
+            ["showtimeId"] = showtimeId.ToString(),
+            ["seatIdsCsv"] = invalidSeatCsv
+        };
+
+        var postReq = new HttpRequestMessage(HttpMethod.Post, "/bookings/reserve")
+        {
+            Content = new FormUrlEncodedContent(form)
+        };
+        postReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
+
+        var resp = await client.SendAsync(postReq);
+        Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
+        Assert.Contains($"/showtimes/{showtimeId}/seats", resp.Headers.Location?.OriginalString);
+
+        // Ensure zero orders created in database for this showtime
+        await using var checkDb = await fixture.CreateDbContextAsync();
+        var ordersCount = await checkDb.Orders.CountAsync(o => o.ShowtimeId == showtimeId);
+        Assert.Equal(0, ordersCount);
+    }
+
+    [Fact]
+    public async Task TC_WEB_BOOK_22_ReserveShowtimePastOrNotOnSale_Rejects()
+    {
+        // 1. Create showtime in the past
+        await using var db = await fixture.CreateDbContextAsync();
+        var movie = await db.Movies.FirstAsync();
+        var room = await db.Rooms.FirstAsync();
+        var manager = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+
+        var pastShowtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = DateTime.UtcNow.AddMinutes(-30),
+            EndUtc = DateTime.UtcNow.AddMinutes(90),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 5,
+            CreatedBy = manager.UserId,
+            CreatedUtc = DateTime.UtcNow.AddDays(-1)
+        };
+        db.Showtimes.Add(pastShowtime);
+        await db.SaveChangesAsync();
+
+        var seat = await db.Seats.Where(s => s.RoomId == room.RoomId && s.IsActive).FirstAsync();
+        db.ShowtimeSeats.Add(new ShowtimeSeat
+        {
+            ShowtimeId = pastShowtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            RoomId = room.RoomId,
+            State = SeatStates.Available
+        });
+        foreach (var st in await db.SeatTypes.ToListAsync())
+        {
+            db.SeatPrices.Add(new SeatPrice
+            {
+                ShowtimeId = pastShowtime.ShowtimeId,
+                SeatTypeCode = st.SeatTypeCode,
+                AmountVnd = 70000,
+                UpdatedUtc = DateTime.UtcNow
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var client = CreateNewClient();
+        var (auth, afCookie, afToken) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+
+        // GET seats map: Must indicate showtime is not open for booking
+        var getReq = new HttpRequestMessage(HttpMethod.Get, $"/api/showtimes/{pastShowtime.ShowtimeId}/seats");
+        var getResp = await client.SendAsync(getReq);
+        Assert.Equal(HttpStatusCode.OK, getResp.StatusCode);
+        var seatMap = await getResp.Content.ReadFromJsonAsync<SeatMapDto>();
+        Assert.NotNull(seatMap);
+        Assert.False(seatMap.IsOpenForBooking);
+        Assert.NotEmpty(seatMap.IneligibleReason!);
+        Assert.All(seatMap.Seats, s => Assert.False(s.IsBookable));
+
+        // POST reserve via API: Must return 409 Conflict
+        var apiReq = new HttpRequestMessage(HttpMethod.Post, "/api/bookings/reserve")
+        {
+            Content = JsonContent.Create(new ReserveSeatsRequest { ShowtimeId = pastShowtime.ShowtimeId, SeatIds = [seat.SeatId] })
+        };
+        apiReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
+        apiReq.Headers.Add("X-XSRF-TOKEN", afToken);
+        var apiResp = await client.SendAsync(apiReq);
+        Assert.Equal(HttpStatusCode.Conflict, apiResp.StatusCode);
+
+        // POST reserve via MVC: Must redirect to Seats with error flash message
+        var form = new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = afToken,
+            ["showtimeId"] = pastShowtime.ShowtimeId.ToString(),
+            ["seatIdsCsv"] = seat.SeatId.ToString()
+        };
+        var mvcReq = new HttpRequestMessage(HttpMethod.Post, "/bookings/reserve")
+        {
+            Content = new FormUrlEncodedContent(form)
+        };
+        mvcReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
+        var mvcResp = await client.SendAsync(mvcReq);
+        Assert.Equal(HttpStatusCode.Redirect, mvcResp.StatusCode);
+        Assert.Contains($"/showtimes/{pastShowtime.ShowtimeId}/seats", mvcResp.Headers.Location?.OriginalString);
+    }
+
+    [Fact]
+    public async Task TC_WEB_BOOK_23_ConcurrentCancelAndPayment_MaintainsConsistency()
+    {
+        var showtimeId = await CreateIsolatedShowtimeAsync(5);
+        await using var db = await fixture.CreateDbContextAsync();
+        var customer = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+        var seat = await db.ShowtimeSeats.Where(s => s.ShowtimeId == showtimeId).FirstAsync();
+
+        var resService = new SeatReservationService(db, new SystemClock());
+        var reservation = await resService.ReserveAsync(customer.UserId, showtimeId, [seat.SeatId]);
+
+        // Setup payment attempt
+        await using var paySetupDb = await fixture.CreateDbContextAsync();
+        var paymentService = new PaymentService(paySetupDb, new SystemClock(), new QrTokenProtector());
+        var attemptKey = Guid.NewGuid().ToString("N");
+        await paymentService.CreateMockAttemptAsync(customer.UserId, reservation.OrderId, attemptKey);
+
+        var msg = new MockPaymentMessage(Guid.NewGuid().ToString("N"), attemptKey, "TXN-" + Guid.NewGuid().ToString("N"), reservation.OrderCode, reservation.TotalVnd, "SUCCESS");
+        var verified = MockPaymentSecurity.Verify(msg, MockPaymentSecurity.SignForDevelopment(msg));
+
+        // Fire Cancel and Payment concurrently
+        var cancelTask = Task.Run(async () =>
+        {
+            await using var cancelDb = await fixture.CreateDbContextAsync();
+            var lifecycle = new OrderLifecycleService(cancelDb, new SystemClock());
+            try
+            {
+                return await lifecycle.CancelAsync(customer.UserId, reservation.OrderId);
+            }
+            catch (BusinessRuleException)
+            {
+                return false;
+            }
+        });
+
+        var paymentTask = Task.Run(async () =>
+        {
+            await using var applyDb = await fixture.CreateDbContextAsync();
+            var pay = new PaymentService(applyDb, new SystemClock(), new QrTokenProtector());
+            try
+            {
+                return await pay.ApplyVerifiedMockAsync(verified);
+            }
+            catch (BusinessRuleException)
+            {
+                return null;
+            }
+        });
+
+        await Task.WhenAll(cancelTask, paymentTask);
+
+        // Verification of invariant consistency
+        await using var verifyDb = await fixture.CreateDbContextAsync();
+        var finalOrder = await verifyDb.Orders.SingleAsync(o => o.OrderId == reservation.OrderId);
+        var finalSeat = await verifyDb.ShowtimeSeats.SingleAsync(s => s.ShowtimeId == showtimeId && s.SeatId == seat.SeatId);
+        var tickets = await verifyDb.Tickets.Where(t => t.OrderId == reservation.OrderId).ToListAsync();
+
+        if (finalOrder.Status == OrderStates.Paid)
+        {
+            Assert.Equal(SeatStates.Sold, finalSeat.State);
+            Assert.Single(tickets);
+            Assert.Equal("ISSUED", tickets[0].Status);
+        }
+        else
+        {
+            Assert.Equal(OrderStates.Cancelled, finalOrder.Status);
+            Assert.Equal(SeatStates.Available, finalSeat.State);
+            Assert.Empty(tickets);
+        }
+    }
+
+    [Fact]
+    public async Task TC_WEB_BOOK_24_PostCancel_WithoutAntiforgeryToken_Returns400BadRequest()
+    {
+        var showtimeId = await CreateIsolatedShowtimeAsync(5);
+        await using var db = await fixture.CreateDbContextAsync();
+        var seat = await db.ShowtimeSeats.Where(s => s.ShowtimeId == showtimeId).FirstAsync();
+
+        var client = CreateNewClient();
+        var (auth, afCookie, afToken) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+
+        var reserveReq = new HttpRequestMessage(HttpMethod.Post, "/api/bookings/reserve")
+        {
+            Content = JsonContent.Create(new ReserveSeatsRequest { ShowtimeId = showtimeId, SeatIds = [seat.SeatId] })
+        };
+        reserveReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
+        reserveReq.Headers.Add("X-XSRF-TOKEN", afToken);
+        var reserveResp = await client.SendAsync(reserveReq);
+        var order = await reserveResp.Content.ReadFromJsonAsync<ReservationResponseDto>();
+        Assert.NotNull(order);
+
+        // Send cancel request with auth cookie but MISSING X-XSRF-TOKEN header
+        var cancelReq = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{order.OrderId}/cancel");
+        cancelReq.Headers.Add("Cookie", $"{auth}; {afCookie}");
+        // Intentionally omit X-XSRF-TOKEN header
+
+        var cancelResp = await client.SendAsync(cancelReq);
+        Assert.Equal(HttpStatusCode.BadRequest, cancelResp.StatusCode);
     }
 }

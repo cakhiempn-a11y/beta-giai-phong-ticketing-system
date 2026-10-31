@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-66%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-75%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -51,7 +51,7 @@ The solution adheres to clean data-driven and modular monolith design patterns:
 - **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, and customer cancellation. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (66 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (75 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -312,9 +312,13 @@ Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_17_Order
 Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_18_MvcSeatSelectionFlow_RedirectsToOrderDetails
 Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_19_GetMyOrders_PaginationAndList_ReturnsAccurateOrders
 Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_20_OrderLifecycleService_ExpireDueAsync_CleansUpExpiredOrders
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_21_MvcReserve_InvalidSeatCsvInput_RedirectsWithFlashError
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_22_ReservePastOrNonSaleShowtime_ReturnsConflict
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_23_ConcurrentCancelAndPayment_MaintainsDataConsistency
+Passed BetaGiaiPhong.Tests.WebTests.BookingAndOrderWebTests.TC_WEB_BOOK_24_PostCancel_WithoutAntiforgeryToken_Returns400BadRequest
 
 Test Run Successful.
-Total tests: 66 | Passed: 66 | Failed: 0 | Total time: ~38 Seconds
+Total tests: 75 | Passed: 75 | Failed: 0 | Total time: ~42 Seconds
 ```
 
 ### 11.1. Running the Web Application
@@ -334,6 +338,7 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 | **ISSUE-03** | **P2** | Missing EF Core navigation properties on domain entities | **RESOLVED**: Added bidirectional navigation properties for all 22 FK relations. |
 | **ISSUE-04** | **P2** | `01_prepare_dev_session.ps1` failure on Windows PowerShell 5.1 | **RESOLVED**: Replaced with cross-platform .NET crypto instance call. |
 | **ISSUE-05** | **P2** | Unmapped reporting view `dbo.vw_ShowtimeSales` | **RESOLVED**: Mapped `ShowtimeSalesSummary` via `HasNoKey().ToView()`. |
+| **BE-02-REV**| **P2** | Test isolation, order IDOR enumeration & MVC input validation | **RESOLVED**: Standardized 404 for cross-customer cancel; strict CSV parsing; legitimate mock payment in TC_WEB_BOOK_13; added 6th invariant check. |
 
 ---
 
@@ -342,8 +347,9 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (66/66 tests passed: 28 Data/Domain tests + 38 Web integration tests).
+- **Test Suite Pass Rate:** 100% (75/75 tests passed: 28 Data/Domain tests + 47 Web integration tests).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
+- **Database Multi-Table Invariants:** 6/6 checks passed with 0 violations via `BetaGiaiPhong.Runner verify`.
 
 ---
 

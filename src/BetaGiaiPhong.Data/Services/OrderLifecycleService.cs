@@ -40,7 +40,7 @@ public sealed class OrderLifecycleService(BetaDbContext db, ISystemClock clock)
         if (actorId is long actor) await SecurityRules.EnsureRoleAsync(db, actor, ct, "CUSTOMER");
         var order = await db.Orders.SingleAsync(o => o.OrderId == orderId, ct);
         if (actorId is long uid && order.UserId != uid)
-            throw new BusinessRuleException("FORBIDDEN", "Customer cannot cancel someone else's order.");
+            throw new BusinessRuleException("ORDER_NOT_FOUND", "Order not found.");
 
         var now = clock.UtcNow;
 
