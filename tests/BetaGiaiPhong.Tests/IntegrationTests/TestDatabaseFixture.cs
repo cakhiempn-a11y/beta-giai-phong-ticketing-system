@@ -53,22 +53,13 @@ END;";
             await DemoSeeder.SeedAsync(db);
         }
 
-        // Clean up any historical dangling held seats and orphan test orders from interrupted test runs to guarantee test isolation
+        // Clean up any historical dangling held seats from interrupted test runs to guarantee test isolation
+        // NOTE: Does NOT perform destructive deletion of orders or evidence of data inconsistency
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE dbo.ShowtimeSeats 
             SET state = 'AVAILABLE', owner_order_id = NULL, hold_expires_utc = NULL 
             WHERE state = 'HELD' 
-              AND owner_order_id IN (SELECT order_id FROM dbo.Orders WHERE status IN ('CANCELLED', 'EXPIRED', 'FAILED'));
-
-            DELETE FROM dbo.OrderSeats 
-            WHERE order_id IN (SELECT o.order_id FROM dbo.Orders o OUTER APPLY (SELECT COUNT_BIG(*) n FROM dbo.Tickets t WHERE t.order_id=o.order_id) x WHERE o.status='PAID' AND x.n<>o.seat_count);
-
-            UPDATE dbo.ShowtimeSeats 
-            SET state = 'AVAILABLE', owner_order_id = NULL, hold_expires_utc = NULL 
-            WHERE owner_order_id IN (SELECT o.order_id FROM dbo.Orders o OUTER APPLY (SELECT COUNT_BIG(*) n FROM dbo.Tickets t WHERE t.order_id=o.order_id) x WHERE o.status='PAID' AND x.n<>o.seat_count);
-
-            DELETE FROM dbo.Orders 
-            WHERE order_id IN (SELECT o.order_id FROM dbo.Orders o OUTER APPLY (SELECT COUNT_BIG(*) n FROM dbo.Tickets t WHERE t.order_id=o.order_id) x WHERE o.status='PAID' AND x.n<>o.seat_count);");
+              AND owner_order_id IN (SELECT order_id FROM dbo.Orders WHERE status IN ('CANCELLED', 'EXPIRED', 'FAILED'));");
     }
 
     public async Task<BetaDbContext> CreateDbContextAsync()

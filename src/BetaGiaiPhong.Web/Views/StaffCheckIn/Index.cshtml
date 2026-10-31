@@ -183,9 +183,10 @@
         (function () {
             let html5QrCode = null;
             let isScanning = false;
+            let isInFlight = false;
+            let isTicketAccepted = false;
             let lastScannedToken = "";
-            let lastScannedTime = 0;
-            const DEBOUNCE_MS = 3000;
+            let pendingRetryToken = null;
 
             const btnStart = document.getElementById("btnStartCamera");
             const btnStop = document.getElementById("btnStopCamera");
@@ -212,21 +213,66 @@
                 return null;
             }
 
-            // Gửi yêu cầu soát vé lên máy chủ
-            async function submitScan(qrToken) {
-                if (!qrToken || !qrToken.trim()) return;
-                qrToken = qrToken.trim();
+            // Reset UI state for scanning next ticket
+            function resetScanState(focusInput = false) {
+                isTicketAccepted = false;
+                lastScannedToken = "";
+                pendingRetryToken = null;
+                isInFlight = false;
 
-                const now = Date.now();
-                if (qrToken === lastScannedToken && (now - lastScannedTime) < DEBOUNCE_MS) {
-                    console.log("Debounced duplicate scan:", qrToken);
+                statusBadge.className = "badge bg-secondary";
+                statusBadge.textContent = "Sẵn sàng quét";
+
+                ticketDetailsCard.classList.add("d-none");
+                resultCard.innerHTML = `
+                    <div class="mb-3 text-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-qr-code-scan" viewBox="0 0 16 16">
+                            <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5M.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5M4 4h1v1H4z"/>
+                            <path d="M7 2H2v5h5zM3 3h3v3H3zm2 8H4v1h1z"/>
+                            <path d="M7 9H2v5h5zM3 10h3v3H3zm8-8H9v5h5zM10 3h3v3h-3zm1 8h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm4-2h1v1h-1zm0 2h1v1h-1z"/>
+                            <path d="M14 9h-5v5h5zM10 10h3v3h-3z"/>
+                        </svg>
+                    </div>
+                    <h6 class="fw-bold text-secondary">Chưa có lượt quét nào</h6>
+                    <p class="text-muted small">Hãy chọn đúng suất chiếu và quét mã QR của khách hàng để kiểm tra vé hợp lệ.</p>
+                `;
+
+                manualInput.value = "";
+                if (focusInput) {
+                    manualInput.focus();
+                }
+            }
+
+            // Gửi yêu cầu soát vé lên máy chủ với cờ in-flight và kiểm soát trùng lặp
+            async function submitScan(qrToken, isExplicitRescan = false) {
+                if (isInFlight) return;
+
+                if (!qrToken || typeof qrToken !== "string") return;
+                qrToken = qrToken.trim();
+                if (qrToken.length === 0) return;
+
+                // Client-side validation: chặn token quá dài trước khi gửi lên mạng
+                if (qrToken.length > 256) {
+                    renderResult({
+                        outcome: "ERROR",
+                        isSuccess: false,
+                        message: "Mã QR không đúng định dạng quy chuẩn (vượt quá 256 ký tự)."
+                    });
                     return;
                 }
+
+                // Nếu vé vừa ACCEPTED và đây không phải là lượt bấm 'Quét lại vé này' chủ động, bỏ qua để chống camera lia trùng
+                if (isTicketAccepted && !isExplicitRescan) {
+                    return;
+                }
+
+                isInFlight = true;
                 lastScannedToken = qrToken;
-                lastScannedTime = now;
+                pendingRetryToken = qrToken;
 
                 const showtimeId = parseInt(showtimeSelect ? showtimeSelect.value : "0", 10);
                 if (!showtimeId || showtimeId <= 0) {
+                    isInFlight = false;
                     renderResult({
                         outcome: "ERROR",
                         isSuccess: false,
@@ -259,27 +305,29 @@
                     const data = await response.json();
                     renderResult(data);
                 } catch (err) {
-                    console.error("Lỗi mạng khi soát vé:", err);
                     renderResult({
                         outcome: "NETWORK_ERROR",
                         isSuccess: false,
-                        message: "Không thể kết nối đến máy chủ để xác thực vé. Vui lòng thử lại."
+                        message: "Không thể kết nối đến máy chủ để xác thực vé. Vui lòng kiểm tra mạng và thử lại."
                     });
+                } finally {
+                    isInFlight = false;
                 }
             }
 
-            // Hiển thị kết quả quét trực quan
+            // Hiển thị kết quả quét an toàn qua DOM APIs (không nội suy chuỗi vào innerHTML)
             function renderResult(data) {
                 const outcome = data.outcome || "UNKNOWN";
                 const isSuccess = !!data.isSuccess;
 
                 let alertClass = "alert-danger";
-                let iconSvg = "";
                 let badgeClass = "bg-danger";
                 let badgeText = outcome;
+                let iconSvg = "";
 
                 switch (outcome) {
                     case "ACCEPTED":
+                        isTicketAccepted = true;
                         alertClass = "alert-success";
                         badgeClass = "bg-success";
                         badgeText = "HỢP LỆ";
@@ -288,6 +336,7 @@
                         </svg>`;
                         break;
                     case "ALREADY_USED":
+                        isTicketAccepted = false;
                         alertClass = "alert-warning";
                         badgeClass = "bg-warning text-dark";
                         badgeText = "ĐÃ SỬ DỤNG";
@@ -296,6 +345,7 @@
                         </svg>`;
                         break;
                     case "WRONG_SHOWTIME":
+                        isTicketAccepted = false;
                         alertClass = "alert-warning";
                         badgeClass = "bg-warning text-dark";
                         badgeText = "SAI SUẤT CHIẾU";
@@ -304,6 +354,7 @@
                         </svg>`;
                         break;
                     case "OUTSIDE_WINDOW":
+                        isTicketAccepted = false;
                         alertClass = "alert-secondary";
                         badgeClass = "bg-secondary";
                         badgeText = "NGOÀI GIỜ SOÁT VÉ";
@@ -312,9 +363,20 @@
                             <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
                         </svg>`;
                         break;
+                    case "NETWORK_ERROR":
+                        isTicketAccepted = false;
+                        alertClass = "alert-danger";
+                        badgeClass = "bg-danger";
+                        badgeText = "LỖI KẾT NỐI";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-wifi-off text-danger mb-2" viewBox="0 0 16 16">
+                            <path d="M10.706 3.294A12.6 12.6 0 0 0 8 3C5.259 3 2.723 3.882.663 5.379a.485.485 0 0 0-.048.736.52.52 0 0 0 .668.05A11.45 11.45 0 0 1 8 4c.63 0 1.249.05 1.852.148zM8 6c-1.905 0-3.68.56-5.166 1.526a.48.48 0 0 0-.053.727c.18.19.467.22.68.077A9.56 9.56 0 0 1 8 7c1.472 0 2.846.36 4.053 1.004l.78-.78A10.6 10.6 0 0 0 8 6"/>
+                            <path d="M10.74 9.26l.78-.78A8 8 0 0 0 8 8c-.99 0-1.92.203-2.77.568l.842.842C6.67 9.155 7.32 9 8 9c.99 0 1.91.248 2.74.678m.72 1.74l.78-.78A5.5 5.5 0 0 0 8 10c-.57 0-1.11.11-1.6.31l.86.86C7.51 11.06 7.75 11 8 11c.78 0 1.49.26 2.06.7"/>
+                        </svg>`;
+                        break;
                     case "NOT_FOUND":
                     case "REJECTED":
                     default:
+                        isTicketAccepted = false;
                         alertClass = "alert-danger";
                         badgeClass = "bg-danger";
                         badgeText = outcome === "NOT_FOUND" ? "KHÔNG TỒN TẠI" : "TỪ CHỐI";
@@ -327,14 +389,66 @@
                 statusBadge.className = `badge ${badgeClass}`;
                 statusBadge.textContent = badgeText;
 
-                resultCard.innerHTML = `
-                    <div class="alert ${alertClass} text-center mb-0 p-3">
-                        ${iconSvg}
-                        <h5 class="alert-heading fw-bold">${badgeText}</h5>
-                        <p class="mb-0">${data.message || "Đã xử lý yêu cầu."}</p>
-                    </div>
-                `;
+                // Xây dựng DOM container an toàn
+                resultCard.innerHTML = "";
+                const alertContainer = document.createElement("div");
+                alertContainer.className = `alert ${alertClass} text-center mb-0 p-3`;
+                alertContainer.innerHTML = iconSvg;
 
+                const heading = document.createElement("h5");
+                heading.className = "alert-heading fw-bold";
+                heading.textContent = badgeText;
+                alertContainer.appendChild(heading);
+
+                const messageP = document.createElement("p");
+                messageP.className = "mb-2";
+                messageP.textContent = data.message || "Đã xử lý yêu cầu.";
+                alertContainer.appendChild(messageP);
+
+                // Nút thao tác sau khi quét: "Quét vé tiếp theo", "Quét lại", hoặc "Thử lại kết nối"
+                const actionsDiv = document.createElement("div");
+                actionsDiv.className = "mt-3 d-flex justify-content-center gap-2 flex-wrap";
+
+                if (outcome === "ACCEPTED") {
+                    const btnNext = document.createElement("button");
+                    btnNext.id = "btnScanNext";
+                    btnNext.type = "button";
+                    btnNext.className = "btn btn-success btn-sm px-3 fw-bold";
+                    btnNext.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right-circle me-1" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0M4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5z"/>
+                        </svg> Quét vé tiếp theo
+                    `;
+                    btnNext.addEventListener("click", () => resetScanState(true));
+                    actionsDiv.appendChild(btnNext);
+
+                    const btnRescan = document.createElement("button");
+                    btnRescan.id = "btnRescanCurrent";
+                    btnRescan.type = "button";
+                    btnRescan.className = "btn btn-outline-secondary btn-sm";
+                    btnRescan.textContent = "Quét lại vé này (Kiểm tra lại)";
+                    btnRescan.addEventListener("click", () => submitScan(lastScannedToken, true));
+                    actionsDiv.appendChild(btnRescan);
+                } else if (outcome === "NETWORK_ERROR") {
+                    const btnRetry = document.createElement("button");
+                    btnRetry.type = "button";
+                    btnRetry.className = "btn btn-outline-danger btn-sm px-3";
+                    btnRetry.textContent = "Thử lại kết nối";
+                    btnRetry.addEventListener("click", () => submitScan(pendingRetryToken, true));
+                    actionsDiv.appendChild(btnRetry);
+                } else {
+                    const btnClear = document.createElement("button");
+                    btnClear.type = "button";
+                    btnClear.className = "btn btn-outline-secondary btn-sm px-3";
+                    btnClear.textContent = "Quét vé khác";
+                    btnClear.addEventListener("click", () => resetScanState(true));
+                    actionsDiv.appendChild(btnClear);
+                }
+
+                alertContainer.appendChild(actionsDiv);
+                resultCard.appendChild(alertContainer);
+
+                // Điền chi tiết vé an toàn qua textContent
                 if (data.ticketId) {
                     ticketDetailsCard.classList.remove("d-none");
                     document.getElementById("resTicketCode").textContent = data.ticketCode || `#${data.ticketId}`;
@@ -367,7 +481,7 @@
                         (decodedText) => {
                             submitScan(decodedText);
                         },
-                        (errorMessage) => {
+                        () => {
                             // Ignored per-frame decoding misses
                         }
                     );
@@ -376,12 +490,12 @@
                     btnStart.disabled = true;
                     btnStop.disabled = false;
                 } catch (err) {
-                    console.error("Không thể mở camera:", err);
                     placeholder.classList.remove("d-none");
                     alert("Không thể khởi động camera: " + (err.message || err));
                 }
             }
 
+            // Dừng Camera an toàn
             async function stopCamera() {
                 if (!isScanning || !html5QrCode) return;
                 try {
@@ -389,7 +503,7 @@
                     html5QrCode.clear();
                     html5QrCode = null;
                 } catch (e) {
-                    console.warn(e);
+                    // Suppress harmless stop error
                 } finally {
                     isScanning = false;
                     btnStart.disabled = false;
@@ -401,17 +515,30 @@
             btnStart.addEventListener("click", startCamera);
             btnStop.addEventListener("click", stopCamera);
 
-            // Xử lý quét qua tải ảnh
+            // Xử lý khi thay đổi suất chiếu: Reset toàn bộ kết quả quét để tránh sai lệch
+            if (showtimeSelect) {
+                showtimeSelect.addEventListener("change", () => {
+                    resetScanState(false);
+                });
+            }
+
+            // Xử lý quét qua tải ảnh (ngắt camera trước nếu đang chạy để không chiếm trùng DOM reader)
             qrFileInput.addEventListener("change", async (e) => {
                 if (e.target.files.length === 0) return;
                 const file = e.target.files[0];
+
+                if (isScanning) {
+                    await stopCamera();
+                }
+
                 try {
                     const tempScanner = new Html5Qrcode("reader");
                     const decodedText = await tempScanner.scanFile(file, true);
+                    tempScanner.clear();
                     submitScan(decodedText);
-                    qrFileInput.value = "";
                 } catch (err) {
                     alert("Không tìm thấy mã QR hợp lệ trong hình ảnh tải lên.");
+                } finally {
                     qrFileInput.value = "";
                 }
             });

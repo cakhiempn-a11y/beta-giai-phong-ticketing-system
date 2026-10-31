@@ -95,7 +95,7 @@ public sealed class ReservationExpiryWorkerTests(TestDatabaseFixture fixture)
                 });
             }
         }
-        else if (status is OrderStates.Cancelled or OrderStates.Expired or OrderStates.Failed)
+        else if (status is OrderStates.Cancelled or OrderStates.Expired or OrderStates.Failed or OrderStates.Review)
         {
             var holds = await db.ShowtimeSeats.Where(s => s.ShowtimeId == showtime.ShowtimeId && s.OwnerOrderId == order.OrderId).ToListAsync();
             foreach (var h in holds)
@@ -231,8 +231,10 @@ public sealed class ReservationExpiryWorkerTests(TestDatabaseFixture fixture)
     {
         var pastUtc = DateTime.UtcNow.AddMinutes(-10);
 
-        var (_, paidOrderId, _) = await CreateOrderAsync(OrderStates.Paid, pastUtc);
-        var (_, cancelledOrderId, _) = await CreateOrderAsync(OrderStates.Cancelled, pastUtc);
+        var (paidStId, paidOrderId, paidSeats) = await CreateOrderAsync(OrderStates.Paid, pastUtc);
+        var (cancelledStId, cancelledOrderId, cancelledSeats) = await CreateOrderAsync(OrderStates.Cancelled, pastUtc);
+        var (failedStId, failedOrderId, failedSeats) = await CreateOrderAsync(OrderStates.Failed, pastUtc);
+        var (reviewStId, reviewOrderId, reviewSeats) = await CreateOrderAsync(OrderStates.Review, pastUtc);
 
         var scopeFactory = CreateScopeFactory();
         var config = new ConfigurationBuilder().Build();
@@ -243,11 +245,47 @@ public sealed class ReservationExpiryWorkerTests(TestDatabaseFixture fixture)
         await worker.ProcessExpiredOrdersAsync(100, CancellationToken.None);
 
         await using var db = await fixture.CreateDbContextAsync();
+
+        // 1. Verify PAID order preserved, tickets intact, seats SOLD
         var paidOrder = await db.Orders.SingleAsync(o => o.OrderId == paidOrderId);
         Assert.Equal(OrderStates.Paid, paidOrder.Status);
+        var paidTickets = await db.Tickets.Where(t => t.OrderId == paidOrderId).ToListAsync();
+        Assert.Equal(paidSeats.Count, paidTickets.Count);
+        var paidSeatsDb = await db.ShowtimeSeats.Where(s => s.ShowtimeId == paidStId && paidSeats.Contains(s.SeatId)).ToListAsync();
+        Assert.All(paidSeatsDb, s => Assert.Equal(SeatStates.Sold, s.State));
 
+        // 2. Verify CANCELLED order preserved, seats AVAILABLE
         var cancelledOrder = await db.Orders.SingleAsync(o => o.OrderId == cancelledOrderId);
         Assert.Equal(OrderStates.Cancelled, cancelledOrder.Status);
+        var cancelledSeatsDb = await db.ShowtimeSeats.Where(s => s.ShowtimeId == cancelledStId && cancelledSeats.Contains(s.SeatId)).ToListAsync();
+        Assert.All(cancelledSeatsDb, s =>
+        {
+            Assert.Equal(SeatStates.Available, s.State);
+            Assert.Null(s.OwnerOrderId);
+            Assert.Null(s.HoldExpiresUtc);
+        });
+
+        // 3. Verify FAILED order preserved, seats AVAILABLE
+        var failedOrder = await db.Orders.SingleAsync(o => o.OrderId == failedOrderId);
+        Assert.Equal(OrderStates.Failed, failedOrder.Status);
+        var failedSeatsDb = await db.ShowtimeSeats.Where(s => s.ShowtimeId == failedStId && failedSeats.Contains(s.SeatId)).ToListAsync();
+        Assert.All(failedSeatsDb, s =>
+        {
+            Assert.Equal(SeatStates.Available, s.State);
+            Assert.Null(s.OwnerOrderId);
+            Assert.Null(s.HoldExpiresUtc);
+        });
+
+        // 4. Verify NEEDS_REVIEW order preserved, seats AVAILABLE
+        var reviewOrder = await db.Orders.SingleAsync(o => o.OrderId == reviewOrderId);
+        Assert.Equal(OrderStates.Review, reviewOrder.Status);
+        var reviewSeatsDb = await db.ShowtimeSeats.Where(s => s.ShowtimeId == reviewStId && reviewSeats.Contains(s.SeatId)).ToListAsync();
+        Assert.All(reviewSeatsDb, s =>
+        {
+            Assert.Equal(SeatStates.Available, s.State);
+            Assert.Null(s.OwnerOrderId);
+            Assert.Null(s.HoldExpiresUtc);
+        });
     }
 
     [Fact]
@@ -288,53 +326,182 @@ public sealed class ReservationExpiryWorkerTests(TestDatabaseFixture fixture)
     [Fact]
     public async Task TC_WORKER_06_ConcurrentPaymentAndExpiry_MaintainsDataConsistency()
     {
-        // Create an overdue pending order
+        var scopeFactory = CreateScopeFactory();
+        var config = new ConfigurationBuilder().Build();
+        var env = new TestHostEnvironment("Production");
+
+        for (int iteration = 0; iteration < 3; iteration++)
+        {
+            await using var initDb = await fixture.CreateDbContextAsync();
+            var movie = await initDb.Movies.FirstAsync();
+            var room = await initDb.Rooms.FirstAsync();
+            var manager = await initDb.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+            var customer = await initDb.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+
+            var showtime = new Showtime
+            {
+                MovieId = movie.MovieId,
+                RoomId = room.RoomId,
+                StartUtc = DateTime.UtcNow.AddDays(1),
+                EndUtc = DateTime.UtcNow.AddDays(1).AddMinutes(120),
+                BufferMinutes = 15,
+                Status = "ON_SALE",
+                SellableCapacitySnapshot = 10,
+                CreatedBy = manager.UserId,
+                CreatedUtc = DateTime.UtcNow
+            };
+            initDb.Showtimes.Add(showtime);
+            await initDb.SaveChangesAsync();
+
+            var seat = await initDb.Seats.FirstAsync(s => s.RoomId == room.RoomId && s.IsActive);
+            initDb.ShowtimeSeats.Add(new ShowtimeSeat
+            {
+                ShowtimeId = showtime.ShowtimeId,
+                SeatId = seat.SeatId,
+                RoomId = room.RoomId,
+                State = SeatStates.Available
+            });
+            foreach (var st in await initDb.SeatTypes.ToListAsync())
+            {
+                initDb.SeatPrices.Add(new SeatPrice
+                {
+                    ShowtimeId = showtime.ShowtimeId,
+                    SeatTypeCode = st.SeatTypeCode,
+                    AmountVnd = 80000,
+                    UpdatedUtc = DateTime.UtcNow
+                });
+            }
+            await initDb.SaveChangesAsync();
+
+            var reservation = await new SeatReservationService(initDb, new SystemClock())
+                .ReserveAsync(customer.UserId, showtime.ShowtimeId, [seat.SeatId]);
+
+            // Create a real payment attempt for this order
+            var attemptKey = "ATTEMPT-RACE-" + Guid.NewGuid().ToString("N");
+            var paymentServiceInit = new PaymentService(initDb, new SystemClock(), new QrTokenProtector());
+            var paymentId = await paymentServiceInit.CreateMockAttemptAsync(customer.UserId, reservation.OrderId, attemptKey);
+
+            // Adjust order expires_utc to be expired or expiring immediately
+            var order = await initDb.Orders.SingleAsync(o => o.OrderId == reservation.OrderId);
+            var pastUtc = DateTime.UtcNow.AddSeconds(-1);
+            order.CreatedUtc = pastUtc.AddMinutes(-15);
+            order.ExpiresUtc = pastUtc;
+            var hold = await initDb.ShowtimeSeats.SingleAsync(s => s.ShowtimeId == showtime.ShowtimeId && s.SeatId == seat.SeatId);
+            hold.HoldExpiresUtc = pastUtc;
+            await initDb.SaveChangesAsync();
+
+            var worker = new ReservationExpiryWorker(
+                scopeFactory, config, env, NullLogger<ReservationExpiryWorker>.Instance);
+
+            // Prepare verified payment message matching order & attemptKey
+            var msg = new MockPaymentMessage(
+                ProviderEventRef: "EVT-" + Guid.NewGuid().ToString("N"),
+                AttemptKey: attemptKey,
+                ProviderTransactionRef: "TXN-" + Guid.NewGuid().ToString("N"),
+                OrderCode: order.OrderCode,
+                AmountVnd: order.TotalVnd,
+                Outcome: "SUCCESS");
+            var verified = MockPaymentSecurity.Verify(msg, MockPaymentSecurity.SignForDevelopment(msg));
+
+            // Concurrently run Expiry Worker and Payment callback across separate DbContexts
+            var expiryTask = Task.Run(async () =>
+            {
+                return await worker.ProcessExpiredOrdersAsync(10, CancellationToken.None);
+            });
+
+            var paymentTask = Task.Run(async () =>
+            {
+                await using var payDb = await fixture.CreateDbContextAsync();
+                var paySvc = new PaymentService(payDb, new SystemClock(), new QrTokenProtector());
+                return await paySvc.ApplyVerifiedMockAsync(verified);
+            });
+
+            await Task.WhenAll(expiryTask, paymentTask);
+            var payResult = await paymentTask;
+
+            // Invariant Verification: No corrupted or hybrid states allowed!
+            await using var verifyDb = await fixture.CreateDbContextAsync();
+            var finalOrder = await verifyDb.Orders.SingleAsync(o => o.OrderId == reservation.OrderId);
+            var finalSeat = await verifyDb.ShowtimeSeats.SingleAsync(s => s.ShowtimeId == showtime.ShowtimeId && s.SeatId == seat.SeatId);
+            var finalTickets = await verifyDb.Tickets.Where(t => t.OrderId == reservation.OrderId).ToListAsync();
+            var finalPayment = await verifyDb.Payments.SingleAsync(p => p.PaymentId == paymentId);
+
+            if (finalOrder.Status == OrderStates.Paid)
+            {
+                // Payment won race: Order is PAID, seats SOLD, tickets issued, payment SUCCESS
+                Assert.Equal(SeatStates.Sold, finalSeat.State);
+                Assert.Null(finalSeat.HoldExpiresUtc);
+                Assert.Single(finalTickets);
+                Assert.Equal("SUCCESS", finalPayment.Status);
+                Assert.Equal("APPLIED", payResult.Decision);
+            }
+            else if (finalOrder.Status is OrderStates.Expired or OrderStates.Review)
+            {
+                // Expiry won race: Order is EXPIRED or NEEDS_REVIEW, seats AVAILABLE, 0 tickets, payment NOT SUCCESS
+                Assert.Equal(SeatStates.Available, finalSeat.State);
+                Assert.Null(finalSeat.OwnerOrderId);
+                Assert.Null(finalSeat.HoldExpiresUtc);
+                Assert.Empty(finalTickets);
+                Assert.Contains(finalPayment.Status, new[] { "CREATED", "NEEDS_REVIEW" });
+                Assert.Contains(payResult.Decision, new[] { "NEEDS_REVIEW", "REJECTED" });
+            }
+            else
+            {
+                Assert.Fail($"Unexpected order status after race: {finalOrder.Status}");
+            }
+        }
+    }
+
+    [Fact]
+    public async Task TC_WORKER_07_RealHostedServiceExecution_SweepsExpiredReservations()
+    {
+        // Create an overdue reservation
         var pastUtc = DateTime.UtcNow.AddMinutes(-5);
         var (showtimeId, orderId, seatIds) = await CreateOrderAsync(OrderStates.Pending, pastUtc);
 
         var scopeFactory = CreateScopeFactory();
-        var config = new ConfigurationBuilder().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["BGP_ENABLE_EXPIRY_WORKER"] = "true",
+                ["BGP_EXPIRY_INTERVAL_SECONDS"] = "1",
+                ["BGP_EXPIRY_BATCH_SIZE"] = "50"
+            })
+            .Build();
+
         var env = new TestHostEnvironment("Production");
         var worker = new ReservationExpiryWorker(
             scopeFactory, config, env, NullLogger<ReservationExpiryWorker>.Instance);
 
-        // Task 1: Expiry sweep
-        var expiryTask = Task.Run(async () =>
-        {
-            await worker.ProcessExpiredOrdersAsync(10, CancellationToken.None);
-        });
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-        // Task 2: Payment callback
-        var paymentTask = Task.Run(async () =>
+        // Start worker in background
+        await worker.StartAsync(cts.Token);
+
+        // Wait up to 3 seconds for worker timer to tick and sweep
+        var swept = false;
+        for (int i = 0; i < 6; i++)
         {
-            await using var db = await fixture.CreateDbContextAsync();
-            var paymentService = new PaymentService(db, new SystemClock(), new QrTokenProtector());
-            var msg = new MockPaymentMessage(Guid.NewGuid().ToString("N"), Guid.NewGuid().ToString("N"), "TXN-RACE-" + Guid.NewGuid().ToString("N"), "BGP-TEST-RACE", 150000, "SUCCESS");
-            var verified = MockPaymentSecurity.Verify(msg, MockPaymentSecurity.SignForDevelopment(msg));
-            try
+            await Task.Delay(500);
+            await using var checkDb = await fixture.CreateDbContextAsync();
+            var status = await checkDb.Orders.Where(o => o.OrderId == orderId).Select(o => o.Status).SingleOrDefaultAsync();
+            if (status == OrderStates.Expired)
             {
-                await paymentService.ApplyVerifiedMockAsync(verified);
+                swept = true;
+                break;
             }
-            catch
-            {
-                // Expected if order expired or invalid
-            }
-        });
-
-        await Task.WhenAll(expiryTask, paymentTask);
-
-        // Invariant: If order is EXPIRED, seats MUST NOT be SOLD
-        await using var verifyDb = await fixture.CreateDbContextAsync();
-        var order = await verifyDb.Orders.SingleAsync(o => o.OrderId == orderId);
-        var seats = await verifyDb.ShowtimeSeats.Where(s => s.ShowtimeId == showtimeId && seatIds.Contains(s.SeatId)).ToListAsync();
-
-        if (order.Status == OrderStates.Expired)
-        {
-            Assert.All(seats, s => Assert.Equal(SeatStates.Available, s.State));
         }
-        else if (order.Status == OrderStates.Paid)
-        {
-            Assert.All(seats, s => Assert.Equal(SeatStates.Sold, s.State));
-        }
+
+        // Stop worker gracefully
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.True(swept, "Worker timer tick should have swept the overdue order to EXPIRED within interval.");
+        Assert.True(worker.ExecuteTask == null || worker.ExecuteTask.IsCompletedSuccessfully,
+            "Worker background execution task should complete successfully without unhandled exceptions.");
+
+        // Verify seats were released
+        await using var db = await fixture.CreateDbContextAsync();
+        var seats = await db.ShowtimeSeats.Where(s => s.ShowtimeId == showtimeId && seatIds.Contains(s.SeatId)).ToListAsync();
+        Assert.All(seats, s => Assert.Equal(SeatStates.Available, s.State));
     }
 }

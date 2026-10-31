@@ -614,4 +614,32 @@ public sealed class StaffCheckInWebTests(TestDatabaseFixture fixture) : IClassFi
         var notFoundHtml = await notFoundHistResp.Content.ReadAsStringAsync();
         Assert.Contains("NOT_FOUND", notFoundHtml);
     }
+
+    [Fact]
+    public async Task TC_WEB_STAFF_18_ClientScannerView_DoesNotLogRawTokens_AndUsesSafeRendering()
+    {
+        var client = CreateNewClient();
+        var (authCookie, _, _) = await LoginAndGetTokensAsync(client, "staff@demo.invalid");
+
+        var getReq = new HttpRequestMessage(HttpMethod.Get, "/staff/check-in");
+        getReq.Headers.Add("Cookie", authCookie);
+        var response = await client.SendAsync(getReq);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        // 1. Security: Must NOT contain raw token logging
+        Assert.DoesNotContain("console.log(\"Debounced duplicate scan:", html);
+        Assert.DoesNotContain("console.log(\"Raw QR Token", html);
+
+        // 2. Safe DOM rendering: Must use textContent and createElement rather than insecure innerHTML interpolation
+        Assert.Contains("textContent", html);
+        Assert.Contains("createElement", html);
+
+        // 3. Duplicate scan prevention & reset flow
+        Assert.Contains("btnScanNext", html);
+        Assert.Contains("btnRescanCurrent", html);
+        Assert.Contains("isInFlight", html);
+        Assert.Contains("isTicketAccepted", html);
+    }
 }

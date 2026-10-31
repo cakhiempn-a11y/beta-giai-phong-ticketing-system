@@ -1,4 +1,5 @@
 using System.Data;
+using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,8 @@ internal static class Program
                     return 0;
                 case "seed-demo":
                     await DemoSeeder.SeedAsync(db); return 0;
+                case "seed-checkin-demo":
+                    await SeedCheckInDemoAsync(options); return 0;
                 case "smoke":
                     await SmokeAsync(options); return 0;
                 case "race":
@@ -195,10 +198,144 @@ internal static class Program
         Console.WriteLine("INTEGRITY PASSED (static consistency checks; run race test separately).");
     }
 
+    private static async Task SeedCheckInDemoAsync(DbContextOptions<BetaDbContext> options)
+    {
+        await using var db = new BetaDbContext(options);
+
+        var customer = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID")
+            ?? throw new InvalidOperationException("Demo user CUSTOMER1@DEMO.INVALID not found. Run 'seed-demo' first.");
+        var manager = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID")
+            ?? throw new InvalidOperationException("Demo user MANAGER@DEMO.INVALID not found. Run 'seed-demo' first.");
+
+        var movie = await db.Movies.FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("No movies found in database. Run 'seed-demo' first.");
+        var room = await db.Rooms.FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("No rooms found in database. Run 'seed-demo' first.");
+
+        var now = DateTime.UtcNow;
+
+        var showtime = await db.Showtimes
+            .Include(s => s.Movie)
+            .Include(s => s.Room)
+            .Where(s => s.Status == "ON_SALE" && s.StartUtc >= now.AddMinutes(-15) && s.StartUtc <= now.AddMinutes(25)
+                && db.ShowtimeSeats.Any(ss => ss.ShowtimeId == s.ShowtimeId && ss.State == SeatStates.Available))
+            .OrderByDescending(s => s.ShowtimeId)
+            .FirstOrDefaultAsync();
+
+        if (showtime == null)
+        {
+            var startUtc = now.AddMinutes(15);
+            var endUtc = startUtc.AddMinutes(120);
+            showtime = new Showtime
+            {
+                MovieId = movie.MovieId,
+                RoomId = room.RoomId,
+                StartUtc = startUtc,
+                EndUtc = endUtc,
+                BufferMinutes = 15,
+                Status = "ON_SALE",
+                SellableCapacitySnapshot = 10,
+                CreatedBy = manager.UserId,
+                CreatedUtc = now
+            };
+            db.Showtimes.Add(showtime);
+            await db.SaveChangesAsync();
+
+            var roomSeats = await db.Seats.Where(s => s.RoomId == room.RoomId && s.IsActive).ToListAsync();
+            foreach (var seat in roomSeats)
+            {
+                db.ShowtimeSeats.Add(new ShowtimeSeat
+                {
+                    ShowtimeId = showtime.ShowtimeId,
+                    SeatId = seat.SeatId,
+                    RoomId = room.RoomId,
+                    State = SeatStates.Available
+                });
+            }
+            foreach (var st in await db.SeatTypes.ToListAsync())
+            {
+                db.SeatPrices.Add(new SeatPrice
+                {
+                    ShowtimeId = showtime.ShowtimeId,
+                    SeatTypeCode = st.SeatTypeCode,
+                    AmountVnd = 75000,
+                    UpdatedUtc = now
+                });
+            }
+            await db.SaveChangesAsync();
+
+            showtime = await db.Showtimes
+                .Include(s => s.Movie)
+                .Include(s => s.Room)
+                .SingleAsync(s => s.ShowtimeId == showtime.ShowtimeId);
+        }
+
+        var availableSeat = await db.ShowtimeSeats
+            .Where(ss => ss.ShowtimeId == showtime.ShowtimeId && ss.State == SeatStates.Available)
+            .Select(ss => ss.SeatId)
+            .FirstOrDefaultAsync();
+
+        if (availableSeat == 0)
+        {
+            throw new InvalidOperationException($"No AVAILABLE seats left in showtime #{showtime.ShowtimeId}. Seed a new showtime or run 'expire'.");
+        }
+
+        var res = await new SeatReservationService(db, new SystemClock())
+            .ReserveAsync(customer.UserId, showtime.ShowtimeId, [availableSeat]);
+
+        var qrProtector = new QrTokenProtector();
+        var payments = new PaymentService(db, new SystemClock(), qrProtector);
+        var attemptKey = "DEMO-ATTEMPT-" + Guid.NewGuid().ToString("N");
+        await payments.CreateMockAttemptAsync(customer.UserId, res.OrderId, attemptKey);
+
+        var msg = new MockPaymentMessage(
+            ProviderEventRef: "EVT-" + Guid.NewGuid().ToString("N"),
+            AttemptKey: attemptKey,
+            ProviderTransactionRef: "TXN-DEMO-" + Guid.NewGuid().ToString("N"),
+            OrderCode: res.OrderCode,
+            AmountVnd: res.TotalVnd,
+            Outcome: "SUCCESS");
+        var verified = MockPaymentSecurity.Verify(msg, MockPaymentSecurity.SignForDevelopment(msg));
+        var applied = await payments.ApplyVerifiedMockAsync(verified);
+
+        if (applied.Decision != "APPLIED" || applied.OrderStatus != "PAID")
+        {
+            throw new InvalidOperationException($"Payment application failed: {applied.Decision} / {applied.OrderStatus}");
+        }
+
+        var ticket = await db.Tickets
+            .SingleAsync(t => t.OrderId == res.OrderId);
+        var seatEntity = await db.Seats
+            .SingleAsync(s => s.SeatId == ticket.SeatId);
+
+        var rawToken = qrProtector.Unseal(ticket.QrTokenCipher);
+
+        Console.WriteLine();
+        Console.WriteLine("======================================================================");
+        Console.WriteLine("BETA GIAI PHONG — DEMO CHECK-IN TICKET GENERATED");
+        Console.WriteLine("======================================================================");
+        Console.WriteLine($"Showtime ID : {showtime.ShowtimeId}");
+        Console.WriteLine($"Movie       : {showtime.Movie?.Title ?? movie.Title}");
+        Console.WriteLine($"Room        : {showtime.Room?.RoomName ?? room.RoomName}");
+        Console.WriteLine($"Start Time  : {showtime.StartUtc:yyyy-MM-dd HH:mm:ss} UTC (Active check-in window)");
+        Console.WriteLine($"Order Code  : {res.OrderCode}");
+        Console.WriteLine($"Ticket Code : {ticket.TicketCode}");
+        Console.WriteLine($"Seat        : {seatEntity.SeatCode} (Row {seatEntity.RowLabel}, Col {seatEntity.ColumnNo})");
+        Console.WriteLine($"Customer    : {customer.DisplayName} ({customer.Email})");
+        Console.WriteLine();
+        Console.WriteLine("RAW QR TOKEN (Copy & paste into Staff Manual Input):");
+        Console.WriteLine(rawToken);
+        Console.WriteLine();
+        Console.WriteLine("Direct Staff Check-In URL:");
+        Console.WriteLine($"http://localhost:5000/staff/check-in?showtimeId={showtime.ShowtimeId}");
+        Console.WriteLine("======================================================================");
+        Console.WriteLine();
+    }
+
     private static void PrintHelp()
     {
         Console.WriteLine("Beta Giải Phóng EF Core data runner (SQL Server, prototype)");
-        Console.WriteLine("Commands: migrate | status | seed-demo | smoke | race | late | expire | verify");
+        Console.WriteLine("Commands: migrate | status | seed-demo | seed-checkin-demo | smoke | race | late | expire | verify");
         Console.WriteLine("Environment: ConnectionStrings__BetaDb (required for commands)");
         Console.WriteLine("seed-demo: BGP_ALLOW_DEMO_SEED=true; BGP_DEMO_PASSWORD=... (>=12 chars)");
         Console.WriteLine("smoke: BGP_MOCK_HMAC_KEY_B64 and BGP_QR_AES_KEY_B64 (32 random bytes each)");
