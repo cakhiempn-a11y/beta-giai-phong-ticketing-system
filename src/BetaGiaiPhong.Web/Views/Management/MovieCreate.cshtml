@@ -1,0 +1,73 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.ManageMovieFormViewModel
+@{
+    ViewData["Title"] = "Thêm Phim Mới";
+}
+
+<div class="container py-4" style="max-width: 800px;">
+    <div class="mb-4">
+        <a asp-action="Movies" class="text-decoration-none small text-muted">&larr; Quay lại danh sách phim</a>
+        <h1 class="h3 fw-bold mt-2">Thêm Phim Mới</h1>
+        <p class="text-secondary small">Phim mới tạo sẽ mặc định ở trạng thái <strong>DRAFT</strong>. Bạn có thể xuất bản (PUBLISHED) sau khi kiểm tra đầy đủ thông tin.</p>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert">
+            <div asp-validation-summary="All" class="mb-0"></div>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <form asp-action="MovieCreate" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên phim <span class="text-danger">*</span></label>
+                    <input type="text" name="Title" value="@Model.Title" class="form-control" placeholder="Ví dụ: Đào, Phở và Piano" required maxlength="250" />
+                    <div class="form-text">Tối đa 250 ký tự. Không được để trống.</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Thời lượng (phút) <span class="text-danger">*</span></label>
+                        <input type="number" name="DurationMin" value="@Model.DurationMin" class="form-control" min="1" max="480" required />
+                        <div class="form-text">Ràng buộc hợp lệ từ 1 đến 480 phút.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Nhãn độ tuổi</label>
+                        <select name="AgeLabel" class="form-select">
+                            <option value="P" selected="@(Model.AgeLabel == "P")">P — Phổ biến cho mọi độ tuổi</option>
+                            <option value="K" selected="@(Model.AgeLabel == "K")">K — Dưới 13 tuổi có người bảo hộ</option>
+                            <option value="T13" selected="@(Model.AgeLabel == "T13")">T13 — Phù hợp từ 13 tuổi trở lên</option>
+                            <option value="T16" selected="@(Model.AgeLabel == "T16")">T16 — Phù hợp từ 16 tuổi trở lên</option>
+                            <option value="T18" selected="@(Model.AgeLabel == "T18")">T18 — Phù hợp từ 18 tuổi trở lên</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Thể loại phim</label>
+                    <input type="text" name="GenreText" value="@Model.GenreText" class="form-control" placeholder="Ví dụ: Hành động, Phiêu lưu, Viễn tưởng" maxlength="160" />
+                    <div class="form-text">Tối đa 160 ký tự.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Đường dẫn Poster (URL hoặc Relative Path)</label>
+                    <input type="text" name="PosterUrl" value="@Model.PosterUrl" class="form-control" placeholder="https://example.com/poster.jpg hoặc /images/posters/movie.jpg" maxlength="500" />
+                    <div class="form-text">Đường dẫn HTTP/HTTPS hợp lệ hoặc đường dẫn nội bộ (bắt đầu bằng /). Tối đa 500 ký tự.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Tóm tắt nội dung (Synopsis)</label>
+                    <textarea name="Synopsis" rows="4" class="form-control" placeholder="Mô tả tóm tắt cốt truyện và thông tin đạo diễn, diễn viên...">@Model.Synopsis</textarea>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a asp-action="Movies" class="btn btn-outline-secondary">Hủy bỏ</a>
+                    <button type="submit" class="btn btn-primary px-4">Lưu Phim (DRAFT)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

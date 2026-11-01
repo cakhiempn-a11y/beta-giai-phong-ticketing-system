@@ -1,8 +1,11 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using BetaGiaiPhong.Data;
+using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Web.Middleware;
 using BetaGiaiPhong.Web.Services;
 using BetaGiaiPhong.Web.Services.Workers;
@@ -97,6 +100,38 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ReturnUrlParameter = "returnUrl";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var userIdStr = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out var userId))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            var db = context.HttpContext.RequestServices.GetRequiredService<BetaDbContext>();
+            var user = await db.Users
+                .Where(u => u.UserId == userId)
+                .Select(u => new { u.Status, Roles = u.UserRoles.Select(ur => ur.Role!.RoleCode).ToList() })
+                .FirstOrDefaultAsync();
+
+            if (user is null || user.Status != "ACTIVE")
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            var claimedRoles = context.Principal?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
+            var dbRoleSet = new HashSet<string>(user.Roles, StringComparer.OrdinalIgnoreCase);
+            if (claimedRoles.Any(r => !dbRoleSet.Contains(r)))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+        };
         options.Events.OnRedirectToLogin = context =>
         {
             if (context.Request.Path.StartsWithSegments("/api") ||

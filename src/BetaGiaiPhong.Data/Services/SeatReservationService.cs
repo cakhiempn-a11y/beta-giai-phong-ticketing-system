@@ -20,9 +20,13 @@ public sealed class SeatReservationService(BetaDbContext db, ISystemClock clock)
             throw new BusinessRuleException("SHOWTIME_NOT_FOUND", "Unknown showtime.");
         await SecurityRules.EnsureRoleAsync(db, customerId, ct, "CUSTOMER");
         var now = clock.UtcNow;
-        var showtime = await db.Showtimes.SingleAsync(s => s.ShowtimeId == showtimeId, ct);
+        var showtime = await db.Showtimes
+            .Include(s => s.Movie)
+            .SingleAsync(s => s.ShowtimeId == showtimeId, ct);
         if (showtime.Status != "ON_SALE" || showtime.StartUtc <= now)
             throw new BusinessRuleException("NOT_ON_SALE", "Showtime is not open for booking.");
+        if (showtime.Movie == null || showtime.Movie.Status != "PUBLISHED")
+            throw new BusinessRuleException("MOVIE_NOT_PUBLISHED", "Phim chưa được xuất bản hoặc đã lưu trữ, không thể đặt vé.");
 
         var selected = await (from ss in db.ShowtimeSeats
             join seat in db.Seats on ss.SeatId equals seat.SeatId
