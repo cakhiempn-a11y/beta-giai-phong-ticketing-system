@@ -2,7 +2,8 @@
 
 **Đề tài:** Phân tích, thiết kế và xây dựng hệ thống quản lý bán vé trực tuyến tại rạp chiếu phim Beta Giải Phóng  
 **Tác giả:** Vũ Văn Khiêm (`11235581`) — Ngành Hệ thống thông tin quản lý (MIS)  
-**Giảng viên hướng dẫn:** ThS. Nguyễn Anh Phương
+**Giảng viên hướng dẫn:** ThS. Nguyễn Anh Phương  
+**Phiên bản:** 1.1 (RC-01 Reconciled)
 
 ---
 
@@ -21,10 +22,10 @@
 
 ## 2. Tải Mã nguồn và Khôi phục Gói Phụ thuộc
 
-Mở PowerShell tại thư mục làm việc (ví dụ `D:\Projects\BetaGiaiPhong`):
+Mở PowerShell tại thư mục làm việc (`D:\Projects\BetaGiaiPhong`):
 
 ```powershell
-# 1. Khôi phục công cụ локаl (dotnet-ef) và các gói NuGet của toàn bộ Solution
+# 1. Khôi phục công cụ local (dotnet-ef) và các gói NuGet của toàn bộ Solution
 dotnet tool restore
 dotnet restore BetaGiaiPhong.slnx
 
@@ -40,90 +41,114 @@ Pop-Location
 
 ---
 
-## 3. Cấu hình Biến Môi trường và Khóa Mật mã (Secrets)
+## 3. Cấu hình Biến Môi trường và Khóa Mật mã CSPRNG (`.NET User Secrets`)
 
-Theo yêu cầu bảo mật `NFR-10`, kho mã nguồn **không lưu cứng (hard-code)** mật khẩu hay khóa mật mã trong `appsettings.json`. Trước khi chạy ứng dụng hoặc công cụ `Runner`, bạn cần thiết lập các biến môi trường (hoặc chạy script tự động ở Mục 4):
+Theo yêu cầu bảo mật `NFR-10`, kho mã nguồn **không lưu cứng (hard-code)** mật khẩu hay khóa mật mã trong `appsettings.json`. Các biến môi trường và khóa cấu hình gồm:
 
-| Tên biến môi trường | Ý nghĩa | Giá trị mẫu cho môi trường phát triển cục bộ |
+| Tên biến môi trường / User Secret | Ý nghĩa | Giá trị / Quy tắc bắt buộc |
 |---|---|---|
-| `ConnectionStrings__BetaDb` | Chuỗi kết nối SQL Server cho ứng dụng Web và Runner | `Server=localhost;Database=BetaGiaiPhong_Dev;Trusted_Connection=True;TrustServerCertificate=True;` |
-| `BGP_QR_AES_KEY_B64` | Khóa đối xứng **AES-256** (32 byte mã hóa Base64) dùng để niêm phong/giải mã `Tickets.qr_token_cipher` | Sinh ngẫu nhiên 32 byte: `[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Max 256 }))` |
-| `BGP_MOCK_HMAC_KEY_B64` | Khóa bí mật **HMAC-SHA256** (tối thiểu 32 byte Base64) để ký và xác thực Webhook thanh toán | Sinh ngẫu nhiên 32 byte Base64 |
-| `BGP_DEMO_PASSWORD` | Mật khẩu khởi tạo cho 5 tài khoản demo khi chạy `DemoSeeder` | Ví dụ: `BetaDemo@2026!` (tối thiểu 10 ký tự) |
-| `BGP_ENABLE_MOCK_PAYMENT_SIMULATOR`| Bật giao diện nút bấm mô phỏng thanh toán trực tiếp trên trang Checkout (`true`/`false`) | `true` (bắt buộc bật khi trình diễn demo) |
-| `BGP_ENABLE_EXPIRY_WORKER` | Bật tiến trình nền `ReservationExpiryWorker` tự động thu hồi ghế quá hạn 5 phút | `true` |
+| `ConnectionStrings__BetaDb` | Chuỗi kết nối SQL Server cho ứng dụng Web và Runner | Mặc định trên Windows: `Server=localhost;Database=BetaGiaiPhong_Dev;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False` |
+| `BGP_QR_AES_KEY_B64` | Khóa đối xứng **AES-256** (đúng **32 byte** mã hóa Base64) dùng để niêm phong/giải mã `Tickets.qr_token_cipher` | Sinh một lần bằng **CSPRNG (`RandomNumberGenerator`)** và lưu vào `.NET User Secrets` của `src/BetaGiaiPhong.Web` |
+| `BGP_MOCK_HMAC_KEY_B64` | Khóa bí mật **HMAC-SHA256** (tối thiểu **32 byte** Base64) để ký và xác thực Webhook thanh toán | Sinh một lần bằng **CSPRNG (`RandomNumberGenerator`)** và lưu vào `.NET User Secrets` của `src/BetaGiaiPhong.Web` |
+| `BGP_DEMO_PASSWORD` | Mật khẩu khởi tạo cho 5 tài khoản demo khi chạy `seed-demo` hoặc `seed-checkin-demo` | Bắt buộc tối thiểu **12 ký tự** (ví dụ: `BetaDemo@2026!`) |
+| `BGP_ALLOW_DEMO_SEED` | Cho phép chạy lệnh `seed-demo` (`true`/`false`) | `true` (được `scripts/01_prepare_dev_session.ps1` bật sẵn) |
+| `BGP_ALLOW_CHECKIN_DEMO` | Cho phép chạy lệnh `seed-checkin-demo` (`true`/`false`) | `true` (được `scripts/01_prepare_dev_session.ps1` bật sẵn) |
+| `MockPayment__AllowDemoTrigger` | Bật nút mô phỏng thanh toán trực tiếp trên trang Checkout (`POST /orders/{id}/demo-pay`) | Mặc định `true` trong `appsettings.Development.json` |
+
+### 3.1. Khởi tạo Khóa Mật mã Ổn định bằng CSPRNG (Chỉ chạy 1 lần duy nhất khi cài máy mới)
+
+Tuyệt đối **không dùng `Get-Random`** để sinh khóa mật mã. Hãy chạy đoạn lệnh PowerShell sử dụng `System.Security.Cryptography.RandomNumberGenerator` dưới đây **một lần duy nhất** để lưu khóa ổn định vào `.NET User Secrets` của dự án `src/BetaGiaiPhong.Web`:
+
+```powershell
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$hmacBytes = New-Object byte[] 32; $rng.GetBytes($hmacBytes)
+$aesBytes  = New-Object byte[] 32; $rng.GetBytes($aesBytes)
+$hmac = [Convert]::ToBase64String($hmacBytes)
+$aes  = [Convert]::ToBase64String($aesBytes)
+
+dotnet user-secrets set "BGP_MOCK_HMAC_KEY_B64" "$hmac" --project .\src\BetaGiaiPhong.Web
+dotnet user-secrets set "BGP_QR_AES_KEY_B64" "$aes" --project .\src\BetaGiaiPhong.Web
+Remove-Variable hmacBytes, aesBytes, hmac, aes -ErrorAction SilentlyContinue
+```
 
 > [!CAUTION]
-> **CẢNH BÁO QUAN TRỌNG VỀ TÍNH ỔN ĐỊNH CỦA KHÓA `BGP_QR_AES_KEY_B64`:**  
-> Cột `Tickets.qr_token_cipher` trong SQL Server được mã hóa bằng thuật toán `AES-256-GCM` với khóa `BGP_QR_AES_KEY_B64` tại thời điểm phát hành vé.  
-> - Nếu bạn khởi động lại ứng dụng Web với một khóa `BGP_QR_AES_KEY_B64` **khác** với khóa đã dùng khi tạo vé, ứng dụng sẽ **không thể giải mã** các vé cũ để vẽ ảnh QR PNG (`CryptographicException: The computed authentication tag did not match`).  
-> - **Quy tắc bắt buộc khi demo:** Luôn giữ cố định cùng một giá trị `BGP_QR_AES_KEY_B64` trong suốt phiên làm việc (script `scripts/01_prepare_dev_session.ps1` tự động lưu khóa vào `.dev-session.env.json` để tái sử dụng ổn định qua nhiều lần khởi động lại).
+> **CẢNH BÁO QUAN TRỌNG VỀ TÍNH ĐỒNG BỘ CỦA KHÓA `BGP_QR_AES_KEY_B64`:**  
+> - Cột `Tickets.qr_token_cipher` trong SQL Server được mã hóa bằng thuật toán `AES-256-GCM` với khóa `BGP_QR_AES_KEY_B64` tại thời điểm phát hành vé.  
+> - Trong môi trường `Development`, dự án `BetaGiaiPhong.Web` tự động đọc `BGP_QR_AES_KEY_B64` và `BGP_MOCK_HMAC_KEY_B64` từ `.NET User Secrets`, nhưng công cụ dòng lệnh `BetaGiaiPhong.Runner` đọc từ biến môi trường của phiên PowerShell.  
+> - Do đó, trước khi chạy `Runner` hoặc `Web` trong một cửa sổ PowerShell mới, hãy luôn gọi `. .\scripts\01_prepare_dev_session.ps1` để script tự động đọc khóa từ `.NET User Secrets` của `src/BetaGiaiPhong.Web` và đồng bộ ra biến môi trường hiện hành. Tuyệt đối không xoay (rotate) `BGP_QR_AES_KEY_B64` nếu cơ sở dữ liệu đã có vé đã phát hành!
 
 ---
 
 ## 4. Khởi tạo Cơ sở Dữ liệu (EF Core Migrations) và Nạp Dữ liệu Mẫu (Demo Seeding)
 
-### Cách 1: Sử dụng bộ Script PowerShell tự động (Khuyên dùng)
+Thư mục `scripts/` cung cấp đúng 3 tệp công cụ thực tế:
+- `scripts/01_prepare_dev_session.ps1`: Thiết lập `ConnectionStrings__BetaDb`, bật `BGP_ALLOW_DEMO_SEED=true`, `BGP_ALLOW_CHECKIN_DEMO=true` và đồng bộ `BGP_QR_AES_KEY_B64` + `BGP_MOCK_HMAC_KEY_B64` từ `.NET User Secrets` ra biến môi trường của phiên PowerShell hiện tại.
+- `scripts/02_run_dev.ps1`: Chạy toàn bộ chuỗi kiểm định cục bộ trên `BetaGiaiPhong.Runner` (`migrate`, `seed-demo`, `status`, `smoke`, `race`, `late`, `verify`).
+- `scripts/static_schema_checks.py`: Kiểm tra tĩnh cấu trúc 17 bảng, 116 cột và 22 khóa ngoại `NO ACTION`.
 
-Dự án cung cấp sẵn bộ 3 script tự động hóa tại thư mục `scripts/`:
+### Cách 1: Chuẩn bị cơ sở dữ liệu sạch cho phiên Demo / Phát triển
 
-```powershell
-# Bước 1: Sinh và lưu cố định khóa AES/HMAC vào .dev-session.env.json, chạy Migration + Seed danh mục mẫu + Verify 9 bất biến
-.\scripts\01_prepare_dev_session.ps1
-
-# Bước 2 (Tùy chọn): Tạo sẵn một suất chiếu nằm ngay trong khung giờ soát vé (StartUtc = hiện tại + 15 phút) phục vụ demo quầy Staff
-.\scripts\03_seed_checkin_demo.ps1
-```
-
-### Cách 2: Chạy trực tiếp qua CLI `BetaGiaiPhong.Runner`
-
-Nếu muốn tự điều khiển từng bước trên cửa sổ PowerShell hiện tại:
+Trong cùng một cửa sổ PowerShell tại `D:\Projects\BetaGiaiPhong`:
 
 ```powershell
-# 1. Áp dụng 2 EF Core Migrations (tạo 17 bảng, 22 FK và View dbo.vw_ShowtimeSales)
-dotnet run --project src/BetaGiaiPhong.Runner -- migrate
+# Bước 1: Đặt mật khẩu cho 5 tài khoản demo (bắt buộc >= 12 ký tự) và nạp cấu hình phiên
+$env:BGP_DEMO_PASSWORD = "BetaDemo@2026!"
+. .\scripts\01_prepare_dev_session.ps1
 
-# 2. Nạp dữ liệu mẫu không phá hủy (5 tài khoản, 2 phòng chiếu, sơ đồ ghế, phim và suất chiếu mẫu)
-dotnet run --project src/BetaGiaiPhong.Runner -- seed-demo
+# Bước 2: Áp dụng 2 EF Core Migrations (tạo 17 bảng, 22 FK và View dbo.vw_ShowtimeSales)
+dotnet run --project .\src\BetaGiaiPhong.Runner -- migrate
 
-# 3. Kiểm tra 9 nhóm bất biến toàn vẹn SQL Server
-dotnet run --project src/BetaGiaiPhong.Runner -- verify
+# Bước 3: Nạp dữ liệu danh mục mẫu (5 tài khoản, 2 phòng chiếu, sơ đồ ghế, phim và suất chiếu mẫu)
+dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-demo
+
+# Bước 4 (Chỉ chạy khi muốn có sẵn 1 suất chiếu ở now + 15 phút và 1 vé PAID để demo quét vé ngay):
+# Lưu ý: Nếu bạn định tự dùng tài khoản Manager tạo suất chiếu mới ở Phòng 1 tại now + 15 phút, KHÔNG chạy lệnh này để tránh trùng lịch Phòng 1.
+dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-checkin-demo
+
+# Bước 5: Kiểm tra 9 nhóm bất biến toàn vẹn SQL Server
+dotnet run --project .\src\BetaGiaiPhong.Runner -- verify
 ```
 
-> [!WARNING]
-> **Lưu ý bảo vệ dữ liệu vé đang hoạt động:**  
-> Lệnh `seed-demo` được thiết kế an toàn (idempotent): chỉ bổ sung danh mục mẫu nếu chưa có mà **không xóa** các đơn hàng/vé đã phát sinh. Tuyệt đối không chạy lệnh `DROP DATABASE` lên cơ sở dữ liệu đang chứa các vé mẫu mà bạn chuẩn bị dùng để trình diễn trước hội đồng.
+### Cách 2: Chạy kịch bản kiểm định tự động toàn trình (`02_run_dev.ps1`)
 
-### Danh sách Tài khoản Demo sau khi Seed
+Nếu muốn chạy kiểm định nhanh toàn bộ các bài toán nghiệp vụ (`migrate`, `seed-demo`, `status`, `smoke`, `race`, `late`, `verify`) trên dòng lệnh:
 
-Mật khẩu của toàn bộ các tài khoản dưới đây là giá trị biến `BGP_DEMO_PASSWORD` (mặc định khi chạy `01_prepare_dev_session.ps1` sẽ được in rõ trên màn hình console):
+```powershell
+$env:BGP_DEMO_PASSWORD = "BetaDemo@2026!"
+. .\scripts\01_prepare_dev_session.ps1
+.\scripts\02_run_dev.ps1
+```
+
+### Danh sách 5 Tài khoản Demo sau khi chạy `seed-demo`
+
+Mật khẩu của toàn bộ 5 tài khoản dưới đây là giá trị biến `$env:BGP_DEMO_PASSWORD` (ví dụ `BetaDemo@2026!`) mà bạn đã đặt trước khi chạy `seed-demo`:
 
 | Vai trò (Role) | Email đăng nhập | Quyền hạn chính |
 |---|---|---|
 | **`ADMIN`** | `admin@demo.invalid` | Toàn quyền hệ thống và quản lý vận hành rạp |
-| **`MANAGER`** | `manager@demo.invalid` | Quản lý phim, xem phòng/sơ đồ ghế, công bố suất chiếu & giá vé, xem Dashboard và Báo cáo doanh thu |
-| **`STAFF`** | `staff@demo.invalid` | Quét mã QR soát vé tại quầy (`/staff/check-in`) và xem lịch sử soát vé |
-| **`CUSTOMER` #1** | `customer1@demo.invalid`| Đặt ghế, giữ chỗ, thanh toán mô phỏng, hủy đơn chờ và nhận vé điện tử QR |
-| **`CUSTOMER` #2** | `customer2@demo.invalid`| Tài khoản khách hàng thứ hai dùng để thử nghiệm tranh chấp ghế đồng thời và chống IDOR |
+| **`MANAGER`** | `manager@demo.invalid` | Quản lý phim, xem phòng/sơ đồ ghế, công bố suất chiếu & giá vé, xem Báo cáo doanh thu (`/management/reports`) |
+| **`STAFF`** | `staff@demo.invalid` | Quét mã QR soát vé tại quầy (`/staff/check-in`) và xem lịch sử soát vé (`/staff/check-in/history`) |
+| **`CUSTOMER` #1** | `customer1@demo.invalid` | Đặt ghế, giữ chỗ, thanh toán mô phỏng, hủy đơn chờ và nhận vé điện tử QR |
+| **`CUSTOMER` #2** | `customer2@demo.invalid` | Tài khoản khách hàng thứ hai dùng để thử nghiệm tranh chấp ghế đồng thời và chống IDOR |
 
 ---
 
 ## 5. Khởi chạy Ứng dụng Web (`BetaGiaiPhong.Web`)
 
-Sau khi đã chạy `.\scripts\01_prepare_dev_session.ps1`, khởi động máy chủ Web bằng lệnh:
+Trong cùng cửa sổ PowerShell đã chạy `. .\scripts\01_prepare_dev_session.ps1`, khởi động máy chủ Web bằng lệnh:
 
 ```powershell
-.\scripts\02_run_web_dev.ps1
+# Chạy profile HTTP (cổng 5145 theo Properties/launchSettings.json)
+dotnet run --project .\src\BetaGiaiPhong.Web --launch-profile http
+
+# Hoặc chạy profile HTTPS (cổng 7097 và 5145 — dùng khi cần bật Camera trình duyệt qua HTTPS)
+dotnet run --project .\src\BetaGiaiPhong.Web --launch-profile https
 ```
 
-Hoặc chạy trực tiếp bằng `dotnet run` (khi các biến môi trường đã được nạp):
-
-```powershell
-dotnet run --project src/BetaGiaiPhong.Web/BetaGiaiPhong.Web.csproj --launch-profile http
-```
-
-- **Địa chỉ truy cập giao diện Web:** `http://localhost:5095` (hoặc cổng được cấu hình trong `launchSettings.json` / biến `ASPNETCORE_URLS`).
-- **Điểm cuối kiểm tra trạng thái sống (Health Check):** `http://localhost:5095/health` (trả về `200 OK` khi Web và SQL Server sẵn sàng).
+- **Địa chỉ truy cập giao diện Web (HTTP):** `http://localhost:5145`
+- **Địa chỉ truy cập giao diện Web (HTTPS):** `https://localhost:7097`
+- **Trang đăng nhập:** `http://localhost:5145/account/login`
+- **API kiểm tra phiên hiện tại:** `http://localhost:5145/api/me`
 
 ---
 
@@ -136,16 +161,16 @@ dotnet ef migrations has-pending-model-changes --project src/BetaGiaiPhong.Data 
 ```
 
 ### 6.2. Chạy 166 bài kiểm thử xUnit (Unit + SQL Integration + WebApplicationFactory)
-> **Cơ chế an toàn DB kiểm thử (`TestDatabaseFixture`):** Bộ kiểm thử tích hợp yêu cầu biến môi trường `BGP_TEST_ALLOW_DB_CREATE=true` để tự động tạo các cơ sở dữ liệu tạm thời độc lập (`BetaGiaiPhong_Test_<guid12>`) gắn nhãn sở hữu `BGP_TestRunOwnershipToken` và tự động dọn sạch sau khi chạy xong.
+> **Cơ chế an toàn DB kiểm thử (`TestDatabaseFixture`):** Bộ kiểm thử tích hợp yêu cầu biến môi trường `BGP_TEST_ALLOW_DB_CREATE=true` và đọc chuỗi kết nối SQL Server qua biến `BGP_TEST_SQL_MASTER_CONNECTION` để tự động tạo các cơ sở dữ liệu tạm thời độc lập (`BetaGiaiPhong_Test_<guid12>`) gắn nhãn sở hữu `BGP_TestRunOwnershipToken` và tự động dọn sạch (`DROP DATABASE`) sau khi chạy xong.
 
 ```powershell
 $env:BGP_TEST_ALLOW_DB_CREATE = "true"
-$env:BGP_TEST_MASTER_CONNECTION_STRING = "Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=True;"
+$env:BGP_TEST_SQL_MASTER_CONNECTION = "Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=True;"
 dotnet test BetaGiaiPhong.slnx -c Release
 ```
 
 ### 6.3. Chạy 5 Bộ Kiểm thử Trình duyệt Thực Playwright Chromium E2E
-Playwright E2E sẽ tự động tạo một CSDL riêng `BetaGiaiPhong_E2E_<runId>`, tự khởi chạy tiến trình `BetaGiaiPhong.Web` trên cổng `5188`, chạy toàn bộ 5 tệp spec trên trình duyệt Chromium, chạy `Runner verify` kiểm tra 9 bất biến SQL, và tự động xóa CSDL E2E trong `global-teardown.ts`:
+Playwright E2E (`e2e/global-setup.ts`) tự động tạo một CSDL riêng `BetaGiaiPhong_E2E_<runId>`, khởi chạy tiến trình `BetaGiaiPhong.Web` trên cổng `5199`, chạy toàn bộ 5 tệp spec trên trình duyệt Chromium (`retries: 0`), chạy `Runner verify` kiểm tra 9 bất biến SQL, và tự động xóa CSDL E2E trong `e2e/global-teardown.ts`:
 
 ```powershell
 Push-Location e2e
@@ -153,21 +178,15 @@ npx playwright test
 Pop-Location
 ```
 
-### 6.4. Quy trình GitHub Actions CI (`.github/workflows/ci.yml`)
-Mọi sự kiện `push` vào `main` và mọi `pull_request` đều kích hoạt tự động 4 jobs trên GitHub-hosted Ubuntu 24.04 runner:
-1. **`build-and-validate`**: Biên dịch Release, kiểm tra `static_schema_checks.py`, kiểm tra `has-pending-model-changes` và quét lỗ hổng NuGet.
-2. **`automated-tests`**: Khởi chạy container SQL Server 2022, chạy toàn bộ **166 xUnit tests** và xuất báo cáo độ phủ mã nguồn.
-3. **`integrity-checks`**: Chạy `Runner` (`migrate`, `seed-demo`, `smoke`, `race`, `verify`) xác nhận 9/9 bất biến SQL.
-4. **`e2e-browser-tests`**: Chạy toàn bộ **5 bộ Playwright Chromium E2E tests**, kiểm tra cổng chất lượng teardown và quét làm sạch artifact trước khi lưu trữ.
-
 ---
 
 ## 7. Xử lý Sự cố Thường gặp (Troubleshooting)
 
 | Triệu chứng lỗi | Nguyên nhân | Cách khắc phục |
 |---|---|---|
-| `InvalidOperationException: Refusing to create test database because BGP_TEST_ALLOW_DB_CREATE is not set to 'true'` | Chạy `dotnet test` mà chưa bật cờ cho phép tạo DB kiểm thử tạm thời. | Đặt `$env:BGP_TEST_ALLOW_DB_CREATE="true"` trước khi chạy `dotnet test`. |
-| `CryptographicException` khi mở trang vé `/orders/{id}/tickets` hoặc tải ảnh QR PNG | Khóa `BGP_QR_AES_KEY_B64` hiện tại khác với khóa đã dùng lúc phát hành vé trong DB. | Dùng `.\scripts\02_run_web_dev.ps1` để tự động nạp lại đúng khóa từ `.dev-session.env.json`, hoặc tạo đơn hàng mới với khóa hiện tại. |
-| Nhân viên quét vé hợp lệ nhưng nhận kết quả `NGOÀI GIỜ SOÁT VÉ (OUTSIDE_WINDOW)` | Suất chiếu đang chọn có thời gian bắt đầu cách hiện tại quá 30 phút (`now < start_utc - 30m`) hoặc đã kết thúc quá 15 phút (`now > end_utc + 15m`). | Chạy `.\scripts\03_seed_checkin_demo.ps1` hoặc vào tài khoản Manager tạo một suất chiếu mới có giờ bắt đầu sau thời điểm hiện tại 10–15 phút. |
-| Không thấy nút mô phỏng thanh toán (`#btnPaySuccess` / `#btnPayFailed`) trên trang Checkout | Biến cấu hình `BGP_ENABLE_MOCK_PAYMENT_SIMULATOR` đang tắt (`false`). | Đặt `$env:BGP_ENABLE_MOCK_PAYMENT_SIMULATOR="true"` và khởi động lại `BetaGiaiPhong.Web`. |
-| Trình duyệt trên điện thoại báo không bật được Camera tại `/staff/check-in` | Truy cập qua địa chỉ HTTP LAN (`http://192.168.x.x`) không phải ngữ cảnh an toàn (`Secure Context`). | Dùng tính năng **Tải ảnh QR PNG** (`#qrFileInput`), hoặc dùng Chrome USB Port Forwarding (`localhost`), hoặc chạy Kestrel với `--launch-profile https`. |
+| `[ERROR] Missing cryptographic keys in .NET User Secrets and environment!` khi chạy `01_prepare_dev_session.ps1` | Chưa khởi tạo khóa CSPRNG trong `.NET User Secrets` của `src/BetaGiaiPhong.Web`. | Chạy khối lệnh khởi tạo khóa ở **Mục 3.1** một lần duy nhất, sau đó gọi lại `. .\scripts\01_prepare_dev_session.ps1`. |
+| `InvalidOperationException` khi chạy `dotnet test`: từ chối tạo DB kiểm thử | Chưa đặt `$env:BGP_TEST_ALLOW_DB_CREATE = "true"`. | Đặt `$env:BGP_TEST_ALLOW_DB_CREATE = "true"` và `$env:BGP_TEST_SQL_MASTER_CONNECTION` như hướng dẫn ở **Mục 6.2**. |
+| `CryptographicException` khi mở trang vé `/orders/{id}/tickets` hoặc tải ảnh `/tickets/{ticketId}/qr` | Khóa `BGP_QR_AES_KEY_B64` của tiến trình Web khác với khóa đã dùng lúc `Runner` phát hành vé trong DB. | Luôn gọi `. .\scripts\01_prepare_dev_session.ps1` trong cùng cửa sổ PowerShell trước khi chạy `Runner` và `Web`. |
+| Tạo suất chiếu mới ở Phòng 1 (`P01`) tại `now + 15 phút` báo lỗi chồng lấn lịch chiếu | Trước đó đã chạy `seed-checkin-demo`, lệnh này đã tạo sẵn một suất chiếu ở Phòng 1 tại `now + 15 phút`. | Chọn **Phòng chiếu số 2 (`P02`)** khi tạo suất chiếu mới, hoặc không chạy `seed-checkin-demo` nếu muốn tự tạo suất chiếu ở Phòng 1. |
+| Nhân viên quét vé hợp lệ nhưng nhận kết quả `NGOÀI KHUNG GIỜ (OUTSIDE_WINDOW)` | Suất chiếu đang chọn có thời gian bắt đầu cách hiện tại quá 30 phút (`now < start_utc - 30m`) hoặc đã kết thúc quá 15 phút (`now > end_utc + 15m`). | Chạy `dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-checkin-demo` hoặc dùng tài khoản Manager tạo một suất chiếu mới có giờ bắt đầu sau thời điểm hiện tại 10–15 phút. |
+| Nhân viên tải tệp ảnh không phải mã QR hoặc tệp ảnh bị hỏng lên `/staff/check-in` | Tệp ảnh không chứa ma trận QR hợp lệ. | Hệ thống hiển thị rõ trạng thái **`"ẢNH QR LỖI"`** (`INVALID_QR_IMAGE`). Bấm `"Quét vé khác"` và tải đúng tệp ảnh PNG mã QR tải từ trang vé của khách hàng. |

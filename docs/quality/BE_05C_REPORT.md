@@ -43,7 +43,7 @@ Chi tiết đầy đủ được trình bày tại [docs/delivery/SRS_IMPLEMENTA
 
 | Nhóm yêu cầu / Mô hình | Tổng số | `IMPLEMENTED` | `PARTIALLY IMPLEMENTED` | `NOT IMPLEMENTED` | `OUT OF SCOPE (P1)` | Tỷ lệ đáp ứng P0 |
 |---|---:|---:|---:|---:|---:|---|
-| **Yêu cầu chức năng (`FR-*`)** | 54 | 46 | 6 | 1 (`FR-AUTH-02`) | 1 (`FR-RPT-05`) | 52/53 yêu cầu P0 có cài đặt hoàn chỉnh hoặc cài đặt tầng Domain/DB |
+| **Yêu cầu chức năng (`FR-*`)** | 54 (`52 P0 + 2 P1`) | 46 (`46 P0`) | 6 (`5 P0 + 1 P1`) | 1 (`FR-AUTH-02` — P0) | 1 (`FR-RPT-05` — P1) | 46/52 P0 hoàn chỉnh, 5/52 P0 một phần, 1/52 P0 chưa cài đặt (`FR-AUTH-02`) |
 | **Quy tắc nghiệp vụ (`BR-01..18`)** | 18 | 18 | 0 | 0 | 0 | **100%** (18/18) |
 | **Yêu cầu phi chức năng (`NFR-01..18`)**| 18 | 17 | 1 (`NFR-15`) | 0 | 0 | **100%** trong phạm vi tự động hóa Chromium |
 | **Quyết định thiết kế (`CR-01..09`)** | 9 | 9 | 0 | 0 | 0 | **100%** (9/9) |

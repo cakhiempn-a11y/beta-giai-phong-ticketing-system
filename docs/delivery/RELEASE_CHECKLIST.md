@@ -3,7 +3,7 @@
 **Đề tài:** Phân tích, thiết kế và xây dựng hệ thống quản lý bán vé trực tuyến tại rạp chiếu phim Beta Giải Phóng  
 **Tác giả:** Vũ Văn Khiêm (`11235581`) — Ngành Hệ thống thông tin quản lý (MIS)  
 **Giảng viên hướng dẫn:** ThS. Nguyễn Anh Phương  
-**Nhánh bàn giao:** `docs/be05c-final-delivery` (Baseline `main`: `964bd232479b220856e13d33abc1aa7d8a0b7666`)  
+**Nhánh bàn giao:** `fix/rc1-final-stabilization` (Baseline `main`: `102e633275e040fcc57be8e6276bd171d79de0fa`)  
 **Nhãn phát hành đề xuất (Candidate Release Tag — chưa gắn thẻ):** `v1.0.0-capstone-rc1`
 
 ---
@@ -23,7 +23,7 @@
 | **9** | **Hoàn thiện bộ 9 tài liệu bàn giao (`docs/delivery/`) & Báo cáo chất lượng (`docs/quality/`)** | Kiểm tra sự tồn tại và nội dung của toàn bộ các tệp Markdown trong `docs/delivery/` và `docs/quality/BE_05C_REPORT.md` | Đầy đủ 10/10 tài liệu kỹ thuật, truy vết, nghiệm thu, hướng dẫn cài đặt/sử dụng, nội dung khóa luận và kịch bản bảo vệ. | ✅ **PASS** |
 | **10**| **Ghi nhận trung thực các giới hạn & phạm vi P0/P1** | Đối chiếu [SRS_IMPLEMENTATION_TRACEABILITY.md](SRS_IMPLEMENTATION_TRACEABILITY.md) | Phân loại rõ `FR-AUTH-02` (`NOT IMPLEMENTED`), `FR-RPT-05` (`OUT OF SCOPE P1`), `sqlExceptions`/`deadlocks` (`NOT MEASURED`). | ✅ **PASS** |
 | **11**| **Quy trình UAT cho Camera vật lý** | Đối chiếu [MANUAL_CAMERA_UAT.md](MANUAL_CAMERA_UAT.md) | Ghi nhận rõ **`MANUAL UAT — NOT TESTED`** trong môi trường tự động hóa kèm 12 kịch bản kiểm thử thiết bị thực địa. | ✅ **DOCUMENTED** |
-| **12**| **Trạng thái GitHub Actions CI trên nhánh bàn giao** | PR #7 CI (`41278913554`) đã PASS 4/4 jobs; lỗi giải mã 1 ảnh QR trên `main` push run (`41279361688`) đã được sửa triệt để bằng `GetGraphic(6)` + multi-scale canvas fallback trong Phase 0 | Đã xác minh PASS 100% tại máy trạm cục bộ; chờ người dùng cho phép `git push` nhánh `docs/be05c-final-delivery` để kích hoạt CI lần cuối. | ⏳ **READY FOR PUSH** |
+| **12**| **Trạng thái GitHub Actions CI trên nhánh bàn giao** | PR #8 CI (`41285460717`) đã PASS 4/4 jobs; lỗi giải mã ảnh QR không ổn định trên `main` push runs (`41279361688` và `41285939537`) đã được khắc phục triệt để trong RC-01 (`ECCLevel.M` + `GetGraphic(7)` + `#qrFileScratch` + ZXing `TRY_HARDER` + `decodeQrFileDeterministically` + trạng thái `"ẢNH QR LỖI"`) và xác minh qua 3 lượt chạy toàn bộ bộ Playwright E2E liên tiếp (`retries: 0`). | Đã xác minh PASS 100% tại máy trạm cục bộ; chờ người dùng cho phép `git push` nhánh `fix/rc1-final-stabilization`. | ⏳ **READY FOR PUSH** |
 
 ---
 
@@ -40,16 +40,16 @@
 | 7 | [docs/delivery/THESIS_TECHNICAL_CONTENT.md](THESIS_TECHNICAL_CONTENT.md) | Nội dung học thuật chuẩn hóa theo cấu trúc 5 chương phục vụ thuyết minh báo cáo đề án tốt nghiệp MIS. |
 | 8 | [docs/delivery/DEFENSE_DEMO_SCRIPT.md](DEFENSE_DEMO_SCRIPT.md) | Kịch bản trình diễn trực tiếp 14 bước (12–15 phút), phương án dự phòng khẩn cấp và bảng Hỏi–Đáp phản biện. |
 | 9 | [docs/delivery/RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | Danh mục kiểm tra chất lượng bàn giao cuối cùng và khuyến nghị hợp nhất/gắn nhãn phiên bản. |
-| 10 | [docs/quality/BE_05C_REPORT.md](../quality/BE_05C_REPORT.md) | Báo cáo tổng kết kỹ thuật giai đoạn BE-05C (Final Quality Gate & Capstone Delivery). |
+| 10 | [docs/quality/BE_05C_REPORT.md](../quality/BE_05C_REPORT.md) & [docs/quality/RC1_FINAL_AUDIT_REPORT.md](../quality/RC1_FINAL_AUDIT_REPORT.md) | Báo cáo tổng kết kỹ thuật giai đoạn BE-05C và Báo cáo kiểm toán chuẩn bị phát hành RC-01. |
 
 ---
 
 ## 3. Khuyến nghị Quy trình Hợp nhất (Merge) và Đóng gói Phiên bản (Release Tag)
 
-Sau khi người dùng rà soát và phê duyệt bản commit cục bộ trên nhánh `docs/be05c-final-delivery`:
+Sau khi người dùng rà soát và phê duyệt bản commit cục bộ trên nhánh `fix/rc1-final-stabilization`:
 1. **Đẩy nhánh lên GitHub:**
    ```powershell
-   git push -u origin docs/be05c-final-delivery
+   git push -u origin fix/rc1-final-stabilization
    ```
 2. **Mở Pull Request và chờ 4/4 jobs của GitHub Actions CI báo xanh (`SUCCESS`).**
 3. **Hợp nhất (Merge) vào nhánh `main`.**

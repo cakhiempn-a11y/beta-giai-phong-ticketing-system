@@ -234,6 +234,7 @@ test.describe('BE-05B Phase 7: Restart, Recovery, Idempotency & Failure Behavior
       });
 
       await staffPage.goto(`/staff/check-in?showtimeId=${showtimeId}`);
+      staffPage.on('dialog', (d) => d.accept());
       await expect(staffPage.locator('#showtimeSelect')).toHaveValue(String(showtimeId));
 
       // Upload QR PNG -> first attempt fails with network abort -> UI displays "LỖI KẾT NỐI"
@@ -242,10 +243,10 @@ test.describe('BE-05B Phase 7: Restart, Recovery, Idempotency & Failure Behavior
       const retryBtn = staffPage.locator('button:has-text("Thử lại kết nối")');
       await expect(retryBtn).toBeVisible();
 
-      // Click retry ("Thử lại kết nối") -> route continues -> scan succeeds or returns deterministic outcome!
+      // Click retry ("Thử lại kết nối") -> route continues -> scan succeeds with "HỢP LỆ" (ACCEPTED)!
       await retryBtn.click();
-      await expect(staffPage.locator('#scanStatusBadge')).not.toHaveText('LỖI KẾT NỐI', { timeout: 15_000 });
-      await expect(staffPage.locator('#scanStatusBadge')).not.toHaveText('Đang kiểm tra...', { timeout: 15_000 });
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('HỢP LỆ', { timeout: 15_000 });
+      await expect(staffPage.locator('#resultCard')).toContainText('Soát vé thành công');
 
       // 7.5 Verify all 9 database invariants pass via Runner verify on main E2E database
       const verifyRes = runRunnerCommand(['verify'], state);

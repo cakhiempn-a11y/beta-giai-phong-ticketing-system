@@ -140,10 +140,12 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
         // Decrypt the raw token in memory
         var rawToken = qrProtector.Unseal(ticket.QrTokenCipher);
 
-        // Generate QR code using pure C# QRCoder PngByteQRCode (no native/GDI dependencies)
+        // Generate QR code using pure C# QRCoder PngByteQRCode (no native/GDI dependencies).
+        // ECCLevel.M yields QR Version 3 (29x29 + 8 quiet zone = 37x37 modules) for 43-char Base64URL tokens,
+        // and 7px per module (259x259 px) stays below ZXing HybridBinarizer's 8x8 block size.
         using var qrGenerator = new QRCodeGenerator();
-        using var qrCodeData = qrGenerator.CreateQrCode(rawToken, QRCodeGenerator.ECCLevel.Q);
+        using var qrCodeData = qrGenerator.CreateQrCode(rawToken, QRCodeGenerator.ECCLevel.M);
         var qrCode = new PngByteQRCode(qrCodeData);
-        return qrCode.GetGraphic(6);
+        return qrCode.GetGraphic(7);
     }
 }

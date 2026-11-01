@@ -298,6 +298,45 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       await expect(staffPage.locator('#scanStatusBadge')).toHaveText('NGOÀI GIỜ SOÁT VÉ', { timeout: 15_000 });
 
       // -----------------------------------------------------------------------
+      // 6.2b STAFF QR FILE SCANNER DETERMINISM & ERROR HANDLING (RC-01 Phase 1)
+      // -----------------------------------------------------------------------
+      // 1) Upload valid 1x1 white PNG (no QR code) -> must transition to "ẢNH QR LỖI" (never stuck at "Chờ quét...")
+      const invalidPngPath = path.join(tmpDir, `invalid-non-qr-${Date.now()}.png`);
+      const onePixelWhitePng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+        'base64'
+      );
+      fs.writeFileSync(invalidPngPath, onePixelWhitePng);
+      await staffPage.locator('#qrFileInput').setInputFiles(invalidPngPath);
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('ẢNH QR LỖI', { timeout: 15_000 });
+      await expect(staffPage.locator('#resultCard')).toContainText('Không tìm thấy mã QR hợp lệ');
+
+      // 2) Upload corrupted binary file with .png extension -> must transition to "ẢNH QR LỖI"
+      const corruptedImgPath = path.join(tmpDir, `corrupted-${Date.now()}.png`);
+      fs.writeFileSync(corruptedImgPath, Buffer.from('not-a-valid-png-image-payload'));
+      await staffPage.locator('#qrFileInput').setInputFiles(corruptedImgPath);
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('ẢNH QR LỖI', { timeout: 15_000 });
+
+      // 3) Consecutive upload without page reload: upload qrPathA while on Showtime B -> "SAI SUẤT CHIẾU"
+      await staffPage.locator('#qrFileInput').setInputFiles(qrPathA);
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('SAI SUẤT CHIẾU', { timeout: 15_000 });
+
+      // 4) Change showtime dropdown to Showtime A -> UI resets to "Sẵn sàng quét"
+      await staffPage.selectOption('#showtimeSelect', String(showtimeAId));
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('Sẵn sàng quét');
+
+      // 5) Consecutive upload of Ticket A on matching Showtime A -> "HỢP LỆ" (ACCEPTED)
+      await staffPage.locator('#qrFileInput').setInputFiles(qrPathA);
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('HỢP LỆ', { timeout: 15_000 });
+
+      // 6) Immediate re-upload of the same Ticket A file without reloading -> "ĐÃ SỬ DỤNG" (ALREADY_USED)
+      await staffPage.locator('#qrFileInput').setInputFiles(qrPathA);
+      await expect(staffPage.locator('#scanStatusBadge')).toHaveText('ĐÃ SỬ DỤNG', { timeout: 15_000 });
+
+      if (fs.existsSync(invalidPngPath)) fs.unlinkSync(invalidPngPath);
+      if (fs.existsSync(corruptedImgPath)) fs.unlinkSync(corruptedImgPath);
+
+      // -----------------------------------------------------------------------
       // 6.2 & 6.3 ROLE AUTHORIZATION & DYNAMIC ROLE REVOCATION
       // -----------------------------------------------------------------------
       // Customer blocked from /staff/check-in and /management
