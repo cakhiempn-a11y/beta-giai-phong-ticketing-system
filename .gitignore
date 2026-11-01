@@ -66,3 +66,15 @@ $RECYCLE.BIN/
 *.crash
 *.swp
 *~
+
+# Playwright E2E
+node_modules/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.tmp/
+e2e/blob-report/
+e2e/playwright/.cache/
+
+# Local unpacked reference packages
+references/BGP_ERD_MoHinhDuLieu_FullPackage_v1_0/
