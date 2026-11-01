@@ -11,14 +11,15 @@ import {
 export interface BenchmarkMetric {
   endpoint: string;
   totalRequests: number;
-  succeeded: number;
-  failedOrConflict: number;
+  succeeded2xx3xx: number;
+  expectedConflicts409: number;
+  http5xxErrors: number;
   avgLatencyMs: number;
   p95LatencyMs: number;
   throughputRps: number;
-  errorRatePct: number;
-  sqlExceptions: number;
-  deadlocks: number;
+  errorRate5xxPct: number;
+  sqlExceptions: 'NOT MEASURED';
+  deadlocks: 'NOT MEASURED';
 }
 
 function calcPercentile(sorted: number[], pct: number): number {
@@ -47,7 +48,7 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
       await loginInBrowser(customerPage, 'customer1@demo.invalid', state.demoPassword);
       await loginInBrowser(staffPage, 'staff@demo.invalid', state.demoPassword);
 
-      // Publish a dedicated movie & showtime at now + 18 hours (non-overlapping) for performance & 30-concurrency load test
+      // Publish a dedicated movie & showtime for performance & 30-concurrency load test
       await managerPage.goto('/management/movies/create');
       const suffix = Date.now().toString().slice(-6);
       const perfTitle = `Phim Perf E2E ${suffix}`;
@@ -72,7 +73,7 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
       const roomId = Number(await roomOption.getAttribute('value'));
       await managerPage.selectOption('select[name="RoomId"]', String(roomId));
 
-      // Schedule at now + 6 hours (360 minutes) so it doesn't collide with now+15m, now+240m, or tomorrow+12h
+      // Schedule at now + 6 hours (360 minutes) so it doesn't collide with other test showtimes
       const perfStart = new Date(Date.now() + 360 * 60 * 1000);
       await managerPage.fill('input[name="StartTimeVn"]', formatVnDateTimeLocal(perfStart));
       await managerPage.fill('input[name="BufferMinutes"]', '15');
@@ -91,7 +92,6 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
         .map((s: any) => s.seatId);
       expect(bookableSeats.length).toBeGreaterThanOrEqual(8);
 
-      // Extract XSRF tokens for Customer and Staff
       const custCookies = await customerSession.context.cookies();
       const custXsrf = custCookies.find((c) => c.name === 'XSRF-TOKEN')!.value;
 
@@ -100,15 +100,15 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
 
       const metrics: BenchmarkMetric[] = [];
 
-      // Helper to benchmark sequential/batched requests
       async function runEndpointBenchmark(
         name: string,
         iterations: number,
         fn: (i: number) => Promise<{ status: number }>
       ): Promise<BenchmarkMetric> {
         const latencies: number[] = [];
-        let succeeded = 0;
-        let failed = 0;
+        let succeeded2xx3xx = 0;
+        let expectedConflicts409 = 0;
+        let http5xxErrors = 0;
         const startWall = performance.now();
 
         for (let i = 0; i < iterations; i++) {
@@ -117,9 +117,11 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
           const dt = performance.now() - t0;
           latencies.push(dt);
           if (res.status >= 200 && res.status < 400) {
-            succeeded++;
-          } else {
-            failed++;
+            succeeded2xx3xx++;
+          } else if (res.status === 409) {
+            expectedConflicts409++;
+          } else if (res.status >= 500) {
+            http5xxErrors++;
           }
         }
 
@@ -130,14 +132,15 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
         const m: BenchmarkMetric = {
           endpoint: name,
           totalRequests: iterations,
-          succeeded,
-          failedOrConflict: failed,
+          succeeded2xx3xx,
+          expectedConflicts409,
+          http5xxErrors,
           avgLatencyMs: Number(avg.toFixed(2)),
           p95LatencyMs: calcPercentile(latencies, 95),
           throughputRps: Number((iterations / totalTimeSec).toFixed(2)),
-          errorRatePct: Number(((failed / iterations) * 100).toFixed(2)),
-          sqlExceptions: 0,
-          deadlocks: 0,
+          errorRate5xxPct: Number(((http5xxErrors / iterations) * 100).toFixed(2)),
+          sqlExceptions: 'NOT MEASURED',
+          deadlocks: 'NOT MEASURED',
         };
         metrics.push(m);
         return m;
@@ -158,7 +161,6 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
       // 3. POST /api/bookings/reserve + Checkout/Mock Payment + GET /tickets/{id}/qr (5 sequential orders using seats 0..4)
       const reserveLatencies: number[] = [];
       const checkoutLatencies: number[] = [];
-      const qrLatencies: number[] = [];
       const issuedTicketIds: number[] = [];
 
       for (let i = 0; i < 5; i++) {
@@ -173,7 +175,6 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
         const resBody = await resResp.json();
         const orderId = resBody.orderId;
 
-        // Checkout & Mock Pay via browser form post
         const tPay0 = performance.now();
         await customerPage.goto(`/orders/${orderId}/checkout`);
         await Promise.all([
@@ -192,28 +193,30 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
       metrics.push({
         endpoint: 'POST /api/bookings/reserve (Valid Hold)',
         totalRequests: 5,
-        succeeded: 5,
-        failedOrConflict: 0,
+        succeeded2xx3xx: 5,
+        expectedConflicts409: 0,
+        http5xxErrors: 0,
         avgLatencyMs: Number((reserveLatencies.reduce((a, b) => a + b, 0) / 5).toFixed(2)),
         p95LatencyMs: calcPercentile(reserveLatencies, 95),
         throughputRps: Number((5 / (reserveLatencies.reduce((a, b) => a + b, 0) / 1000)).toFixed(2)),
-        errorRatePct: 0,
-        sqlExceptions: 0,
-        deadlocks: 0,
+        errorRate5xxPct: 0,
+        sqlExceptions: 'NOT MEASURED',
+        deadlocks: 'NOT MEASURED',
       });
 
       checkoutLatencies.sort((a, b) => a - b);
       metrics.push({
         endpoint: 'POST /orders/{id}/demo-pay (Checkout & Ticket Issue)',
         totalRequests: 5,
-        succeeded: 5,
-        failedOrConflict: 0,
+        succeeded2xx3xx: 5,
+        expectedConflicts409: 0,
+        http5xxErrors: 0,
         avgLatencyMs: Number((checkoutLatencies.reduce((a, b) => a + b, 0) / 5).toFixed(2)),
         p95LatencyMs: calcPercentile(checkoutLatencies, 95),
         throughputRps: Number((5 / (checkoutLatencies.reduce((a, b) => a + b, 0) / 1000)).toFixed(2)),
-        errorRatePct: 0,
-        sqlExceptions: 0,
-        deadlocks: 0,
+        errorRate5xxPct: 0,
+        sqlExceptions: 'NOT MEASURED',
+        deadlocks: 'NOT MEASURED',
       });
 
       // 4. GET /tickets/{ticketId}/qr (20 requests)
@@ -227,9 +230,8 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
       await runEndpointBenchmark('POST /api/staff/tickets/scan (Staff Verification)', 20, async () => {
         const r = await staffSession.context.request.post('/api/staff/tickets/scan', {
           headers: { 'X-XSRF-TOKEN': staffXsrf },
-          data: { qrToken: 'BGP1.benchmark_probe_token', expectedShowtimeId: perfShowtimeId },
+          data: { qrToken: 'invalid_probe_token_for_latency_check_0000000', expectedShowtimeId: perfShowtimeId },
         });
-        // Returns deterministic 404 NOT_FOUND JSON response (< 500)
         return { status: r.status() < 500 ? 200 : 500 };
       });
 
@@ -239,7 +241,7 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
         return { status: r.status() };
       });
 
-      // 7. CONCURRENT SEAT RESERVATION LOAD TEST: 30 simultaneous requests competing for the SAME seat!
+      // 7. CONCURRENT SEAT RESERVATION LOAD TEST: 30 simultaneous requests competing for the SAME seat
       const contestedSeatId = bookableSeats[6];
       const concurrencyLevel = 30;
       const concLatencies: number[] = [];
@@ -259,40 +261,40 @@ test.describe('BE-05B Phase 9: Performance Baseline & Concurrent Load Validation
       const concTotalSec = (performance.now() - concStart) / 1000;
 
       let concWinners = 0;
-      let concConflicts = 0;
-      let concServerErrors = 0;
+      let concConflicts409 = 0;
+      let concHttp5xxErrors = 0;
 
       for (const r of concResults) {
         concLatencies.push(r.dt);
         if (r.status === 201) concWinners++;
-        else if (r.status === 409) concConflicts++;
-        else concServerErrors++;
+        else if (r.status === 409) concConflicts409++;
+        else if (r.status >= 500) concHttp5xxErrors++;
       }
 
       concLatencies.sort((a, b) => a - b);
 
-      // Must have exactly 1 winner (201 Created), 29 conflicts (409 Conflict), and 0 server errors (500)
+      // Must have exactly 1 winner (201 Created), 29 valid domain conflicts (409 Conflict), and 0 HTTP 5xx server errors
       expect(concWinners).toBe(1);
-      expect(concConflicts).toBe(concurrencyLevel - 1);
-      expect(concServerErrors).toBe(0);
+      expect(concConflicts409).toBe(concurrencyLevel - 1);
+      expect(concHttp5xxErrors).toBe(0);
 
       metrics.push({
         endpoint: `CONCURRENT POST /api/bookings/reserve (${concurrencyLevel} parallel on 1 seat)`,
         totalRequests: concurrencyLevel,
-        succeeded: concWinners,
-        failedOrConflict: concConflicts,
+        succeeded2xx3xx: concWinners,
+        expectedConflicts409: concConflicts409,
+        http5xxErrors: concHttp5xxErrors,
         avgLatencyMs: Number((concLatencies.reduce((a, b) => a + b, 0) / concurrencyLevel).toFixed(2)),
         p95LatencyMs: calcPercentile(concLatencies, 95),
         throughputRps: Number((concurrencyLevel / concTotalSec).toFixed(2)),
-        errorRatePct: Number(((concServerErrors / concurrencyLevel) * 100).toFixed(2)),
-        sqlExceptions: 0,
-        deadlocks: 0,
+        errorRate5xxPct: Number(((concHttp5xxErrors / concurrencyLevel) * 100).toFixed(2)),
+        sqlExceptions: 'NOT MEASURED',
+        deadlocks: 'NOT MEASURED',
       });
 
-      // Save benchmark metrics to e2e/.tmp/benchmark-results.json for reporting
       const outPath = path.join(__dirname, '..', '.tmp', 'benchmark-results.json');
       fs.writeFileSync(outPath, JSON.stringify(metrics, null, 2), 'utf-8');
-      console.log('\n[BE-05B Performance Benchmark Results]:');
+      console.log('\n[BE-05B/05C Empirical Performance Baseline (Non-SLA Reference)]:');
       console.table(metrics);
     } finally {
       await managerSession.context.close();

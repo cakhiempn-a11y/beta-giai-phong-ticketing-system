@@ -6,6 +6,7 @@ import {
   assertNoSecretLeakInText,
   createRoleSession,
   formatVnDateTimeLocal,
+  getOrderSensitiveQrArtifactsInMemory,
   loginInBrowser,
 } from './helpers';
 
@@ -30,6 +31,7 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       managerPage.on('dialog', (d) => d.accept());
       cust1Page.on('dialog', (d) => d.accept());
       cust2Page.on('dialog', (d) => d.accept());
+      staffPage.on('dialog', (d) => d.accept());
 
       await loginInBrowser(managerPage, 'manager@demo.invalid', state.demoPassword);
       await loginInBrowser(cust1Page, 'customer1@demo.invalid', state.demoPassword);
@@ -332,10 +334,20 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       });
       expect(csrfResp.status()).toBe(400);
 
-      // Check console logs for any secret leaks
+      const sensitiveQrA = getOrderSensitiveQrArtifactsInMemory(paidOrderAId, state);
+      const sensitiveQrB = getOrderSensitiveQrArtifactsInMemory(paidOrderBId, state);
+      const combinedSensitiveQr = {
+        rawTokens: [...sensitiveQrA.rawTokens, ...sensitiveQrB.rawTokens],
+        cipherB64List: [...sensitiveQrA.cipherB64List, ...sensitiveQrB.cipherB64List],
+      };
+
+      if (fs.existsSync(qrPathA)) fs.unlinkSync(qrPathA);
+      if (fs.existsSync(qrPathB)) fs.unlinkSync(qrPathB);
+
+      // Check console logs for any secret or real 43-char QR token leaks
       for (const s of [managerSession, cust1Session, cust2Session, staffSession, guestSession]) {
         for (const m of s.consoleMessages) {
-          assertNoSecretLeakInText(m, state, 'Browser Console');
+          assertNoSecretLeakInText(m, state, 'Browser Console', combinedSensitiveQr);
         }
       }
     } finally {

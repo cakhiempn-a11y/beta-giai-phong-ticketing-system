@@ -67,7 +67,7 @@ Hệ thống kiểm thử trình duyệt thực được xây dựng tại thư 
   4. Khi kết thúc toàn bộ suite, `global-teardown.ts` dừng máy chủ Web, chạy `BetaGiaiPhong.Runner verify` để kiểm tra 9 nhóm bất biến toàn vẹn dữ liệu trên DB E2E, sau đó gọi `drop-e2e-db` (kiểm tra khớp `ownershipToken`) để dọn sạch cơ sở dữ liệu.
 - **Sửa lỗi thực tế phát hiện qua trình duyệt thật:**
   - Trong quá trình chạy Playwright với bộ lắng nghe `page.on('pageerror')`, phát hiện các trang sử dụng `_ValidationScriptsPartial.cshtml` báo lỗi `ReferenceError: jQuery is not defined` do [`_Layout.cshtml`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml) thiếu thẻ nạp `~/lib/jquery/dist/jquery.min.js` trước validation scripts. Đã bổ sung `jquery.min.js` vào `_Layout.cshtml`, giúp số lượng lỗi JavaScript runtime (`pageerror`) trên toàn bộ hành trình giảm về **0**.
-  - Tối ưu hóa mật độ điểm ảnh QR (`GetGraphic(10)`, `ECCLevel.M`) trong [`TicketQueryService.cs`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Services/TicketQueryService.cs) và cơ chế fallback `scanFile(file, false)` trong [`StaffCheckIn/Index.cshtml`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Views/StaffCheckIn/Index.cshtml), đảm bảo thư viện `Html5Qrcode` giải mã ảnh PNG QR trong trình duyệt đạt độ tin cậy 100%.
+  - Tối ưu hóa mật độ điểm ảnh QR (`GetGraphic(6)`, `ECCLevel.M`) trong [`TicketQueryService.cs`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Services/TicketQueryService.cs) và cơ chế fallback `scanFile(file, false)` trong [`StaffCheckIn/Index.cshtml`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Views/StaffCheckIn/Index.cshtml), đảm bảo thư viện `Html5Qrcode` giải mã ảnh PNG QR trong trình duyệt đạt độ tin cậy 100%.
 
 ---
 
@@ -158,14 +158,14 @@ Bài kiểm thử [`01-full-journey.spec.ts`](file:///d:/Projects/BetaGiaiPhong/
 
 | Endpoint / Kịch bản tải | Số Request | Thành công (`2xx/3xx`) | Xung đột hợp lệ (`409`) | Độ trễ TB (`Avg ms`) | Độ trễ `P95 (ms)` | Thông lượng (`req/s`) | Lỗi Server (`5xx`) | SQL Exception / Deadlock |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `GET /movies` (Danh mục phim) | 25 | 25 | 0 | **12.00 ms** | **18.83 ms** | 83.32 rps | 0% | 0 / 0 |
-| `GET /showtimes/{id}/seats` (Sơ đồ ghế) | 25 | 25 | 0 | **17.28 ms** | **31.22 ms** | 57.85 rps | 0% | 0 / 0 |
-| `POST /api/bookings/reserve` (Giữ ghế hợp lệ) | 5 | 5 | 0 | **100.47 ms** | **147.30 ms** | 9.95 rps | 0% | 0 / 0 |
-| `POST /orders/{id}/demo-pay` (Thanh toán & Cấp vé) | 5 | 5 | 0 | **461.16 ms** | **622.23 ms** | 2.17 rps | 0% | 0 / 0 |
-| `GET /tickets/{ticketId}/qr` (Sinh ảnh QR PNG) | 20 | 20 | 0 | **13.90 ms** | **20.52 ms** | 71.92 rps | 0% | 0 / 0 |
-| `POST /api/staff/tickets/scan` (Soát vé QR) | 20 | 20 | 0 | **15.76 ms** | **17.21 ms** | 63.43 rps | 0% | 0 / 0 |
-| `GET /management/reports` (Dashboard Doanh thu) | 20 | 20 | 0 | **37.79 ms** | **118.89 ms** | 26.46 rps | 0% | 0 / 0 |
-| **CONCURRENT LOAD:** `POST /api/bookings/reserve` (30 request song song tranh cùng 1 ghế) | **30** | **1** (`201 Created`) | **29** (`409 Conflict`) | **227.04 ms** | **276.20 ms** | **100.30 rps** | **0%** | **0 / 0** |
+| `GET /movies` (Danh mục phim) | 25 | 25 | 0 | **12.00 ms** | **18.83 ms** | 83.32 rps | 0% | NOT MEASURED |
+| `GET /showtimes/{id}/seats` (Sơ đồ ghế) | 25 | 25 | 0 | **17.28 ms** | **31.22 ms** | 57.85 rps | 0% | NOT MEASURED |
+| `POST /api/bookings/reserve` (Giữ ghế hợp lệ) | 5 | 5 | 0 | **100.47 ms** | **147.30 ms** | 9.95 rps | 0% | NOT MEASURED |
+| `POST /orders/{id}/demo-pay` (Thanh toán & Cấp vé) | 5 | 5 | 0 | **461.16 ms** | **622.23 ms** | 2.17 rps | 0% | NOT MEASURED |
+| `GET /tickets/{ticketId}/qr` (Sinh ảnh QR PNG) | 20 | 20 | 0 | **13.90 ms** | **20.52 ms** | 71.92 rps | 0% | NOT MEASURED |
+| `POST /api/staff/tickets/scan` (Soát vé QR) | 20 | 20 | 0 | **15.76 ms** | **17.21 ms** | 63.43 rps | 0% | NOT MEASURED |
+| `GET /management/reports` (Dashboard Doanh thu) | 20 | 20 | 0 | **37.79 ms** | **118.89 ms** | 26.46 rps | 0% | NOT MEASURED |
+| **CONCURRENT LOAD:** `POST /api/bookings/reserve` (30 request song song tranh cùng 1 ghế) | **30** | **1** (`201 Created`) | **29** (`409 Conflict`) | **227.04 ms** | **276.20 ms** | **100.30 rps** | **0%** | **NOT MEASURED** |
 
 > [!NOTE]
 > Nhờ cơ chế khóa bi quan theo thứ tự phân cấp (`SqlServerLocks.ShowtimeAsync` với `UPDLOCK, HOLDLOCK` trong giao dịch `IsolationLevel.Serializable`), khi 30 yêu cầu đặt cùng một ghế ập đến đồng thời, các giao dịch được xếp hàng tuần tự tại SQL Server mà **không phát sinh bất kỳ lỗi Deadlock (SQL Error 1205) nào**, đảm bảo đúng 1 khách hàng giữ được ghế và 29 yêu cầu còn lại nhận phản hồi `409 Conflict` an toàn.

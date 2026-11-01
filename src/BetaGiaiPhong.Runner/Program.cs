@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
@@ -351,7 +351,7 @@ internal static class Program
 
         Console.WriteLine();
         Console.WriteLine("======================================================================");
-        Console.WriteLine("BETA GIAI PHONG — DEMO CHECK-IN TICKET GENERATED");
+        Console.WriteLine("BETA GIAI PHONG â€” DEMO CHECK-IN TICKET GENERATED");
         Console.WriteLine("======================================================================");
         Console.WriteLine($"Showtime ID : {showtime.ShowtimeId}");
         Console.WriteLine($"Movie       : {showtime.Movie?.Title ?? movie.Title}");
@@ -367,7 +367,7 @@ internal static class Program
         Console.WriteLine();
         if (showRawToken)
         {
-            Console.WriteLine("[WARNING: BGP_SHOW_DEMO_QR_TOKEN=true] RAW QR TOKEN (Confidential — Development use only):");
+            Console.WriteLine("[WARNING: BGP_SHOW_DEMO_QR_TOKEN=true] RAW QR TOKEN (Confidential â€” Development use only):");
             Console.WriteLine(rawToken);
         }
         else
@@ -381,7 +381,7 @@ internal static class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Beta Giải Phóng EF Core data runner (SQL Server, prototype)");
+        Console.WriteLine("Beta Giáº£i PhÃ³ng EF Core data runner (SQL Server, prototype)");
         Console.WriteLine("Commands: migrate | status | seed-demo | seed-checkin-demo | smoke | race | late | expire | verify");
         Console.WriteLine("Environment: ConnectionStrings__BetaDb (required for commands)");
         Console.WriteLine("seed-demo: BGP_ALLOW_DEMO_SEED=true; BGP_DEMO_PASSWORD=... (>=12 chars)");
@@ -500,6 +500,17 @@ DROP DATABASE [{dbName}];";
             Console.Error.WriteLine("Safety violation: e2e-sql is only allowed against BetaGiaiPhong_E2E_ databases.");
             return 3;
         }
+        if (string.Equals(action, "check-db-exists", StringComparison.OrdinalIgnoreCase))
+        {
+            await using var masterConn = new SqlConnection(ResolveE2eMasterConnection());
+            await masterConn.OpenAsync();
+            await using var existsCmd = masterConn.CreateCommand();
+            existsCmd.CommandText = "SELECT CASE WHEN DB_ID(@dbName) IS NOT NULL THEN 1 ELSE 0 END;";
+            existsCmd.Parameters.Add(new SqlParameter("@dbName", SqlDbType.NVarChar, 128) { Value = builder.InitialCatalog });
+            var exists = Convert.ToInt32(await existsCmd.ExecuteScalarAsync());
+            Console.WriteLine($"DB_EXISTS:{exists}");
+            return 0;
+        }
         await using var sqlConn = new SqlConnection(conn);
         await sqlConn.OpenAsync();
         await using var cmd = sqlConn.CreateCommand();
@@ -527,6 +538,24 @@ AND NOT EXISTS (SELECT 1 FROM dbo.UserRoles ur WHERE ur.user_id = u.user_id AND 
                 if (!long.TryParse(orderIdStr, out var orderId)) return 2;
                 cmd.CommandText = "UPDATE dbo.Orders SET created_utc = DATEADD(MINUTE, -10, SYSUTCDATETIME()), expires_utc = DATEADD(MINUTE, -2, SYSUTCDATETIME()) WHERE order_id = @orderId AND status = 'PENDING_PAYMENT'; UPDATE dbo.ShowtimeSeats SET hold_expires_utc = DATEADD(MINUTE, -2, SYSUTCDATETIME()) WHERE owner_order_id = @orderId AND state = 'HELD';";
                 cmd.Parameters.Add(new SqlParameter("@orderId", SqlDbType.BigInt) { Value = orderId });
+                await cmd.ExecuteNonQueryAsync();
+                return 0;
+            case "get-order-ciphers":
+                var cipherOrderIdStr = Environment.GetEnvironmentVariable("BGP_E2E_ORDER_ID");
+                if (!long.TryParse(cipherOrderIdStr, out var cipherOrderId)) return 2;
+                cmd.CommandText = "SELECT qr_token_cipher FROM dbo.Tickets WHERE order_id = @orderId ORDER BY ticket_id;";
+                cmd.Parameters.Add(new SqlParameter("@orderId", SqlDbType.BigInt) { Value = cipherOrderId });
+                await using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var cipherBytes = (byte[])reader[0];
+                        Console.WriteLine("CIPHER_B64:" + Convert.ToBase64String(cipherBytes));
+                    }
+                }
+                return 0;
+            case "corrupt-e2e-db":
+                cmd.CommandText = "UPDATE TOP (1) dbo.Movies SET status = 'ARCHIVED' WHERE movie_id IN (SELECT movie_id FROM dbo.Showtimes WHERE status = 'ON_SALE' AND start_utc > SYSUTCDATETIME());";
                 await cmd.ExecuteNonQueryAsync();
                 return 0;
             default:

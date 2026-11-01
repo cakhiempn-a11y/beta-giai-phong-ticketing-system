@@ -78,3 +78,5 @@ e2e/playwright/.cache/
 
 # Local unpacked reference packages
 references/BGP_ERD_MoHinhDuLieu_FullPackage_v1_0/
+references/Beta_Giai_Phong_BPMN_UseCase_BanChot_v1_1/
+.dev-session.env.json
