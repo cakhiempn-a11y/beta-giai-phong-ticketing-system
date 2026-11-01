@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-validate:
+    name: Build & Static Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Restore dependencies
+        run: dotnet restore BetaGiaiPhong.slnx
+
+      - name: Build (Release)
+        run: dotnet build BetaGiaiPhong.slnx -c Release --no-restore
+
+      - name: Static Schema Checks
+        run: python scripts/static_schema_checks.py
+
+      - name: EF Core Model Drift Check
+        run: dotnet ef migrations has-pending-model-changes --project src/BetaGiaiPhong.Data --startup-project src/BetaGiaiPhong.Data
+
+      - name: Audit NuGet Package Vulnerabilities
+        run: dotnet list package --vulnerable --include-transitive
+
+  automated-tests:
+    name: Automated Tests with SQL Server
+    runs-on: ubuntu-latest
+    needs: build-and-validate
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "BgpTestPassword123!"
+          MSSQL_PID: "Developer"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "(/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'BgpTestPassword123!' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'BgpTestPassword123!' -C -Q 'SELECT 1') || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore BetaGiaiPhong.slnx
+
+      - name: Run Tests
+        env:
+          BGP_TEST_SQL_MASTER_CONNECTION: "Server=localhost,1433;Database=master;User Id=sa;Password=BgpTestPassword123!;TrustServerCertificate=True;"
+          BGP_TEST_ALLOW_DB_CREATE: "true"
+          BGP_TEST_AUTO_CLEANUP_DB: "true"
+          BGP_QR_AES_KEY_B64: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+          BGP_MOCK_HMAC_KEY_B64: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+          BGP_ALLOW_DEMO_SEED: "true"
+          BGP_DEMO_PASSWORD: "DemoPassword123!"
+        run: >
+          dotnet test BetaGiaiPhong.slnx
+          --configuration Release
+          --no-restore
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+
+  integrity-checks:
+    name: Integrity Checks & Runner Validation
+    runs-on: ubuntu-latest
+    needs: [build-and-validate, automated-tests]
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "BgpTestPassword123!"
+          MSSQL_PID: "Developer"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "(/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'BgpTestPassword123!' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'BgpTestPassword123!' -C -Q 'SELECT 1') || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore BetaGiaiPhong.slnx
+
+      - name: Run Migrations and Invariant Verification
+        env:
+          ConnectionStrings__BetaDb: "Server=localhost,1433;Database=BetaGiaiPhong_CI_Integrity;User Id=sa;Password=BgpTestPassword123!;TrustServerCertificate=True;"
+          BGP_MOCK_HMAC_KEY_B64: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+          BGP_QR_AES_KEY_B64: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+          BGP_ALLOW_DEMO_SEED: "true"
+          BGP_DEMO_PASSWORD: "DemoPassword123!"
+        run: |
+          dotnet run --project src/BetaGiaiPhong.Runner -- migrate
+          dotnet run --project src/BetaGiaiPhong.Runner -- seed-demo
+          dotnet run --project src/BetaGiaiPhong.Runner -- smoke
+          dotnet run --project src/BetaGiaiPhong.Runner -- race
+          dotnet run --project src/BetaGiaiPhong.Runner -- verify

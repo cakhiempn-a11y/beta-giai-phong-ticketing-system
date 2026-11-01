@@ -444,7 +444,7 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
 
     public async Task<SalesDashboardReportDto> GetSalesDashboardAsync(
         DateTime? fromDateUtc, DateTime? toDateUtc, long? movieId, long? roomId,
-        int page, int pageSize, CancellationToken ct = default)
+        int page = 1, int pageSize = 15, CancellationToken ct = default)
     {
         if (page < 1) page = 1;
         if (pageSize is < 5 or > 100) pageSize = 15;

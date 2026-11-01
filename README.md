@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-159%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-161%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -46,7 +46,7 @@ The solution adheres to clean data-driven and modular monolith design patterns:
 - **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, dynamic QR code generation, staff check-in portal with browser camera & USB 2D barcode scanning (`/staff/check-in`), check-in history audit log viewer (`/staff/check-in/history`), background worker (`ReservationExpiryWorker`) for automatic cleanup of expired reservations, and management portal (`/management/movies`, `/management/showtimes`, `/management/rooms`, `/management/reports`) for movie lifecycle transitions, showtime publishing, and sales dashboard. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`, `MovieManagementService`, `ManagementQueryService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios. Directly references `BetaGiaiPhong.Data`.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (159 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (161 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -261,13 +261,46 @@ dotnet run --project .\src\BetaGiaiPhong.Runner -- verify
 
 ## 11. Running Automated Tests
 
-The solution features a dedicated xUnit test suite (`tests/BetaGiaiPhong.Tests`):
+The solution features a comprehensive automated xUnit test suite (`tests/BetaGiaiPhong.Tests`) consisting of **161 automated tests** spanning unit tests, live SQL Server integration tests, and full ASP.NET Core web host tests via `CustomWebApplicationFactory`.
+
+### 11.1. Dynamic SQL Server Test Isolation
+Integration and Web tests dynamically create an ephemeral test database per test execution run (`BetaGiaiPhong_Test_<RunId>`) via `TestDatabaseFixture`, applying migrations automatically and disposing the database upon completion.
+
+Configurable environment variables for test execution:
+- `BGP_TEST_SQL_MASTER_CONNECTION`: Master database connection string (default: `Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=True;`).
+- `BGP_TEST_ALLOW_DB_CREATE`: When `true` (default), enables dynamic database creation.
+- `BGP_TEST_DATABASE_PREFIX`: Prefix for ephemeral databases (default: `BetaGiaiPhong_Test_`).
+- `BGP_TEST_AUTO_CLEANUP_DB`: When `true` (default), drops the ephemeral database on test completion.
+- `BGP_TEST_DATABASE_NAME`: Explicit pre-existing test database name (reuses database without dropping).
+
+> [!IMPORTANT]
+> **Safety Guards**: `TestDatabaseFixture` strictly rejects connection strings containing `prod` or `production`, prohibits running against the active development database `BetaGiaiPhong_Dev`, and enforces ownership checks to only drop databases created by the current test run.
+
+### 11.2. Executing Tests
+
+**Windows Developer Machine:**
 ```powershell
-# Run all unit and integration tests
+# Run all 161 unit, integration, and web tests
 dotnet test .\BetaGiaiPhong.slnx --logger "console;verbosity=normal"
 ```
 
-### Test Suite Execution Output
+**Docker Containerized SQL Server:**
+```powershell
+# Spin up local SQL Server container
+docker compose up -d
+
+# Point test runner to containerized master
+$env:BGP_TEST_SQL_MASTER_CONNECTION = "Server=localhost,1433;Database=master;User Id=sa;Password=StrongLocalDevPassword123!;TrustServerCertificate=True;"
+dotnet test .\BetaGiaiPhong.slnx
+```
+
+**Continuous Integration (GitHub Actions):**
+Automated CI is configured in `.github/workflows/ci.yml` running on `ubuntu-latest` with a containerized SQL Server 2022 service container, executing:
+1. `build-and-validate`: SDK check, Release build, static schema check, EF model drift check, and vulnerability scan.
+2. `automated-tests`: Full 161-test execution with TRX and Cobertura code coverage reporting.
+3. `integrity-checks`: Migration, synthetic demo seeding, smoke verification, concurrency race test, and 9/9 runner invariants check.
+
+### 11.3. Test Suite Execution Output
 ```text
 Passed BetaGiaiPhong.Tests.UnitTests.MockPaymentSecurityTests.SignAndVerify_ValidMessage_ReturnsTrue
 Passed BetaGiaiPhong.Tests.UnitTests.QrTokenProtectorTests.HashToken_ProducesDeterministicSha256
@@ -368,11 +401,15 @@ Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_24_D
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_25_DemoPay_WithoutCsrfToken_Returns400BadRequest
 Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_26_DatabaseInvariants_ZeroViolationsAfterPayments
 
+Passed BetaGiaiPhong.Tests.WebTests.ManagementWebTests.TC_MGMT_27_AuditTrail_RecordsCriticalActions
+Passed BetaGiaiPhong.Tests.WebTests.ManagementWebTests.TC_MGMT_28_Dashboard_IndependentFinancialReconciliation_CalculatesCorrectly
+Passed BetaGiaiPhong.Tests.WebTests.ManagementWebTests.TC_MGMT_29_MovieArchive_ShowtimePublish_Concurrency_PreservesInvariants
+
 Test Run Successful.
-Total tests: 104 | Passed: 104 | Failed: 0 | Total time: ~53 Seconds
+Total tests: 161 | Passed: 161 | Failed: 0 | Total time: ~1m 20s
 ```
 
-### 11.1. Running the Web Application
+### 11.4. Running the Web Application
 ```powershell
 # Launch the ASP.NET Core Web server (http://localhost:5145 / https://localhost:7097)
 dotnet run --project .\src\BetaGiaiPhong.Web
@@ -398,7 +435,7 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (159/159 tests passed: 28 Data/Domain tests + 131 Web integration tests).
+- **Test Suite Pass Rate:** 100% (161/161 tests passed: 28 Data/Domain tests + 133 Web integration tests).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
 - **Database Multi-Table Invariants:** 9/9 checks passed with 0 violations via `BetaGiaiPhong.Runner verify`.
 
@@ -440,6 +477,16 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Room & Physical Seat Reference:** Read-only inspection of room layouts, capacities, and physical seat matrices.
 - **Sales & Operations Dashboard:** Grounded in `dbo.vw_ShowtimeSales`, calculating valid paid revenue, tickets sold, and mathematically correct weighted occupancy.
 - **Quality Assurance:** 27 dedicated web integration tests (`TC_MGMT_01` to `TC_MGMT_27`), bringing the test suite to 159/159 PASS.
+
+### 14.6. Phase BE-05A (Completed — SQL Test Isolation, GitHub Actions CI, Security & Regression Assurance)
+- **Dynamic Ephemeral SQL Server Test Isolation:** Refactored `TestDatabaseFixture` to generate isolated, ephemeral test databases (`BetaGiaiPhong_Test_<RunId>`) per test run with strict production and development guard rails, preventing state pollution and ensuring repeatability across Windows local environments and Linux CI containers.
+- **GitHub Actions CI Automation:** Implemented `.github/workflows/ci.yml` featuring 3 parallel and sequential jobs:
+  1. `build-and-validate`: SDK setup, tool restore (`dotnet-ef`), Release build (0 warnings, 0 errors), static schema checks, EF Core model drift verification, and NuGet vulnerability audits.
+  2. `automated-tests`: Containerized SQL Server 2022 service container, running the full 161-test suite with TRX and Cobertura code coverage reporting.
+  3. `integrity-checks`: Standalone SQL Server container applying migrations, seeding demo catalog, running smoke test, high-concurrency race test, and verifying 9/9 database invariants.
+- **Concurrency Locking & Invariant Preservation:** Enforced strict hierarchical lock ordering (`SqlServerLocks.MovieAsync` followed by `RoomAsync` under `IsolationLevel.Serializable`) across `ShowtimePublishingService` and `MovieManagementService`, proving that archived movies cannot possess active future showtimes (`TC_MGMT_29`).
+- **Independent Financial Assertions:** Built independent mathematical reconciliation tests for the Sales & Operations Dashboard (`TC_MGMT_28`), validating revenue, ticket counts, and weighted occupancy calculations across timezone boundaries without circular dependencies on `dbo.vw_ShowtimeSales`.
+- **Quality Assurance:** 161/161 tests PASS (100% pass rate) with 86.78% overall code coverage (97.85% in `BetaGiaiPhong.Data`).
 
 ---
 
