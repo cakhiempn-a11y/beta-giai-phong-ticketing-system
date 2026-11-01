@@ -206,14 +206,27 @@ internal static class Program
             !string.Equals(optInDemo, "true", StringComparison.OrdinalIgnoreCase))
         {
             Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Set BGP_ALLOW_CHECKIN_DEMO=true to enable demo ticket generation.");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? "Development";
+        if (string.Equals(envName, "Production", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Running under Production environment. Refusing execution.");
+            Environment.ExitCode = 1;
             return;
         }
 
         var conn = Environment.GetEnvironmentVariable("ConnectionStrings__BetaDb") ?? string.Empty;
         if (conn.Contains("production", StringComparison.OrdinalIgnoreCase) ||
-            conn.Contains("prod.database", StringComparison.OrdinalIgnoreCase))
+            conn.Contains("prod.database", StringComparison.OrdinalIgnoreCase) ||
+            conn.Contains("BetaDb_Prod", StringComparison.OrdinalIgnoreCase))
         {
             Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Connection string appears to point to a PRODUCTION database. Refusing execution.");
+            Environment.ExitCode = 1;
             return;
         }
 
@@ -327,7 +340,7 @@ internal static class Program
         var baseUrl = Environment.GetEnvironmentVariable("BGP_BASE_URL") ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS")?.Split(';').FirstOrDefault() ?? "";
         if (!string.IsNullOrEmpty(baseUrl)) baseUrl = baseUrl.TrimEnd('/');
         var checkinPath = $"/staff/check-in?showtimeId={showtime.ShowtimeId}";
-        var ticketPath = $"/tickets/order/{res.OrderCode}";
+        var ticketPath = $"/orders/{res.OrderId}/tickets";
 
         Console.WriteLine();
         Console.WriteLine("======================================================================");

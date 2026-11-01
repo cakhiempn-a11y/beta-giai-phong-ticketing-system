@@ -1,0 +1,115 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.ManageShowtimeCreateViewModel
+@{
+    ViewData["Title"] = "Công bố suất chiếu mới";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb small">
+                    <li class="breadcrumb-item"><a asp-action="Showtimes">Lịch chiếu</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Công bố suất chiếu mới</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h1 class="h4 fw-bold mb-0 text-dark">Công bố suất chiếu mới</h1>
+                    <span class="text-muted small">Khởi tạo suất chiếu, kiểm tra xung đột phòng và thiết lập bảng giá ghế.</span>
+                </div>
+                <div class="card-body p-4">
+                    @if (Model.PublishedMovies.Count == 0)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <h6 class="alert-heading fw-bold">Chưa có phim nào ở trạng thái PUBLISHED!</h6>
+                            <p class="mb-2">Bạn cần xuất bản (Publish) ít nhất một bộ phim trước khi có thể lên lịch suất chiếu.</p>
+                            <a asp-action="Movies" class="btn btn-sm btn-outline-dark">Đi tới Danh mục Phim</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <form method="post" asp-action="ShowtimeCreate">
+                            @Html.AntiForgeryToken()
+
+                            <div asp-validation-summary="All" class="alert alert-danger small py-2 mb-3" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Phim chiếu <span class="text-danger">*</span></label>
+                                <select name="MovieId" class="form-select" required>
+                                    <option value="">-- Chọn phim đã xuất bản --</option>
+                                    @foreach (var m in Model.PublishedMovies)
+                                    {
+                                        <option value="@m.MovieId" selected="@(Model.SelectedMovieId == m.MovieId)">
+                                            @m.Title (@m.DurationMin phút | @m.AgeLabel)
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Phòng chiếu <span class="text-danger">*</span></label>
+                                <select name="RoomId" class="form-select" required>
+                                    <option value="">-- Chọn phòng chiếu hoạt động --</option>
+                                    @foreach (var r in Model.ActiveRooms)
+                                    {
+                                        <option value="@r.RoomId" selected="@(Model.SelectedRoomId == r.RoomId)">
+                                            @r.RoomName (Sức chứa danh nghĩa: @r.Seats.Count ghế)
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-7">
+                                    <label class="form-label fw-semibold">Thời gian bắt đầu (Giờ Việt Nam - UTC+7) <span class="text-danger">*</span></label>
+                                    @{
+                                        var defaultTimeStr = (Model.StartTimeVn ?? DateTime.Now.AddHours(2)).ToString("yyyy-MM-ddTHH:mm");
+                                    }
+                                    <input type="datetime-local" name="StartTimeVn" value="@defaultTimeStr" class="form-control" required />
+                                    <div class="form-text small">Hệ thống sẽ tự động chuyển đổi sang chuẩn lưu trữ UTC.</div>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Thời gian đệm dọn phòng (phút)</label>
+                                    <input type="number" name="BufferMinutes" value="@Model.BufferMinutes" min="0" max="120" class="form-control" required />
+                                    <div class="form-text small">Khoảng nghỉ giữa 2 suất (mặc định 15p).</div>
+                                </div>
+                            </div>
+
+                            <!-- Seat Pricing Section -->
+                            <div class="card bg-light border-0 mb-4">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-dark mb-2">Bảng giá vé theo loại ghế (VNĐ) <span class="text-danger">*</span></h6>
+                                    <p class="text-muted small mb-3">Nhập giá vé cho từng loại ghế áp dụng cho suất chiếu này. Mọi loại ghế trong phòng phải được định giá dương.</p>
+
+                                    <div class="row g-3">
+                                        @foreach (var st in Model.SeatTypes)
+                                        {
+                                            var currentPrice = Model.Prices.TryGetValue(st.SeatTypeCode, out var p) ? p : (st.SeatTypeCode switch { "VIP" => 90000, "SWEETBOX" => 160000, _ => 75000 });
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold text-secondary mb-1">
+                                                    Loại ghế: <strong class="text-dark">@st.TypeName</strong> (@st.SeatTypeCode)
+                                                </label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" name="Prices[@st.SeatTypeCode]" value="@currentPrice" min="1000" step="1000" class="form-control" required />
+                                                    <span class="input-group-text">đ</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <a asp-action="Showtimes" class="btn btn-outline-secondary">Hủy bỏ</a>
+                                <button type="submit" class="btn btn-primary px-4">
+                                    Công bố suất chiếu (PUBLISH)
+                                </button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

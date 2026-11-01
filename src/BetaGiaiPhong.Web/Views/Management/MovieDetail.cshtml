@@ -1,0 +1,197 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.ManageMovieDetailViewModel
+@{
+    ViewData["Title"] = $"Chi tiết phim: {Model.Movie.Title}";
+    var m = Model.Movie;
+}
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a asp-action="Movies">Danh mục Phim</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@m.Title</li>
+        </ol>
+    </nav>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Movie Profile Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="row g-4">
+                <div class="col-md-3 text-center">
+                    @if (!string.IsNullOrWhiteSpace(m.PosterUrl))
+                    {
+                        <img src="@m.PosterUrl" alt="@m.Title" class="img-fluid rounded shadow-sm border" style="max-height: 360px; object-fit: cover;" onerror="this.onerror=null;this.src='/images/poster-placeholder.png';" />
+                    }
+                    else
+                    {
+                        <div class="bg-light text-muted d-flex align-items-center justify-content-center rounded border" style="height: 320px;">
+                            <span>Chưa có Poster</span>
+                        </div>
+                    }
+                </div>
+                <div class="col-md-9">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <div>
+                            <span class="badge bg-secondary mb-1">Mã phim: #@m.MovieId</span>
+                            <h1 class="h3 fw-bold text-dark mb-1">@m.Title</h1>
+                            <div class="d-flex align-items-center gap-2 text-muted small">
+                                <span class="badge bg-danger">@m.AgeLabel</span>
+                                <span>&bull;</span>
+                                <span><strong>@m.DurationMin</strong> phút</span>
+                                <span>&bull;</span>
+                                <span>@(string.IsNullOrWhiteSpace(m.GenreText) ? "Chưa phân loại" : m.GenreText)</span>
+                            </div>
+                        </div>
+                        <div>
+                            @switch (m.Status)
+                            {
+                                case "PUBLISHED":
+                                    <span class="badge bg-success fs-6 px-3 py-2">PUBLISHED</span>
+                                    break;
+                                case "ARCHIVED":
+                                    <span class="badge bg-secondary fs-6 px-3 py-2">ARCHIVED</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-warning text-dark fs-6 px-3 py-2">DRAFT</span>
+                                    break;
+                            }
+                        </div>
+                    </div>
+
+                    <hr class="my-3 text-muted" />
+
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-secondary mb-1">Tóm tắt nội dung</h6>
+                        <p class="text-dark mb-0" style="white-space: pre-line;">@(string.IsNullOrWhiteSpace(m.Synopsis) ? "Chưa có thông tin tóm tắt." : m.Synopsis)</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-wrap gap-2 pt-2 border-top">
+                        <a asp-action="MovieEdit" asp-route-id="@m.MovieId" class="btn btn-outline-primary btn-sm px-3">
+                            Chỉnh sửa thông tin
+                        </a>
+
+                        @if (m.Status == "DRAFT")
+                        {
+                            <form method="post" asp-action="MoviePublish" asp-route-id="@m.MovieId" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xuất bản phim này? Sau khi xuất bản, phim có thể được lên lịch chiếu.');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success btn-sm px-3">
+                                    Xuất bản phim (PUBLISH)
+                                </button>
+                            </form>
+                        }
+
+                        @if (m.Status == "PUBLISHED")
+                        {
+                            <a asp-action="ShowtimeCreate" asp-route-movieId="@m.MovieId" class="btn btn-primary btn-sm px-3">
+                                + Lên lịch suất chiếu
+                            </a>
+
+                            <form method="post" asp-action="MovieArchive" asp-route-id="@m.MovieId" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn lưu trữ phim này? Các suất chiếu chưa phát sinh vé sẽ tự động đóng lại và không thể tạo suất chiếu mới.');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm px-3">
+                                    Lưu trữ phim (ARCHIVE)
+                                </button>
+                            </form>
+                        }
+
+                        @if (m.Status == "ARCHIVED")
+                        {
+                            <span class="text-muted small align-self-center fst-italic">
+                                (Phim đã lưu trữ. Không thể tạo thêm suất chiếu mới.)
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Associated Showtimes -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h5 class="h6 fw-bold mb-0 text-dark">Danh sách suất chiếu của phim (@Model.Showtimes.Count)</h5>
+            @if (m.Status == "PUBLISHED")
+            {
+                <a asp-action="ShowtimeCreate" asp-route-movieId="@m.MovieId" class="btn btn-outline-primary btn-sm">
+                    + Thêm suất chiếu
+                </a>
+            }
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Showtimes.Count == 0)
+            {
+                <div class="text-center py-5 text-muted">
+                    <p class="mb-0">Chưa có suất chiếu nào được tạo cho phim này.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary small">
+                            <tr>
+                                <th class="ps-3" style="width: 80px;">Mã suất</th>
+                                <th>Phòng chiếu</th>
+                                <th>Thời gian bắt đầu (VN)</th>
+                                <th>Thời gian kết thúc (VN)</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end pe-3">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Showtimes.OrderByDescending(st => st.StartUtc))
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold">#@s.ShowtimeId</td>
+                                    <td>Phòng @s.RoomId</td>
+                                    <td>@s.StartUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@s.EndUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        @switch (s.Status)
+                                        {
+                                            case "ON_SALE":
+                                                <span class="badge bg-success">ON_SALE</span>
+                                                break;
+                                            case "DRAFT":
+                                                <span class="badge bg-warning text-dark">DRAFT</span>
+                                                break;
+                                            case "CLOSED":
+                                                <span class="badge bg-secondary">CLOSED</span>
+                                                break;
+                                            case "CANCELLED":
+                                                <span class="badge bg-danger">CANCELLED</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-light text-dark">@s.Status</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <a asp-action="ShowtimeDetail" asp-route-id="@s.ShowtimeId" class="btn btn-sm btn-outline-secondary">
+                                            Xem chi tiết
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

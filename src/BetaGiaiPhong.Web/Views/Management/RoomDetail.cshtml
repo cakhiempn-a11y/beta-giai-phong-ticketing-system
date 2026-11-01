@@ -1,0 +1,112 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.ManageRoomDetailViewModel
+@{
+    var r = Model.Room;
+    ViewData["Title"] = $"Sơ đồ phòng: {r.RoomName}";
+}
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a asp-action="Rooms">Phòng chiếu</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@r.RoomName</li>
+        </ol>
+    </nav>
+
+    <!-- Header Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-secondary">Mã phòng: @r.RoomCode</span>
+                        <span class="badge @(r.Status == "ACTIVE" ? "bg-success" : "bg-secondary")">@r.Status</span>
+                    </div>
+                    <h1 class="h3 fw-bold text-dark mb-1">@r.RoomName</h1>
+                    <p class="text-muted small mb-0">Cấu hình danh mục ghế vật lý (Read-only Reference). Không cho phép sửa đổi cấu trúc phòng đã vận hành.</p>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <div class="text-end">
+                        <div class="small text-muted">Tổng số ghế</div>
+                        <div class="h4 fw-bold text-dark mb-0">@r.TotalSeats</div>
+                    </div>
+                    <div class="text-end border-start ps-3">
+                        <div class="small text-muted">Ghế hoạt động</div>
+                        <div class="h4 fw-bold text-success mb-0">@r.ActiveSeats</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-3 align-items-center pt-3 border-top">
+                <span class="small fw-semibold text-secondary">Phân loại ghế:</span>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="badge bg-secondary text-white border" style="width: 20px; height: 20px; display:inline-block;"> </span>
+                    <span class="small">STANDARD (Thường)</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="badge bg-warning text-dark border" style="width: 20px; height: 20px; display:inline-block;"> </span>
+                    <span class="small">VIP (Ghế VIP)</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="badge bg-danger text-white border" style="width: 20px; height: 20px; display:inline-block;"> </span>
+                    <span class="small">SWEETBOX (Ghế đôi)</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="badge bg-light text-muted border text-decoration-line-through" style="width: 20px; height: 20px; display:inline-block;"> </span>
+                    <span class="small">Không khả dụng (Ngừng hoạt động)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Grid Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 border-bottom text-center">
+            <h5 class="h6 fw-bold mb-0 text-dark">Sơ đồ bố trí ghế vật lý</h5>
+        </div>
+        <div class="card-body p-4 bg-light">
+            <!-- Screen Representation -->
+            <div class="text-center mb-4">
+                <div class="mx-auto py-2 px-5 bg-dark text-white rounded-pill shadow-sm" style="max-width: 450px; letter-spacing: 2px; font-size: 0.85rem;">
+                    [ MÀN HÌNH CHIẾU ]
+                </div>
+            </div>
+
+            <!-- Seat Matrix Grid -->
+            <div class="overflow-auto py-3 text-center">
+                <div class="d-inline-block text-start">
+                    @{
+                        var groupedSeats = r.Seats.GroupBy(s => s.RowLabel).OrderBy(g => g.Key);
+                    }
+                    @foreach (var row in groupedSeats)
+                    {
+                        <div class="d-flex align-items-center justify-content-center mb-2 gap-1">
+                            <span class="fw-bold text-muted text-center me-2" style="width: 24px;">@row.Key</span>
+                            @foreach (var seat in row.OrderBy(s => s.ColumnNo))
+                            {
+                                var badgeClass = seat.SeatTypeCode switch
+                                {
+                                    "VIP" => "bg-warning text-dark",
+                                    "SWEETBOX" => "bg-danger text-white",
+                                    _ => "bg-secondary text-white"
+                                };
+
+                                if (!seat.IsActive)
+                                {
+                                    badgeClass = "bg-light text-muted border text-decoration-line-through";
+                                }
+
+                                <div class="badge @badgeClass d-flex align-items-center justify-content-center border"
+                                     style="width: 38px; height: 32px; font-size: 0.75rem; cursor: pointer;"
+                                     title="@seat.SeatCode (@seat.SeatTypeCode) - @(seat.IsActive ? "Hoạt động" : "Ngừng hoạt động")">
+                                    @seat.SeatCode
+                                </div>
+                            }
+                            <span class="fw-bold text-muted text-center ms-2" style="width: 24px;">@row.Key</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

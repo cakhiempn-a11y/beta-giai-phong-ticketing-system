@@ -44,6 +44,22 @@
                                 <a class="nav-link" asp-controller="StaffCheckIn" asp-action="History">Lịch sử soát vé</a>
                             </li>
                         }
+                        @if (User.IsInRole("MANAGER") || User.IsInRole("ADMIN"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-info fw-semibold" href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="badge bg-info text-dark me-1">Quản lý</span>
+                                    <span>Vận hành</span>
+                                </a>
+                                <ul class="dropdown-menu shadow" aria-labelledby="managementDropdown">
+                                    <li><a class="dropdown-item" asp-controller="Management" asp-action="Reports">Báo cáo & Doanh thu</a></li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li><a class="dropdown-item" asp-controller="Management" asp-action="Movies">Quản lý Phim</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Management" asp-action="Showtimes">Lịch chiếu & Suất chiếu</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Management" asp-action="Rooms">Phòng chiếu & Sơ đồ ghế</a></li>
+                                </ul>
+                            </li>
+                        }
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Home" asp-action="Privacy">Giới thiệu & Quy chế</a>
                         </li>
@@ -66,6 +82,15 @@
                                     {
                                         <li><a class="dropdown-item" asp-controller="StaffCheckIn" asp-action="Index">Màn hình soát vé</a></li>
                                         <li><a class="dropdown-item" asp-controller="StaffCheckIn" asp-action="History">Lịch sử soát vé</a></li>
+                                    }
+                                    @if (User.IsInRole("MANAGER") || User.IsInRole("ADMIN"))
+                                    {
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><h6 class="dropdown-header text-uppercase small">Vận hành quản lý</h6></li>
+                                        <li><a class="dropdown-item" asp-controller="Management" asp-action="Reports">Báo cáo & Doanh thu</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Management" asp-action="Movies">Quản lý Phim</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Management" asp-action="Showtimes">Lịch chiếu</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Management" asp-action="Rooms">Phòng chiếu</a></li>
                                     }
                                     <li><hr class="dropdown-divider my-1"></li>
                                     <li>
@@ -100,13 +125,11 @@
                 <span class="d-block text-secondary small">Hệ thống học thuật sử dụng dữ liệu mô phỏng. Không phải dịch vụ thương mại của Beta Cinemas.</span>
             </div>
             <div class="small">
-                <a class="text-decoration-none text-muted me-3" asp-controller="Home" asp-action="Privacy">Quy chế học thuật</a>
-                <a class="text-decoration-none text-muted" href="/health" target="_blank">Health Check</a>
+                ASP.NET Core 10 &bull; SQL Server &bull; EF Core
             </div>
         </div>
     </footer>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)

@@ -1,0 +1,107 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.ManageMovieFormViewModel
+@{
+    ViewData["Title"] = $"Chỉnh sửa phim #{Model.MovieId}: {Model.Title}";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb small">
+                    <li class="breadcrumb-item"><a asp-action="Movies">Danh mục Phim</a></li>
+                    <li class="breadcrumb-item"><a asp-action="MovieDetail" asp-route-id="@Model.MovieId">@Model.Title</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Chỉnh sửa</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h4 fw-bold mb-0 text-dark">Chỉnh sửa thông tin phim</h1>
+                        <span class="text-muted small">Mã phim: #@Model.MovieId</span>
+                    </div>
+                    <div>
+                        @switch (Model.Status)
+                        {
+                            case "PUBLISHED":
+                                <span class="badge bg-success">PUBLISHED</span>
+                                break;
+                            case "ARCHIVED":
+                                <span class="badge bg-secondary">ARCHIVED</span>
+                                break;
+                            default:
+                                <span class="badge bg-warning text-dark">DRAFT</span>
+                                break;
+                        }
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" asp-action="MovieEdit" asp-route-id="@Model.MovieId">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="MovieId" value="@Model.MovieId" />
+
+                        <div asp-validation-summary="All" class="alert alert-danger small py-2 mb-3" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tựa phim <span class="text-danger">*</span></label>
+                            <input type="text" name="Title" class="form-control" value="@Model.Title" maxlength="200" required placeholder="Ví dụ: Đào, Phở và Piano" />
+                            <div class="form-text small">Tối đa 200 ký tự.</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Thời lượng (phút) <span class="text-danger">*</span></label>
+                                @if (Model.HasActiveShowtimes)
+                                {
+                                    <input type="number" class="form-control bg-light" value="@Model.DurationMin" disabled />
+                                    <input type="hidden" name="DurationMin" value="@Model.DurationMin" />
+                                    <div class="alert alert-warning small py-1 px-2 mt-1 mb-0">
+                                        <i class="bi bi-lock-fill"></i> Thời lượng bị khóa vì phim đang có suất chiếu hiệu lực trong lịch chiếu.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <input type="number" name="DurationMin" class="form-control" value="@Model.DurationMin" min="1" max="480" required />
+                                    <div class="form-text small">Từ 1 đến 480 phút.</div>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phân loại khán giả (Độ tuổi)</label>
+                                <select name="AgeLabel" class="form-select">
+                                    <option value="P" selected="@(Model.AgeLabel == "P")">P - Phổ biến mọi lứa tuổi</option>
+                                    <option value="K" selected="@(Model.AgeLabel == "K")">K - Khán giả dưới 13 tuổi có người giám hộ</option>
+                                    <option value="T13" selected="@(Model.AgeLabel == "T13")">T13 - Khán giả từ đủ 13 tuổi</option>
+                                    <option value="T16" selected="@(Model.AgeLabel == "T16")">T16 - Khán giả từ đủ 16 tuổi</option>
+                                    <option value="T18" selected="@(Model.AgeLabel == "T18")">T18 - Khán giả từ đủ 18 tuổi</option>
+                                    <option value="C" selected="@(Model.AgeLabel == "C")">C - Phim bị cấm phổ biến</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Thể loại</label>
+                            <input type="text" name="GenreText" class="form-control" value="@Model.GenreText" maxlength="100" placeholder="Hành động, Phiêu lưu, Tâm lý..." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Đường dẫn Poster (URL hoặc đường dẫn tương đối)</label>
+                            <input type="text" name="PosterUrl" class="form-control" value="@Model.PosterUrl" maxlength="500" placeholder="https://... hoặc /images/posters/movie.jpg" />
+                            <div class="form-text small">Chỉ chấp nhận URL HTTPS hoặc đường dẫn tĩnh nội bộ bắt đầu bằng '/'. Không dùng javascript: hoặc http:.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Tóm tắt nội dung (Synopsis)</label>
+                            <textarea name="Synopsis" class="form-control" rows="4" maxlength="2000" placeholder="Nhập tóm tắt nội dung phim...">@Model.Synopsis</textarea>
+                            <div class="form-text small">Tối đa 2000 ký tự.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a asp-action="MovieDetail" asp-route-id="@Model.MovieId" class="btn btn-outline-secondary">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-primary px-4">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
