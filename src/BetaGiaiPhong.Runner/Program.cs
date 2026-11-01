@@ -2,6 +2,7 @@ using System.Data;
 using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace BetaGiaiPhong.Runner;
@@ -13,6 +14,9 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         var command = (args.Length > 0 ? args[0] : "help").ToLowerInvariant();
+        if (command == "create-e2e-db") return args.Length >= 3 ? await CreateE2eDatabaseAsync(args[1], args[2]) : 2;
+        if (command == "drop-e2e-db") return args.Length >= 3 ? await DropE2eDatabaseAsync(args[1], args[2]) : 2;
+        if (command == "e2e-sql") return args.Length >= 2 ? await ExecuteE2eSqlAsync(args[1]) : 2;
         if (command is "help" or "--help" or "-h")
         {
             PrintHelp(); return 0;
@@ -383,4 +387,152 @@ internal static class Program
         Console.WriteLine("seed-demo: BGP_ALLOW_DEMO_SEED=true; BGP_DEMO_PASSWORD=... (>=12 chars)");
         Console.WriteLine("smoke: BGP_MOCK_HMAC_KEY_B64 and BGP_QR_AES_KEY_B64 (32 random bytes each)");
     }
+
+    private const string OwnershipExtendedPropertyName = "BGP_TestRunOwnershipToken";
+
+    private static string ResolveE2eMasterConnection()
+    {
+        var master = Environment.GetEnvironmentVariable("BGP_TEST_SQL_MASTER_CONNECTION")
+            ?? "Server=localhost;Database=master;Integrated Security=True;TrustServerCertificate=True;";
+        var builder = new SqlConnectionStringBuilder(master) { InitialCatalog = "master" };
+        return builder.ConnectionString;
+    }
+
+    private static async Task<int> CreateE2eDatabaseAsync(string dbName, string token)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(dbName, @"^BetaGiaiPhong_E2E_[a-zA-Z0-9_]{1,40}$"))
+        {
+            Console.Error.WriteLine($"Safety violation: E2E database name '{dbName}' must start with 'BetaGiaiPhong_E2E_'.");
+            return 2;
+        }
+        var masterConnStr = ResolveE2eMasterConnection();
+        await using (var masterConn = new SqlConnection(masterConnStr))
+        {
+            await masterConn.OpenAsync();
+            await using (var checkCmd = masterConn.CreateCommand())
+            {
+                checkCmd.CommandText = "SELECT CASE WHEN DB_ID(@dbName) IS NOT NULL THEN 1 ELSE 0 END;";
+                checkCmd.Parameters.Add(new SqlParameter("@dbName", SqlDbType.NVarChar, 128) { Value = dbName });
+                var exists = Convert.ToInt32(await checkCmd.ExecuteScalarAsync()) == 1;
+                if (exists)
+                {
+                    Console.Error.WriteLine($"Safety violation: E2E database '{dbName}' already exists.");
+                    return 3;
+                }
+            }
+            await using (var createCmd = masterConn.CreateCommand())
+            {
+                createCmd.CommandText = $"CREATE DATABASE [{dbName}];";
+                await createCmd.ExecuteNonQueryAsync();
+            }
+            await using (var propCmd = masterConn.CreateCommand())
+            {
+                propCmd.CommandText = $@"
+ALTER DATABASE [{dbName}] SET RECOVERY SIMPLE;
+EXEC [{dbName}].sys.sp_addextendedproperty @name = N'{OwnershipExtendedPropertyName}', @value = @token;";
+                propCmd.Parameters.Add(new SqlParameter("@token", SqlDbType.NVarChar, 128) { Value = token });
+                await propCmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        var dbConnBuilder = new SqlConnectionStringBuilder(masterConnStr) { InitialCatalog = dbName };
+        var options = new DbContextOptionsBuilder<BetaDbContext>()
+            .UseSqlServer(dbConnBuilder.ConnectionString, sql => sql.MigrationsAssembly(typeof(BetaDbContext).Assembly.FullName))
+            .Options;
+        await using var db = new BetaDbContext(options);
+        await db.Database.MigrateAsync();
+        await DemoSeeder.SeedAsync(db);
+        Console.WriteLine($"E2E database '{dbName}' created, migrated, and seeded.");
+        return 0;
+    }
+
+    private static async Task<int> DropE2eDatabaseAsync(string dbName, string expectedToken)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(dbName, @"^BetaGiaiPhong_E2E_[a-zA-Z0-9_]{1,40}$"))
+        {
+            Console.Error.WriteLine($"Safety violation: Refusing to drop database '{dbName}' without BetaGiaiPhong_E2E_ prefix.");
+            return 2;
+        }
+        SqlConnection.ClearAllPools();
+        var masterConnStr = ResolveE2eMasterConnection();
+        await using var masterConn = new SqlConnection(masterConnStr);
+        await masterConn.OpenAsync();
+        await using (var checkCmd = masterConn.CreateCommand())
+        {
+            checkCmd.CommandText = "SELECT CASE WHEN DB_ID(@dbName) IS NOT NULL THEN 1 ELSE 0 END;";
+            checkCmd.Parameters.Add(new SqlParameter("@dbName", SqlDbType.NVarChar, 128) { Value = dbName });
+            var exists = Convert.ToInt32(await checkCmd.ExecuteScalarAsync()) == 1;
+            if (!exists) return 0;
+        }
+        string? actualToken;
+        await using (var tokenCmd = masterConn.CreateCommand())
+        {
+            tokenCmd.CommandText = $@"
+SELECT CAST(value AS NVARCHAR(128))
+FROM [{dbName}].sys.extended_properties
+WHERE class = 0 AND name = N'{OwnershipExtendedPropertyName}';";
+            var scalar = await tokenCmd.ExecuteScalarAsync();
+            actualToken = scalar == null || scalar == DBNull.Value ? null : Convert.ToString(scalar);
+        }
+        if (!string.Equals(actualToken, expectedToken, StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine($"Safety violation: Ownership token mismatch on '{dbName}'. Refusing to drop.");
+            return 3;
+        }
+        await using (var dropCmd = masterConn.CreateCommand())
+        {
+            dropCmd.CommandText = $@"
+ALTER DATABASE [{dbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+DROP DATABASE [{dbName}];";
+            await dropCmd.ExecuteNonQueryAsync();
+        }
+        Console.WriteLine($"E2E database '{dbName}' dropped safely.");
+        return 0;
+    }
+
+    private static async Task<int> ExecuteE2eSqlAsync(string action)
+    {
+        var conn = Environment.GetEnvironmentVariable("ConnectionStrings__BetaDb");
+        if (string.IsNullOrWhiteSpace(conn)) return 2;
+        var builder = new SqlConnectionStringBuilder(conn);
+        if (!builder.InitialCatalog.StartsWith("BetaGiaiPhong_E2E_", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("Safety violation: e2e-sql is only allowed against BetaGiaiPhong_E2E_ databases.");
+            return 3;
+        }
+        await using var sqlConn = new SqlConnection(conn);
+        await sqlConn.OpenAsync();
+        await using var cmd = sqlConn.CreateCommand();
+        switch (action.ToLowerInvariant())
+        {
+            case "revoke-staff":
+                cmd.CommandText = @"
+DELETE ur FROM dbo.UserRoles ur
+JOIN dbo.Users u ON u.user_id = ur.user_id
+JOIN dbo.Roles r ON r.role_id = ur.role_id
+WHERE u.normalized_email = 'STAFF@DEMO.INVALID' AND r.role_code = 'STAFF';";
+                await cmd.ExecuteNonQueryAsync();
+                return 0;
+            case "restore-staff":
+                cmd.CommandText = @"
+INSERT INTO dbo.UserRoles (user_id, role_id)
+SELECT u.user_id, r.role_id
+FROM dbo.Users u CROSS JOIN dbo.Roles r
+WHERE u.normalized_email = 'STAFF@DEMO.INVALID' AND r.role_code = 'STAFF'
+AND NOT EXISTS (SELECT 1 FROM dbo.UserRoles ur WHERE ur.user_id = u.user_id AND ur.role_id = r.role_id);";
+                await cmd.ExecuteNonQueryAsync();
+                return 0;
+            case "force-expire-order":
+                var orderIdStr = Environment.GetEnvironmentVariable("BGP_E2E_ORDER_ID");
+                if (!long.TryParse(orderIdStr, out var orderId)) return 2;
+                cmd.CommandText = "UPDATE dbo.Orders SET created_utc = DATEADD(MINUTE, -10, SYSUTCDATETIME()), expires_utc = DATEADD(MINUTE, -2, SYSUTCDATETIME()) WHERE order_id = @orderId AND status = 'PENDING_PAYMENT'; UPDATE dbo.ShowtimeSeats SET hold_expires_utc = DATEADD(MINUTE, -2, SYSUTCDATETIME()) WHERE owner_order_id = @orderId AND state = 'HELD';";
+                cmd.Parameters.Add(new SqlParameter("@orderId", SqlDbType.BigInt) { Value = orderId });
+                await cmd.ExecuteNonQueryAsync();
+                return 0;
+            default:
+                Console.Error.WriteLine($"Unknown e2e-sql action: {action}");
+                return 2;
+        }
+    }
+
 }

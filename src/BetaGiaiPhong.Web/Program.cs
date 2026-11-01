@@ -178,7 +178,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("LoginRateLimit", opt =>
     {
-        opt.PermitLimit = 10;
+        opt.PermitLimit = builder.Configuration.GetValue<int>("BGP_LOGIN_RATE_LIMIT_PERMITS", 10);
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueLimit = 0;
     });

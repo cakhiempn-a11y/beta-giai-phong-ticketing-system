@@ -533,7 +533,12 @@
 
                 try {
                     const tempScanner = new Html5Qrcode("reader");
-                    const decodedText = await tempScanner.scanFile(file, true);
+                    let decodedText;
+                    try {
+                        decodedText = await tempScanner.scanFile(file, false);
+                    } catch {
+                        decodedText = await tempScanner.scanFile(file, true);
+                    }
                     tempScanner.clear();
                     submitScan(decodedText);
                 } catch (err) {

@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-161%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-166%20xUnit%20%2B%205%20E2E%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -46,7 +46,8 @@ The solution adheres to clean data-driven and modular monolith design patterns:
 - **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, dynamic QR code generation, staff check-in portal with browser camera & USB 2D barcode scanning (`/staff/check-in`), check-in history audit log viewer (`/staff/check-in/history`), background worker (`ReservationExpiryWorker`) for automatic cleanup of expired reservations, and management portal (`/management/movies`, `/management/showtimes`, `/management/rooms`, `/management/reports`) for movie lifecycle transitions, showtime publishing, and sales dashboard. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`, `MovieManagementService`, `ManagementQueryService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios. Directly references `BetaGiaiPhong.Data`.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (161 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (166 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants, and test database safety guards), and Web application integration tests via `WebApplicationFactory`.
+- **`e2e/`:** Dedicated Playwright Real-Browser E2E test suite running Chromium against a live `BetaGiaiPhong.Web` server process and isolated ephemeral SQL Server database (`BetaGiaiPhong_E2E_<RunId>`), verifying the complete cross-role user journey, negative/security scenarios, server restart recovery, responsive/accessibility viewports, and 30-concurrent-request seat contention.
 
 ---
 
@@ -261,27 +262,41 @@ dotnet run --project .\src\BetaGiaiPhong.Runner -- verify
 
 ## 11. Running Automated Tests
 
-The solution features a comprehensive automated xUnit test suite (`tests/BetaGiaiPhong.Tests`) consisting of **161 automated tests** spanning unit tests, live SQL Server integration tests, and full ASP.NET Core web host tests via `CustomWebApplicationFactory`.
+The solution features a comprehensive automated xUnit test suite (`tests/BetaGiaiPhong.Tests`) consisting of **166 automated tests** spanning unit tests, live SQL Server integration tests, test database safety guards, and full ASP.NET Core web host tests via `CustomWebApplicationFactory`, complemented by a **5-suite Real-Browser Playwright E2E test suite** (`e2e/`).
 
-### 11.1. Dynamic SQL Server Test Isolation
+### 11.1. Dynamic SQL Server Test Isolation & Safety Guards
 Integration and Web tests dynamically create an ephemeral test database per test execution run (`BetaGiaiPhong_Test_<RunId>`) via `TestDatabaseFixture`, applying migrations automatically and disposing the database upon completion.
 
 Configurable environment variables for test execution:
-- `BGP_TEST_SQL_MASTER_CONNECTION`: Master database connection string (default: `Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=True;`).
-- `BGP_TEST_ALLOW_DB_CREATE`: When `true` (default), enables dynamic database creation.
+- `BGP_TEST_SQL_MASTER_CONNECTION`: Dedicated master database connection string (default: `Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=True;`). Does **not** fall back to `ConnectionStrings__BetaDb`.
+- `BGP_TEST_ALLOW_DB_CREATE`: Explicit opt-in required (`true` / `1`) to allow creating ephemeral test databases.
 - `BGP_TEST_DATABASE_PREFIX`: Prefix for ephemeral databases (default: `BetaGiaiPhong_Test_`).
-- `BGP_TEST_AUTO_CLEANUP_DB`: When `true` (default), drops the ephemeral database on test completion.
-- `BGP_TEST_DATABASE_NAME`: Explicit pre-existing test database name (reuses database without dropping).
+- `BGP_TEST_AUTO_CLEANUP_DB`: When `true` (default), drops the ephemeral database on test completion after verifying ownership.
+- `BGP_TEST_DATABASE_NAME`: Explicit pre-existing test database name. Requires `BGP_TEST_ALLOW_EXISTING_DB_REUSE=true` if the database already exists, and **never** drops pre-existing databases on dispose.
+- `BGP_TEST_CONFIRM_REMOTE_SQL_SERVER`: Required (`true`) if the SQL Server `Data Source` is non-local (`localhost`, `127.0.0.1`, `(local)`, `.`).
 
 > [!IMPORTANT]
-> **Safety Guards**: `TestDatabaseFixture` strictly rejects connection strings containing `prod` or `production`, prohibits running against the active development database `BetaGiaiPhong_Dev`, and enforces ownership checks to only drop databases created by the current test run.
+> **Strict Ownership & Safety Guards**: `TestDatabaseFixture` strictly rejects connection strings or database names containing `prod`/`production`, prohibits running against `BetaGiaiPhong_Dev`, `master`, `model`, `msdb`, or `tempdb`, stamps newly created databases with a SQL Extended Property (`BGP_TestRunOwnershipToken`), and verifies that exact token before executing `DROP DATABASE`. Pre-existing databases are **never** dropped by `DisposeAsync()`.
 
 ### 11.2. Executing Tests
 
-**Windows Developer Machine:**
+**Windows Developer Machine (xUnit Suite):**
 ```powershell
-# Run all 161 unit, integration, and web tests
+# Run all 166 unit, integration, safety, and web tests
+$env:BGP_TEST_ALLOW_DB_CREATE = "true"
 dotnet test .\BetaGiaiPhong.slnx --logger "console;verbosity=normal"
+```
+
+**Real-Browser Playwright E2E Suite (`e2e/`):**
+```powershell
+# Install Playwright dependencies and Chromium browser (first time)
+cd .\e2e
+npm ci
+npx playwright install chromium
+
+# Execute all 5 real-browser E2E test suites against a real Web server & isolated E2E database
+npx playwright test
+cd ..
 ```
 
 **Docker Containerized SQL Server:**
@@ -291,14 +306,16 @@ docker compose up -d
 
 # Point test runner to containerized master
 $env:BGP_TEST_SQL_MASTER_CONNECTION = "Server=localhost,1433;Database=master;User Id=sa;Password=StrongLocalDevPassword123!;TrustServerCertificate=True;"
+$env:BGP_TEST_ALLOW_DB_CREATE = "true"
 dotnet test .\BetaGiaiPhong.slnx
 ```
 
 **Continuous Integration (GitHub Actions):**
-Automated CI is configured in `.github/workflows/ci.yml` running on `ubuntu-latest` with a containerized SQL Server 2022 service container, executing:
+Automated CI is configured in `.github/workflows/ci.yml` running on `ubuntu-latest` with a containerized SQL Server 2022 service container, executing 4 jobs:
 1. `build-and-validate`: SDK check, Release build, static schema check, EF model drift check, and vulnerability scan.
-2. `automated-tests`: Full 161-test execution with TRX and Cobertura code coverage reporting.
+2. `automated-tests`: Full 166-test xUnit execution with TRX and Cobertura code coverage reporting.
 3. `integrity-checks`: Migration, synthetic demo seeding, smoke verification, concurrency race test, and 9/9 runner invariants check.
+4. `e2e-browser-tests`: Headless Chromium Playwright E2E suite against a real `BetaGiaiPhong.Web` process and isolated SQL Server 2022 E2E database, uploading Playwright HTML reports, traces, screenshots, and runner logs on failure.
 
 ### 11.3. Test Suite Execution Output
 ```text
@@ -404,9 +421,14 @@ Passed BetaGiaiPhong.Tests.WebTests.MockPaymentAndTicketWebTests.TC_WEB_PAY_26_D
 Passed BetaGiaiPhong.Tests.WebTests.ManagementWebTests.TC_MGMT_27_AuditTrail_RecordsCriticalActions
 Passed BetaGiaiPhong.Tests.WebTests.ManagementWebTests.TC_MGMT_28_Dashboard_IndependentFinancialReconciliation_CalculatesCorrectly
 Passed BetaGiaiPhong.Tests.WebTests.ManagementWebTests.TC_MGMT_29_MovieArchive_ShowtimePublish_Concurrency_PreservesInvariants
+Passed BetaGiaiPhong.Tests.IntegrationTests.TestDatabaseSafetyTests.TC_SAFE_01_PreExistingDatabase_WithoutReuseOptIn_ThrowsAndNeverDrops
+Passed BetaGiaiPhong.Tests.IntegrationTests.TestDatabaseSafetyTests.TC_SAFE_02_PreExistingDatabase_WithReuseOptIn_ReusesAndNeverDropsOnDispose
+Passed BetaGiaiPhong.Tests.IntegrationTests.TestDatabaseSafetyTests.TC_SAFE_03_NewlyCreatedDatabase_HasOwnershipToken_AndIsDroppedOnDispose
+Passed BetaGiaiPhong.Tests.IntegrationTests.TestDatabaseSafetyTests.TC_SAFE_04_ProtectedDatabaseNames_AreStrictlyRejected
+Passed BetaGiaiPhong.Tests.IntegrationTests.TestDatabaseSafetyTests.TC_SAFE_05_AllowDbCreateFalse_RefusesToCreateNewDatabase
 
 Test Run Successful.
-Total tests: 161 | Passed: 161 | Failed: 0 | Total time: ~1m 20s
+Total tests: 166 | Passed: 166 | Failed: 0 | Total time: ~1m 20s
 ```
 
 ### 11.4. Running the Web Application
@@ -427,6 +449,7 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 | **ISSUE-04** | **P2** | `01_prepare_dev_session.ps1` failure on Windows PowerShell 5.1 | **RESOLVED**: Replaced with cross-platform .NET crypto instance call. |
 | **ISSUE-05** | **P2** | Unmapped reporting view `dbo.vw_ShowtimeSales` | **RESOLVED**: Mapped `ShowtimeSalesSummary` via `HasNoKey().ToView()`. |
 | **BE-02-REV**| **P2** | Test isolation, order IDOR enumeration & MVC input validation | **RESOLVED**: Standardized 404 for cross-customer cancel; strict CSV parsing; legitimate mock payment in TC_WEB_BOOK_13; added 6th invariant check. |
+| **BE-05B-SAFE**| **P1** | `TestDatabaseFixture` pre-existing database drop hazard | **RESOLVED**: Enforced explicit `BGP_TEST_ALLOW_DB_CREATE=true` opt-in, `BGP_TEST_ALLOW_EXISTING_DB_REUSE=true`, and SQL Extended Property ownership token (`BGP_TestRunOwnershipToken`) verification before `DROP DATABASE`. |
 
 ---
 
@@ -435,7 +458,8 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (161/161 tests passed: 28 Data/Domain tests + 133 Web integration tests).
+- **xUnit Test Suite Pass Rate:** 100% (166/166 tests passed: 33 Data/Domain/Safety tests + 133 Web integration tests).
+- **Playwright Real-Browser E2E Pass Rate:** 100% (5/5 E2E suites passed in Headless Chromium against live `BetaGiaiPhong.Web` and SQL Server).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
 - **Database Multi-Table Invariants:** 9/9 checks passed with 0 violations via `BetaGiaiPhong.Runner verify`.
 
@@ -487,6 +511,16 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Concurrency Locking & Invariant Preservation:** Enforced strict hierarchical lock ordering (`SqlServerLocks.MovieAsync` followed by `RoomAsync` under `IsolationLevel.Serializable`) across `ShowtimePublishingService` and `MovieManagementService`, proving that archived movies cannot possess active future showtimes (`TC_MGMT_29`).
 - **Independent Financial Assertions:** Built independent mathematical reconciliation tests for the Sales & Operations Dashboard (`TC_MGMT_28`), validating revenue, ticket counts, and weighted occupancy calculations across timezone boundaries without circular dependencies on `dbo.vw_ShowtimeSales`.
 - **Quality Assurance:** 161/161 tests PASS (100% pass rate) with 86.78% overall code coverage (97.85% in `BetaGiaiPhong.Data`).
+
+### 14.7. Phase BE-05B (Completed — Real Browser E2E Testing, Security, Performance, Recovery & User Acceptance)
+- **Critical Test Database Safety Hardening:** Eliminated pre-existing database drop hazards in `TestDatabaseFixture` via explicit `BGP_TEST_ALLOW_DB_CREATE=true` opt-in, `BGP_TEST_ALLOW_EXISTING_DB_REUSE=true`, remote host confirmation guards, and SQL Server Extended Property ownership tokens (`BGP_TestRunOwnershipToken`), verified by 5 dedicated safety regression tests (`TC_SAFE_01` to `TC_SAFE_05`).
+- **Real-Browser Playwright E2E Suite (`e2e/`):** Full Chromium browser automation against a live `BetaGiaiPhong.Web` Kestrel process and isolated `BetaGiaiPhong_E2E_<RunId>` SQL Server database:
+  1. `01-full-journey.spec.ts`: End-to-end cross-role journey (**Manager** movie/showtime publishing $\rightarrow$ **Customer** seat selection, checkout, simulated payment, QR PNG download $\rightarrow$ **Staff** in-browser `Html5Qrcode` PNG decoding, `ACCEPTED` / `ALREADY_USED` check-in, history audit $\rightarrow$ **Manager** sales dashboard verification).
+  2. `02-negative-and-security.spec.ts`: Browser concurrency conflict (`409`), >8 seat limit enforcement, expired order checkout block, cross-customer IDOR (`404`), `WRONG_SHOWTIME` / `OUTSIDE_WINDOW` / `NOT_FOUND` QR scan rejections, ticketed showtime cancellation block, archived movie booking block, dynamic role revocation & account lock on next request, CSRF validation, and zero secret leakage in console/network.
+  3. `03-restart-recovery.spec.ts`: Live `BetaGiaiPhong.Web` process termination and restart with preserved paid orders/tickets, duplicate signed webhook idempotency, network failure banner (`LỖI KẾT NỐI`) and retry recovery on `/staff/check-in`, `ReservationExpiryWorker` background reclamation, and 9/9 runner invariants verification.
+  4. `04-responsive-and-a11y.spec.ts`: Multi-viewport verification (`1440x900` Desktop, `768x1024` Tablet, `390x844` Mobile), form accessibility labels, keyboard focus navigation, QR minimum rendering dimensions ($\ge 120\text{px}$), and Manual Physical Camera UAT checklist.
+  5. `05-performance-load.spec.ts`: Page & API latency benchmarking (P95 well below thresholds) and 30 concurrent seat reservation requests on a single seat (1 winner `201`, 29 conflicts `409`, 0 server errors, 0 deadlocks).
+- **CI Pipeline Integration:** Added `e2e-browser-tests` job to `.github/workflows/ci.yml` with Playwright report/trace artifact uploads on failure.
 
 ---
 
