@@ -519,8 +519,27 @@ dotnet run --project .\src\BetaGiaiPhong.Web
   2. `02-negative-and-security.spec.ts`: Browser concurrency conflict (`409`), >8 seat limit enforcement, expired order checkout block, cross-customer IDOR (`404`), `WRONG_SHOWTIME` / `OUTSIDE_WINDOW` / `NOT_FOUND` QR scan rejections, ticketed showtime cancellation block, archived movie booking block, dynamic role revocation & account lock on next request, CSRF validation, and zero secret leakage in console/network.
   3. `03-restart-recovery.spec.ts`: Live `BetaGiaiPhong.Web` process termination and restart with preserved paid orders/tickets, duplicate signed webhook idempotency, network failure banner (`LỖI KẾT NỐI`) and retry recovery on `/staff/check-in`, `ReservationExpiryWorker` background reclamation, and 9/9 runner invariants verification.
   4. `04-responsive-and-a11y.spec.ts`: Multi-viewport verification (`1440x900` Desktop, `768x1024` Tablet, `390x844` Mobile), form accessibility labels, keyboard focus navigation, QR minimum rendering dimensions ($\ge 120\text{px}$), and Manual Physical Camera UAT checklist.
-  5. `05-performance-load.spec.ts`: Page & API latency benchmarking (P95 well below thresholds) and 30 concurrent seat reservation requests on a single seat (1 winner `201`, 29 conflicts `409`, 0 server errors, 0 deadlocks).
+  5. `05-performance-load.spec.ts`: Page & API latency benchmarking (P95 well below thresholds) and 30 concurrent seat reservation requests on a single seat (1 winner `201`, 29 conflicts `409`, 0 server errors; SQL exceptions/deadlocks recorded as NOT MEASURED).
 - **CI Pipeline Integration:** Added `e2e-browser-tests` job to `.github/workflows/ci.yml` with Playwright report/trace artifact uploads on failure.
+
+### 14.8. Phase BE-05C (Completed — Final Quality Gate, Requirements Traceability, Thesis Documentation & Defense Readiness)
+- **Phase 0 Final Quality Gate Hardening:**
+  - e2e/global-teardown.ts: Enforces Runner verify exit code 0 and INTEGRITY PASSED as a hard E2E quality gate while always executing inally database drop and state cleanup (Test 7.6).
+  - e2e/global-setup.ts: Persists ownership state immediately after create-e2e-db and automatically drops the ephemeral E2E database if Web startup or /health check fails (Test 7.7).
+  - e2e/tests/05-performance-load.spec.ts: Records sqlExceptions and deadlocks honestly as NOT MEASURED and separates valid 409 Conflict responses (expectedConflicts409) from HTTP 5xx server errors (http5xxErrors).
+  - e2e/tests/helpers.ts, e2e/playwright.config.ts, .github/workflows/ci.yml: Unseals actual 43-char Base64URL QR tokens (QrTokenProtector.Issue()) in memory to verify zero leakage across HTML, JSON APIs, and console logs; disables automatic CI screenshot/video/trace capture and sanitizes artifacts before upload.
+  - TicketQueryService.cs & StaffCheckIn/Index.cshtml: Uses qrCode.GetGraphic(6) (246x246 px, 6px/module < 8px ZXing HybridBinarizer block size) with multi-scale white-padded offscreen canvas fallback for 100% deterministic in-browser QR PNG decoding.
+- **Capstone Delivery Documentation (docs/delivery/ & docs/quality/):**
+  - [docs/delivery/SRS_IMPLEMENTATION_TRACEABILITY.md](docs/delivery/SRS_IMPLEMENTATION_TRACEABILITY.md)
+  - [docs/delivery/ARCHITECTURE_AND_DATA_MODEL.md](docs/delivery/ARCHITECTURE_AND_DATA_MODEL.md)
+  - [docs/delivery/TEST_ACCEPTANCE_SUMMARY.md](docs/delivery/TEST_ACCEPTANCE_SUMMARY.md)
+  - [docs/delivery/MANUAL_CAMERA_UAT.md](docs/delivery/MANUAL_CAMERA_UAT.md)
+  - [docs/delivery/INSTALLATION_GUIDE.md](docs/delivery/INSTALLATION_GUIDE.md)
+  - [docs/delivery/USER_MANUAL.md](docs/delivery/USER_MANUAL.md)
+  - [docs/delivery/THESIS_TECHNICAL_CONTENT.md](docs/delivery/THESIS_TECHNICAL_CONTENT.md)
+  - [docs/delivery/DEFENSE_DEMO_SCRIPT.md](docs/delivery/DEFENSE_DEMO_SCRIPT.md)
+  - [docs/delivery/RELEASE_CHECKLIST.md](docs/delivery/RELEASE_CHECKLIST.md)
+  - [docs/quality/BE_05C_REPORT.md](docs/quality/BE_05C_REPORT.md)
 
 ---
 

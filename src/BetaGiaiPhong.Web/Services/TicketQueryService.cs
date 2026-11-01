@@ -144,6 +144,6 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(rawToken, QRCodeGenerator.ECCLevel.Q);
         var qrCode = new PngByteQRCode(qrCodeData);
-        return qrCode.GetGraphic(10);
+        return qrCode.GetGraphic(6);
     }
 }

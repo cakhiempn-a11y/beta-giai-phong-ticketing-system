@@ -6,25 +6,24 @@
 
 ---
 
-## 1. KHẢO SÁT HIỆN TRẠNG TÀI LIỆU THƯỢNG NGUỒN TRONG WORKSPACE
+## 1. KHẢO SÁT HIỆN TRẠNG TÀI LIỆU THƯỢNG NGUỒN TRONG WORKSPACE (CẬP NHẬT BE-05C)
 
-Tuân thủ nghiêm ngặt nguyên tắc kiểm định **KHÔNG HALLUCINATE**, hội đồng kiểm định đã kiểm tra cấu trúc tệp thực tế trong toàn bộ workspace và xác định tình trạng các tài liệu tham chiếu như sau:
+Toàn bộ các tài liệu thượng nguồn trong `references/` và `docs/` đã được trích xuất, kiểm định và đối chiếu đầy đủ tại [docs/delivery/SRS_IMPLEMENTATION_TRACEABILITY.md](../delivery/SRS_IMPLEMENTATION_TRACEABILITY.md):
 
-| STT | Tài liệu thiết kế dự kiến | Trạng thái trong workspace | Đường dẫn / Ghi chú kiểm định |
+| STT | Tài liệu thiết kế thượng nguồn | Trạng thái trong workspace | Đường dẫn / Ghi chú kiểm định |
 |:---:|---|:---:|---|
-| 1 | **SRS v1.0 (Đặc tả yêu cầu phần mềm)** | **NOT AVAILABLE** | Không có tệp văn bản đặc tả SRS v1.0 độc lập trong repo; chỉ có các đề xuất SRS v1.1. |
-| 2 | **BPMN TO-BE v1.1 (Sơ đồ quy trình)** | **NOT AVAILABLE** | Không có tệp BPMN (.bpmn, .xml) trong workspace. |
-| 3 | **Use Case Diagram & Đặc tả Use Case** | **NOT AVAILABLE** | Không có tài liệu đặc tả Use Case chi tiết trong workspace. |
-| 4 | **14 Sequence Diagrams** | **NOT AVAILABLE** | Không có sơ đồ tuần tự dạng tệp rời trong workspace. |
-| 5 | **SRS v1.1 Design Decisions (9 CRs)** | **AVAILABLE** | [docs/SRS_v1_1_Design_Decisions.md](file:///d:/Downloads/BGP_EFCore10_SQLServer_TrienKhai_FullPackage_v1_0/BetaGiaiPhong_EFCore_SQLServer_v1_0/docs/SRS_v1_1_Design_Decisions.md) |
-| 6 | **Kiến trúc & Ranh giới giao dịch** | **AVAILABLE** | [docs/Architecture_And_Rules.md](file:///d:/Downloads/BGP_EFCore10_SQLServer_TrienKhai_FullPackage_v1_0/BetaGiaiPhong_EFCore_SQLServer_v1_0/docs/Architecture_And_Rules.md) |
-| 7 | **Từ điển dữ liệu (116 cột)** | **AVAILABLE** | [docs/Data_Dictionary_116_Columns.csv](file:///d:/Downloads/BGP_EFCore10_SQLServer_TrienKhai_FullPackage_v1_0/BetaGiaiPhong_EFCore_SQLServer_v1_0/docs/Data_Dictionary_116_Columns.csv) |
-| 8 | **Ma trận Khóa ngoại (22 FKs)** | **AVAILABLE** | [docs/Foreign_Key_Matrix_22.csv](file:///d:/Downloads/BGP_EFCore10_SQLServer_TrienKhai_FullPackage_v1_0/BetaGiaiPhong_EFCore_SQLServer_v1_0/docs/Foreign_Key_Matrix_22.csv) |
+| 1 | **SRS v1.0 (Đặc tả yêu cầu phần mềm — 54 FR, 18 BR, 18 NFR, 25 TC)** | **AVAILABLE** | `references/Beta_Giai_Phong_SRS_v1_0.docx` |
+| 2 | **BPMN TO-BE v1.0 & v1.1 (`BPMN-01` .. `BPMN-05`)** | **AVAILABLE** | `references/Beta_Giai_Phong_BPMN_TO_BE_v1_0.docx` |
+| 3 | **Use Case Diagram & Đặc tả Use Case (`UC-01` .. `UC-16`)** | **AVAILABLE** | `references/BGP_UseCase_TongQuat_Va_DacTa_ChiTiet_v1_0.docx` |
+| 4 | **14 Sequence Diagrams (`SD-01` .. `SD-14`)** | **AVAILABLE** | `references/BGP_Sequence_Diagrams_ThuyetMinh_v1_0.docx` |
+| 5 | **SRS v1.1 Design Decisions (9 CRs)** | **AVAILABLE** | `docs/SRS_v1_1_Design_Decisions.md` |
+| 6 | **Kiến trúc & Ranh giới giao dịch** | **AVAILABLE** | `docs/Architecture_And_Rules.md` |
+| 7 | **Từ điển dữ liệu (116 cột)** | **AVAILABLE** | `docs/Data_Dictionary_116_Columns.csv` |
+| 8 | **Ma trận Khóa ngoại (22 FKs)** | **AVAILABLE** | `docs/Foreign_Key_Matrix_22.csv` |
 | 9 | **Sơ đồ ERD (Mô hình thực thể quan hệ)** | **AVAILABLE** | `docs/ERD_Source_Editable.drawio`, `docs/figures/*.png` |
 
 > [!NOTE]
-> Do các tài liệu thượng nguồn (SRS v1.0, BPMN, Use Case, Sequence Diagrams) hiện chưa được lưu trữ trực tiếp trong workspace này, hội đồng kiểm định **không đưa ra kết luận khẳng định tính nhất quán tuyệt đối với các tài liệu vắng mặt đó**, mà tập trung truy vết chi tiết dựa trên:
-> `SRS v1.1 Design Decisions (CR-01..CR-09)` $\rightarrow$ `ERD / Data Dictionary` $\rightarrow$ `Entities` $\rightarrow$ `Fluent API` $\rightarrow$ `Migrations` $\rightarrow$ `Services` $\rightarrow$ `Test Verification`.
+> Ma trận truy vết toàn diện (54 FR, 18 BR, 18 NFR, 9 CR, 16 UC, 6 BPMN, 14 SD, 25 TC) từ tài liệu SRS đến Controller/Service/Database/Test (166 xUnit tests + 5 Playwright Chromium E2E suites) được trình bày chi tiết tại [docs/delivery/SRS_IMPLEMENTATION_TRACEABILITY.md](../delivery/SRS_IMPLEMENTATION_TRACEABILITY.md).
 
 ---
 

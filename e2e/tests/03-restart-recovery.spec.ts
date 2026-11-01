@@ -2,10 +2,20 @@ import { test, expect } from '@playwright/test';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadE2eState, runRunnerCommand, spawnWebServer } from '../e2e-env';
 import {
+  createInitialE2eState,
+  loadE2eState,
+  runGlobalSetupLifecycle,
+  runGlobalTeardownLifecycle,
+  runRunnerCommand,
+  saveE2eState,
+  spawnWebServer,
+} from '../e2e-env';
+import {
+  assertNoSecretLeakInText,
   createRoleSession,
   formatVnDateTimeLocal,
+  getOrderSensitiveQrArtifactsInMemory,
   loginInBrowser,
 } from './helpers';
 
@@ -237,10 +247,68 @@ test.describe('BE-05B Phase 7: Restart, Recovery, Idempotency & Failure Behavior
       await expect(staffPage.locator('#scanStatusBadge')).not.toHaveText('LỖI KẾT NỐI', { timeout: 15_000 });
       await expect(staffPage.locator('#scanStatusBadge')).not.toHaveText('Đang kiểm tra...', { timeout: 15_000 });
 
-      // 7.5 Verify all 9 database invariants pass via Runner verify
+      // 7.5 Verify all 9 database invariants pass via Runner verify on main E2E database
       const verifyRes = runRunnerCommand(['verify'], state);
       expect(verifyRes.status).toBe(0);
       expect(verifyRes.stdout).toContain('INTEGRITY PASSED');
+
+      const sensitiveQr = getOrderSensitiveQrArtifactsInMemory(paidOrderId, state);
+      if (fs.existsSync(qrFilePath)) {
+        fs.unlinkSync(qrFilePath);
+      }
+      for (const s of [managerSession, customerSession, staffSession]) {
+        for (const m of s.consoleMessages) {
+          assertNoSecretLeakInText(m, state, 'Browser Console', sensitiveQr);
+        }
+      }
+
+      // 7.6 (BE-05C Phase 0.1): Verify globalTeardown FAILS quality gate when Runner verify detects a violation,
+      // while STILL executing finally cleanup (dropping database and removing state file).
+      const gateState = createInitialE2eState(`gate_${crypto.randomBytes(2).toString('hex')}`, 5192);
+      const gateStateFile = path.join(tmpDir, `gate-state-${Date.now()}.json`);
+      const createGateRes = runRunnerCommand(
+        ['create-e2e-db', gateState.dbName, gateState.ownershipToken],
+        gateState
+      );
+      expect(createGateRes.status).toBe(0);
+      saveE2eState(gateState, gateStateFile);
+
+      const corruptRes = runRunnerCommand(['e2e-sql', 'corrupt-e2e-db'], gateState);
+      expect(corruptRes.status).toBe(0);
+
+      let gateError: Error | null = null;
+      try {
+        await runGlobalTeardownLifecycle(gateStateFile, { forceAutoCleanup: true });
+      } catch (err: any) {
+        gateError = err;
+      }
+      expect(gateError).not.toBeNull();
+      expect(gateError!.message).toContain('Runner verify failed');
+
+      // Confirm finally block still dropped the corrupted DB and removed the state file
+      const gateExistsRes = runRunnerCommand(['e2e-sql', 'check-db-exists'], gateState);
+      expect(gateExistsRes.stdout).toContain('DB_EXISTS:0');
+      expect(fs.existsSync(gateStateFile)).toBe(false);
+
+      // 7.7 (BE-05C Phase 0.2): Verify globalSetup cleans up newly created DB and state file if health check fails
+      const setupFailState = createInitialE2eState(`sfail_${crypto.randomBytes(2).toString('hex')}`, 5193);
+      const setupFailStateFile = path.join(tmpDir, `setupfail-state-${Date.now()}.json`);
+      let setupFailError: Error | null = null;
+      try {
+        await runGlobalSetupLifecycle(setupFailState, {
+          stateFilePath: setupFailStateFile,
+          healthTimeoutMs: 1600,
+          healthPath: '/nonexistent-health-endpoint-should-fail-404',
+        });
+      } catch (err: any) {
+        setupFailError = err;
+      }
+      expect(setupFailError).not.toBeNull();
+      expect(setupFailError!.message).toContain('Failed to start Web server');
+
+      const setupFailExistsRes = runRunnerCommand(['e2e-sql', 'check-db-exists'], setupFailState);
+      expect(setupFailExistsRes.stdout).toContain('DB_EXISTS:0');
+      expect(fs.existsSync(setupFailStateFile)).toBe(false);
     } finally {
       await managerSession.context.close();
       await customerSession.context.close();

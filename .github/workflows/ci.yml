@@ -196,6 +196,17 @@ jobs:
           BGP_DEMO_PASSWORD: "DemoPassword123!"
         run: npx playwright test
 
+      - name: Sanitize & Verify E2E Artifacts Before Upload
+        if: always()
+        working-directory: e2e
+        run: |
+          rm -f .tmp/*.png .tmp/e2e-state.json
+          find playwright-report test-results -type f \( -name "*.png" -o -name "*.zip" -o -name "*.webm" \) -delete 2>/dev/null || true
+          if grep -rnE "BgpTestPassword123!|DemoPassword123!" playwright-report/ test-results/ 2>/dev/null; then
+            echo "ERROR: Credentials detected in E2E report artifacts!"
+            exit 1
+          fi
+
       - name: Upload Playwright Report & Failure Traces
         if: always()
         uses: actions/upload-artifact@v4

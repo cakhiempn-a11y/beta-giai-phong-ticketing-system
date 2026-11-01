@@ -7,6 +7,7 @@ import {
   createRoleSession,
   formatVnDateOnly,
   formatVnDateTimeLocal,
+  getOrderSensitiveQrArtifactsInMemory,
   loginInBrowser,
 } from './helpers';
 
@@ -319,10 +320,25 @@ test.describe('BE-05B Phase 2-5: Complete Real-Browser Journey (Manager -> Custo
       await expect(managerPage.locator('body')).toContainText(`${expectedRevenueFormatted} VND`);
       await expect(managerPage.locator('body')).toContainText('2 vé');
 
+      // Phase 0.4: Decrypt actual issued 43-char Base64URL QR tokens in memory (never logged)
+      // and verify zero leakage in HTML, JSON API, and Browser Console
+      const sensitiveQr = getOrderSensitiveQrArtifactsInMemory(orderId, state);
+      const ticketsPageHtml = await customerPage.content();
+      assertNoSecretLeakInText(ticketsPageHtml, state, 'Tickets Page HTML', sensitiveQr);
+
+      const ticketsApiResp = await customerSession.context.request.get(`/api/orders/${orderId}/tickets`);
+      expect(ticketsApiResp.status()).toBe(200);
+      const ticketsApiJsonText = await ticketsApiResp.text();
+      assertNoSecretLeakInText(ticketsApiJsonText, state, 'GET /api/orders/{id}/tickets JSON', sensitiveQr);
+
+      if (fs.existsSync(qrFilePath)) {
+        fs.unlinkSync(qrFilePath);
+      }
+
       // Verify no secret or raw QR token leaked into console logs of any session
       for (const session of [managerSession, customerSession, staffSession]) {
         for (const msg of session.consoleMessages) {
-          assertNoSecretLeakInText(msg, state, 'Browser Console');
+          assertNoSecretLeakInText(msg, state, 'Browser Console', sensitiveQr);
         }
         expect(session.pageErrors).toEqual([]);
       }

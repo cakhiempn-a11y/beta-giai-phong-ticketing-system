@@ -532,7 +532,56 @@
                 }
 
                 try {
-                    const tempScanner = new Html5Qrcode("reader");
+                    const tempScanner = new Html5Qrcode("reader", false);
+                    let decodedText = null;
+                    try {
+                        decodedText = await tempScanner.scanFile(file, false);
+                    } catch {
+                        const scales = [
+                            { size: 205, pad: 24, smooth: false },
+                            { size: 246, pad: 30, smooth: false },
+                            { size: 287, pad: 32, smooth: false },
+                            { size: 328, pad: 36, smooth: true },
+                            { size: 410, pad: 40, smooth: true }
+                        ];
+                        for (const cfg of scales) {
+                            try {
+                                const paddedFile = await new Promise((resolve, reject) => {
+                                    const url = URL.createObjectURL(file);
+                                    const img = new Image();
+                                    img.onload = () => {
+                                        URL.revokeObjectURL(url);
+                                        const canvas = document.createElement("canvas");
+                                        canvas.width = cfg.size + cfg.pad * 2;
+                                        canvas.height = cfg.size + cfg.pad * 2;
+                                        const ctx = canvas.getContext("2d");
+                                        ctx.fillStyle = "#FFFFFF";
+                                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                        ctx.imageSmoothingEnabled = cfg.smooth;
+                                        ctx.drawImage(img, cfg.pad, cfg.pad, cfg.size, cfg.size);
+                                        canvas.toBlob((blob) => {
+                                            if (!blob) return reject(new Error("Canvas toBlob failed"));
+                                            resolve(new File([blob], "qr-padded.png", { type: "image/png" }));
+                                        }, "image/png");
+                                    };
+                                    img.onerror = (err) => {
+                                        URL.revokeObjectURL(url);
+                                        reject(err);
+                                    };
+                                    img.src = url;
+                                });
+                                decodedText = await tempScanner.scanFile(paddedFile, false);
+                                if (decodedText) break;
+                            } catch {
+                                // Try next scale
+                            }
+                        }
+                        if (!decodedText) {
+                            decodedText = await tempScanner.scanFile(file, true);
+                        }
+                    }
+                    try { tempScanner.clear(); } catch {}
+                    if (false) {
                     let decodedText;
                     try {
                         decodedText = await tempScanner.scanFile(file, false);
@@ -540,6 +589,7 @@
                         decodedText = await tempScanner.scanFile(file, true);
                     }
                     tempScanner.clear();
+                    }
                     submitScan(decodedText);
                 } catch (err) {
                     alert("Không tìm thấy mã QR hợp lệ trong hình ảnh tải lên.");
