@@ -34,8 +34,8 @@ Theo tiêu chuẩn bảo mật của trình duyệt hiện đại (W3C Secure Co
 
 ### Phương án A (Khuyên dùng cho Android): USB Port Forwarding qua Chrome DevTools
 1. Cắm cáp USB kết nối điện thoại Android với máy tính chạy `BetaGiaiPhong.Web`.
-2. Trên máy tính, mở `chrome://inspect/#devices`, bật `Discover USB devices` và cấu hình **Port forwarding**: cổng `5188` trên điện thoại ánh xạ về `localhost:5188` của máy tính.
-3. Trên điện thoại Android, mở `http://localhost:5188/staff/check-in` — trình duyệt coi `localhost` là ngữ cảnh an toàn và cho phép bật Camera ngay lập tức mà không gặp cảnh báo chứng chỉ tự ký.
+2. Trên máy tính, mở `chrome://inspect/#devices`, bật `Discover USB devices` và cấu hình **Port forwarding**: cổng `5145` trên điện thoại ánh xạ về `localhost:5145` của máy tính.
+3. Trên điện thoại Android, mở `http://localhost:5145/staff/check-in` — trình duyệt coi `localhost` là ngữ cảnh an toàn và cho phép bật Camera ngay lập tức mà không gặp cảnh báo chứng chỉ tự ký.
 
 ### Phương án B (Dùng cho cả Android, iPhone và Laptop): Khởi chạy Kestrel HTTPS
 1. Tin cậy chứng chỉ HTTPS phát triển trên máy trạm:
@@ -46,7 +46,7 @@ Theo tiêu chuẩn bảo mật của trình duyệt hiện đại (W3C Secure Co
    ```powershell
    dotnet run --project src/BetaGiaiPhong.Web/BetaGiaiPhong.Web.csproj --launch-profile https
    ```
-3. Truy cập `https://<IP-LAN-Máy-Tính>:7188/staff/check-in` từ trình duyệt điện thoại và chấp nhận cảnh báo chứng chỉ phát triển nội bộ.
+3. Truy cập `https://<IP-LAN-Máy-Tính>:7097/staff/check-in` từ trình duyệt điện thoại và chấp nhận cảnh báo chứng chỉ phát triển nội bộ.
 
 ---
 

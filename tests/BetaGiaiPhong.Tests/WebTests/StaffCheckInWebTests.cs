@@ -636,10 +636,13 @@ public sealed class StaffCheckInWebTests(TestDatabaseFixture fixture) : IClassFi
         Assert.Contains("textContent", html);
         Assert.Contains("createElement", html);
 
-        // 3. Duplicate scan prevention & reset flow
+        // 3. Duplicate scan prevention & reset flow + isolated deterministic QR file decoder
         Assert.Contains("btnScanNext", html);
         Assert.Contains("btnRescanCurrent", html);
         Assert.Contains("isInFlight", html);
         Assert.Contains("isTicketAccepted", html);
+        Assert.Contains("qrFileScratch", html);
+        Assert.Contains("decodeQrFileDeterministically", html);
+        Assert.Contains("INVALID_QR_IMAGE", html);
     }
 }

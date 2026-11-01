@@ -58,7 +58,7 @@ Hệ thống phân tách quyền hạn nghiêm ngặt theo 5 vai trò nghiệp v
 2. Mỗi ghế trong đơn được cấp **1 thẻ vé điện tử độc lập** bao gồm:
    - Mã vé (`TicketCode`), Tên phim, Phòng chiếu, Giờ chiếu (giờ VN), Mã ghế, Loại ghế.
    - Trạng thái vé: `HỢP LỆ / CHƯA SOÁT (ISSUED)` hoặc `ĐÃ SOÁT VÉ (USED)`.
-   - Hình ảnh **Mã QR (`246x246` px PNG)** được giải mã trực tiếp trong bộ nhớ từ `qr_token_cipher`.
+   - Hình ảnh **Mã QR (`259x259` px PNG tại `/tickets/{ticketId}/qr`)** được giải mã trực tiếp trong bộ nhớ từ `qr_token_cipher`.
 3. Bạn có thể lưu ảnh QR PNG về thiết bị hoặc đưa trực tiếp màn hình cho nhân viên soát vé tại rạp.
 
 ---
@@ -71,7 +71,7 @@ Hệ thống phân tách quyền hạn nghiêm ngặt theo 5 vai trò nghiệp v
 3. **Bước 2 — Thực hiện quét mã QR bằng 1 trong 3 cách:**
    - **Cách A (Tải ảnh QR PNG — ổn định nhất khi demo trên máy tính):** Nhấn vào ô **Tải ảnh mã QR từ thiết bị** (`#qrFileInput`) và chọn tệp ảnh `.png` mã QR của khách hàng. Trình duyệt tự động giải mã ảnh QR và gửi xác thực ngay lập tức.
    - **Cách B (Quét bằng Camera trực tiếp):** Nhấn **Bật Camera** (`#btnStartCamera`), cấp quyền truy cập camera và hướng ống kính vào mã QR trên điện thoại khách hàng.
-   - **Cách C (Nhập mã hoặc dùng súng quét 2D USB):** Đặt con trỏ vào ô `#manualQrToken`, quét bằng đầu đọc USB hoặc dán chuỗi token và nhấn **Kiểm tra vé**.
+   - **Cách C (Nhập mã hoặc dùng súng quét 2D USB):** Đặt con trỏ vào ô `#manualTokenInput`, quét bằng đầu đọc USB hoặc dán chuỗi token và nhấn **Xác thực** (`#btnManualSubmit`).
 4. **Bước 3 — Đọc kết quả trả về trên màn hình:**
    - 🟢 **`HỢP LỆ (ACCEPTED)`:** Vé hợp lệ lần đầu $\rightarrow$ Cho phép khách vào phòng chiếu; vé tự động chuyển sang trạng thái `USED`.
    - 🟡 **`ĐÃ SỬ DỤNG (ALREADY_USED)`:** Vé này đã được check-in trước đó $\rightarrow$ Từ chối cho vào, đối chiếu thời điểm đã quét trên màn hình.

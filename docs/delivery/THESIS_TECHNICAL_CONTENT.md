@@ -93,7 +93,7 @@ Mô hình dữ liệu quan hệ được chuẩn hóa đạt dạng chuẩn 3 (3
 
 ### 4.2. Kết quả kiểm thử tự động và đo đạc thực nghiệm
 Hệ thống đã vượt qua toàn bộ các cổng chất lượng tự động trên cả máy trạm Windows và GitHub Actions Linux CI:
-- **Kiểm thử xUnit (.NET 10):** **166 / 166 bài kiểm thử PASS** (42 Unit Tests, 68 SQL Server Integration Tests trên DB cô lập theo GUID với cơ chế bảo vệ quyền sở hữu `BGP_TestRunOwnershipToken`, và 56 `WebApplicationFactory` Functional/Security Tests).
+- **Kiểm thử xUnit (.NET 10):** **166 / 166 bài kiểm thử PASS** (**10** Unit Tests, **35** SQL Server Integration & Concurrency Tests trên DB cô lập theo GUID với cơ chế bảo vệ quyền sở hữu `BGP_TestRunOwnershipToken`, và **121** `WebApplicationFactory` Functional/Security Tests).
 - **Kiểm thử trình duyệt thực Playwright Chromium E2E:** **5 / 5 bộ spec PASS** (`01-full-journey`, `02-negative-and-security`, `03-restart-recovery`, `04-responsive-and-a11y`, `05-performance-load`), chứng minh trọn vẹn chu trình **Manager mở bán $\rightarrow$ Customer đặt ghế & thanh toán $\rightarrow$ Staff tải ảnh QR PNG soát vé $\rightarrow$ Manager đối soát báo cáo doanh thu**.
 - **Kiểm định bất biến SQL Server (`Runner verify`):** **9 / 9 nhóm bất biến đạt 0 vi phạm** sau mọi kịch bản tranh chấp và khởi động lại.
 - **Đo đạc hiệu năng và tải đồng thời (`05-performance-load.spec.ts`):**
@@ -107,7 +107,7 @@ Hệ thống đã vượt qua toàn bộ các cổng chất lượng tự độn
 
 ### 5.1. Đánh giá mức độ hoàn thành mục tiêu đề án
 Đề án đã hoàn thành mục tiêu phân tích, thiết kế và xây dựng một hệ thống quản lý bán vé trực tuyến có độ toàn vẹn giao dịch cao cho rạp Beta Giải Phóng:
-- Bao phủ **52/54 yêu cầu chức năng** (trong đó 46 yêu cầu `IMPLEMENTED` toàn diện và 6 yêu cầu `PARTIALLY IMPLEMENTED` ở tầng CSDL/Service/Read-UI), **18/18 quy tắc nghiệp vụ (`BR`)**, **18/18 yêu cầu phi chức năng (`NFR`)**, **9/9 quyết định kiến trúc (`CR`)** và tự động hóa **24/25 ca kiểm thử nghiệm thu (`TC`)**.
+- Bao phủ **54 yêu cầu chức năng (`52 P0 + 2 P1`)**, trong đó đối với **52 yêu cầu P0** có **46 yêu cầu `IMPLEMENTED`** toàn diện, **5 yêu cầu `PARTIALLY IMPLEMENTED`** ở tầng CSDL/Service/Read-UI và **1 yêu cầu `NOT IMPLEMENTED`** (`FR-AUTH-02`); đối với **2 yêu cầu P1** có **1 `PARTIALLY IMPLEMENTED`** (`FR-AUTH-06`) và **1 `OUT OF SCOPE`** (`FR-RPT-05`). Đạt **18/18 quy tắc nghiệp vụ (`BR`)**, **18/18 yêu cầu phi chức năng (`NFR`)**, **9/9 quyết định kiến trúc (`CR`)** và tự động hóa **24/25 ca kiểm thử nghiệm thu (`TC`)**.
 - Đảm bảo tính nhất quán tuyệt đối giữa sơ đồ quy trình BPMN, sơ đồ tuần tự UML, mô hình dữ liệu vật lý 17 bảng trên SQL Server và mã nguồn C# thực thi.
 
 ### 5.2. Các giới hạn được ghi nhận trung thực của nguyên mẫu (Honest Limitations)

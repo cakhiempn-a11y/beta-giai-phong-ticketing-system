@@ -83,6 +83,8 @@
                             <p class="mb-0">Nhấn <strong>"Bật Camera"</strong> để bắt đầu quét vé của khách hàng</p>
                         </div>
                     </div>
+                    <!-- Dedicated offscreen container for deterministic file scanning (isolated from #reader camera DOM) -->
+                    <div id="qrFileScratch" aria-hidden="true" style="position: fixed; left: -9999px; top: -9999px; width: 640px; height: 640px; overflow: hidden; pointer-events: none;"></div>
 
                     <div class="mt-3 text-start">
                         <label for="qrFileInput" class="form-label small fw-semibold text-secondary">
@@ -182,6 +184,7 @@
     <script>
         (function () {
             let html5QrCode = null;
+            let fileScannerInstance = null;
             let isScanning = false;
             let isInFlight = false;
             let isTicketAccepted = false;
@@ -198,6 +201,43 @@
             const resultCard = document.getElementById("resultCard");
             const ticketDetailsCard = document.getElementById("ticketDetailsCard");
             const statusBadge = document.getElementById("scanStatusBadge");
+
+            // Safe diagnostic telemetry (never logs raw QR tokens, hashes, keys, or image bytes)
+            function emitScanTelemetry(stage, meta) {
+                try {
+                    const safeMeta = meta ? JSON.stringify(meta) : "{}";
+                    console.info(`[QR-SCAN-STAGE] ${stage} ${safeMeta}`);
+                } catch {
+                    // Ignore telemetry serialization errors
+                }
+            }
+
+            // Initialize or retrieve dedicated QR-only file scanner with ZXing TRY_HARDER enabled
+            function getOrCreateFileScanner() {
+                if (!fileScannerInstance) {
+                    const formats = (typeof Html5QrcodeSupportedFormats !== "undefined" && Html5QrcodeSupportedFormats.QR_CODE !== undefined)
+                        ? [Html5QrcodeSupportedFormats.QR_CODE]
+                        : undefined;
+                    fileScannerInstance = new Html5Qrcode("qrFileScratch", {
+                        verbose: false,
+                        formatsToSupport: formats,
+                        useBarCodeDetectorIfSupported: false
+                    });
+                    // Enable ZXing DecodeHintType.TRY_HARDER (enum key 3) on both primary and secondary decoders
+                    try {
+                        if (fileScannerInstance.qrcode && fileScannerInstance.qrcode.primaryDecoder && fileScannerInstance.qrcode.primaryDecoder.hints) {
+                            fileScannerInstance.qrcode.primaryDecoder.hints.set(3, true);
+                        }
+                        if (fileScannerInstance.qrcode && fileScannerInstance.qrcode.secondaryDecoder && fileScannerInstance.qrcode.secondaryDecoder.hints) {
+                            fileScannerInstance.qrcode.secondaryDecoder.hints.set(3, true);
+                        }
+                    } catch {
+                        // Ignore if internal hints map structure differs
+                    }
+                    emitScanTelemetry("scanner_initialized", { container: "qrFileScratch", tryHarder: true });
+                }
+                return fileScannerInstance;
+            }
 
             // Antiforgery token from form
             function getAntiForgeryToken() {
@@ -241,15 +281,30 @@
                 if (focusInput) {
                     manualInput.focus();
                 }
+                emitScanTelemetry("ui_state_reset", { badge: "Sẵn sàng quét" });
             }
 
             // Gửi yêu cầu soát vé lên máy chủ với cờ in-flight và kiểm soát trùng lặp
             async function submitScan(qrToken, isExplicitRescan = false) {
                 if (isInFlight) return;
 
-                if (!qrToken || typeof qrToken !== "string") return;
+                if (!qrToken || typeof qrToken !== "string") {
+                    renderResult({
+                        outcome: "INVALID_QR_IMAGE",
+                        isSuccess: false,
+                        message: "Không tìm thấy chuỗi mã QR hợp lệ để kiểm tra."
+                    });
+                    return;
+                }
                 qrToken = qrToken.trim();
-                if (qrToken.length === 0) return;
+                if (qrToken.length === 0) {
+                    renderResult({
+                        outcome: "INVALID_QR_IMAGE",
+                        isSuccess: false,
+                        message: "Chuỗi mã QR trống hoặc không hợp lệ."
+                    });
+                    return;
+                }
 
                 // Client-side validation: chặn token quá dài trước khi gửi lên mạng
                 if (qrToken.length > 256) {
@@ -283,6 +338,7 @@
 
                 statusBadge.className = "badge bg-info text-dark";
                 statusBadge.textContent = "Đang kiểm tra...";
+                emitScanTelemetry("api_post_started", { expectedShowtimeId: showtimeId, tokenLength: qrToken.length, isExplicitRescan: !!isExplicitRescan });
 
                 try {
                     const xsrfCookie = getCookie("XSRF-TOKEN");
@@ -303,8 +359,10 @@
                     });
 
                     const data = await response.json();
+                    emitScanTelemetry("api_post_completed", { status: response.status, outcome: data ? data.outcome : "UNKNOWN" });
                     renderResult(data);
                 } catch (err) {
+                    emitScanTelemetry("api_post_failed", { reason: "network_error" });
                     renderResult({
                         outcome: "NETWORK_ERROR",
                         isSuccess: false,
@@ -373,6 +431,15 @@
                             <path d="M10.74 9.26l.78-.78A8 8 0 0 0 8 8c-.99 0-1.92.203-2.77.568l.842.842C6.67 9.155 7.32 9 8 9c.99 0 1.91.248 2.74.678m.72 1.74l.78-.78A5.5 5.5 0 0 0 8 10c-.57 0-1.11.11-1.6.31l.86.86C7.51 11.06 7.75 11 8 11c.78 0 1.49.26 2.06.7"/>
                         </svg>`;
                         break;
+                    case "INVALID_QR_IMAGE":
+                        isTicketAccepted = false;
+                        alertClass = "alert-danger";
+                        badgeClass = "bg-danger";
+                        badgeText = "ẢNH QR LỖI";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-file-earmark-x-fill text-danger mb-2" viewBox="0 0 16 16">
+                            <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M6.854 7.146 8 8.293l1.146-1.147a.5.5 0 1 1 .708.708L8.707 9l1.147 1.146a.5.5 0 0 1-.708.708L8 9.707l-1.146 1.147a.5.5 0 0 1-.708-.708L7.293 9 6.146 7.854a.5.5 0 1 1 .708-.708"/>
+                        </svg>`;
+                        break;
                     case "NOT_FOUND":
                     case "REJECTED":
                     default:
@@ -388,6 +455,7 @@
 
                 statusBadge.className = `badge ${badgeClass}`;
                 statusBadge.textContent = badgeText;
+                emitScanTelemetry("ui_state_transition", { outcome: outcome, badgeText: badgeText });
 
                 // Xây dựng DOM container an toàn
                 resultCard.innerHTML = "";
@@ -489,8 +557,10 @@
                     isScanning = true;
                     btnStart.disabled = true;
                     btnStop.disabled = false;
+                    emitScanTelemetry("camera_started", { elementId: "reader" });
                 } catch (err) {
                     placeholder.classList.remove("d-none");
+                    emitScanTelemetry("camera_start_failed", { reason: "camera_unavailable" });
                     alert("Không thể khởi động camera: " + (err.message || err));
                 }
             }
@@ -509,6 +579,7 @@
                     btnStart.disabled = false;
                     btnStop.disabled = true;
                     placeholder.classList.remove("d-none");
+                    emitScanTelemetry("camera_stopped", { elementId: "reader" });
                 }
             }
 
@@ -522,77 +593,121 @@
                 });
             }
 
-            // Xử lý quét qua tải ảnh (ngắt camera trước nếu đang chạy để không chiếm trùng DOM reader)
+            // Helper: Load uploaded File into an HTMLImageElement
+            function loadImageFromFile(file) {
+                return new Promise((resolve, reject) => {
+                    const objectUrl = URL.createObjectURL(file);
+                    const img = new Image();
+                    img.onload = () => {
+                        URL.revokeObjectURL(objectUrl);
+                        resolve(img);
+                    };
+                    img.onerror = () => {
+                        URL.revokeObjectURL(objectUrl);
+                        reject(new Error("Invalid or corrupted image file."));
+                    };
+                    img.src = objectUrl;
+                });
+            }
+
+            // Helper: Render image onto a clean white-padded 2D canvas
+            function createPaddedCanvas(img, targetSize, padding, imageSmoothing) {
+                const drawW = targetSize || img.naturalWidth || img.width;
+                const drawH = targetSize || img.naturalHeight || img.height;
+                const canvas = document.createElement("canvas");
+                canvas.width = drawW + padding * 2;
+                canvas.height = drawH + padding * 2;
+                const ctx = canvas.getContext("2d", { willReadFrequently: true });
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.imageSmoothingEnabled = !!imageSmoothing;
+                ctx.drawImage(img, padding, padding, drawW, drawH);
+                return canvas;
+            }
+
+            // Deterministic multi-stage QR file decoding pipeline
+            async function decodeQrFileDeterministically(file) {
+                const scanner = getOrCreateFileScanner();
+                emitScanTelemetry("file_decode_started", { fileSize: file.size, fileType: file.type || "unknown" });
+
+                // Stage 1: Load image and decode directly via ZXing HTMLCanvasElementLuminanceSource (with TRY_HARDER=true)
+                let img = null;
+                try {
+                    img = await loadImageFromFile(file);
+                    emitScanTelemetry("image_loaded", { width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+                } catch (loadErr) {
+                    emitScanTelemetry("file_decode_failed", { stage: "image_load_error" });
+                    throw loadErr;
+                }
+
+                const canvasAttempts = [
+                    { label: "native_pad48", size: 0, pad: 48, smooth: false },
+                    { label: "scale_185_pad32", size: 185, pad: 32, smooth: false },
+                    { label: "scale_222_pad36", size: 222, pad: 36, smooth: false },
+                    { label: "scale_259_pad40", size: 259, pad: 40, smooth: false },
+                    { label: "scale_296_pad44", size: 296, pad: 44, smooth: false },
+                    { label: "scale_370_pad48", size: 370, pad: 48, smooth: false },
+                    { label: "scale_246_pad36", size: 246, pad: 36, smooth: false },
+                    { label: "scale_328_pad40", size: 328, pad: 40, smooth: true }
+                ];
+
+                if (scanner.qrcode && typeof scanner.qrcode.decodeRobustlyAsync === "function") {
+                    for (const cfg of canvasAttempts) {
+                        try {
+                            const canvas = createPaddedCanvas(img, cfg.size, cfg.pad, cfg.smooth);
+                            const qrResult = await scanner.qrcode.decodeRobustlyAsync(canvas);
+                            const text = qrResult && (qrResult.text || qrResult.decodedText);
+                            if (text && typeof text === "string" && text.trim().length > 0) {
+                                emitScanTelemetry("file_decode_succeeded", { stage: cfg.label, length: text.trim().length });
+                                return text.trim();
+                            }
+                        } catch {
+                            // Proceed to next deterministic canvas scale
+                        }
+                    }
+                }
+
+                // Stage 2: Fallback to Html5Qrcode.scanFile on dedicated #qrFileScratch container
+                try {
+                    const scanned = await scanner.scanFile(file, false);
+                    try { scanner.clear(); } catch {}
+                    if (scanned && typeof scanned === "string" && scanned.trim().length > 0) {
+                        emitScanTelemetry("file_decode_succeeded", { stage: "scanFile_direct", length: scanned.trim().length });
+                        return scanned.trim();
+                    }
+                } catch {
+                    try { scanner.clear(); } catch {}
+                }
+
+                emitScanTelemetry("file_decode_failed", { stage: "exhausted_all_stages" });
+                throw new Error("Unable to decode QR code from uploaded image.");
+            }
+
+            // Xử lý quét qua tải ảnh (tách biệt hoàn toàn khỏi DOM #reader của camera)
             qrFileInput.addEventListener("change", async (e) => {
-                if (e.target.files.length === 0) return;
+                if (!e.target.files || e.target.files.length === 0) return;
                 const file = e.target.files[0];
+
+                emitScanTelemetry("file_selected", { fileSize: file.size, fileType: file.type || "unknown" });
 
                 if (isScanning) {
                     await stopCamera();
                 }
 
+                // Reset previous accepted lock so a newly selected QR image is always processed
+                isTicketAccepted = false;
+                statusBadge.className = "badge bg-info text-dark";
+                statusBadge.textContent = "Đang đọc ảnh QR...";
+
                 try {
-                    const tempScanner = new Html5Qrcode("reader", false);
-                    let decodedText = null;
-                    try {
-                        decodedText = await tempScanner.scanFile(file, false);
-                    } catch {
-                        const scales = [
-                            { size: 205, pad: 24, smooth: false },
-                            { size: 246, pad: 30, smooth: false },
-                            { size: 287, pad: 32, smooth: false },
-                            { size: 328, pad: 36, smooth: true },
-                            { size: 410, pad: 40, smooth: true }
-                        ];
-                        for (const cfg of scales) {
-                            try {
-                                const paddedFile = await new Promise((resolve, reject) => {
-                                    const url = URL.createObjectURL(file);
-                                    const img = new Image();
-                                    img.onload = () => {
-                                        URL.revokeObjectURL(url);
-                                        const canvas = document.createElement("canvas");
-                                        canvas.width = cfg.size + cfg.pad * 2;
-                                        canvas.height = cfg.size + cfg.pad * 2;
-                                        const ctx = canvas.getContext("2d");
-                                        ctx.fillStyle = "#FFFFFF";
-                                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                        ctx.imageSmoothingEnabled = cfg.smooth;
-                                        ctx.drawImage(img, cfg.pad, cfg.pad, cfg.size, cfg.size);
-                                        canvas.toBlob((blob) => {
-                                            if (!blob) return reject(new Error("Canvas toBlob failed"));
-                                            resolve(new File([blob], "qr-padded.png", { type: "image/png" }));
-                                        }, "image/png");
-                                    };
-                                    img.onerror = (err) => {
-                                        URL.revokeObjectURL(url);
-                                        reject(err);
-                                    };
-                                    img.src = url;
-                                });
-                                decodedText = await tempScanner.scanFile(paddedFile, false);
-                                if (decodedText) break;
-                            } catch {
-                                // Try next scale
-                            }
-                        }
-                        if (!decodedText) {
-                            decodedText = await tempScanner.scanFile(file, true);
-                        }
-                    }
-                    try { tempScanner.clear(); } catch {}
-                    if (false) {
-                    let decodedText;
-                    try {
-                        decodedText = await tempScanner.scanFile(file, false);
-                    } catch {
-                        decodedText = await tempScanner.scanFile(file, true);
-                    }
-                    tempScanner.clear();
-                    }
-                    submitScan(decodedText);
+                    const decodedText = await decodeQrFileDeterministically(file);
+                    await submitScan(decodedText, true);
                 } catch (err) {
-                    alert("Không tìm thấy mã QR hợp lệ trong hình ảnh tải lên.");
+                    renderResult({
+                        outcome: "INVALID_QR_IMAGE",
+                        isSuccess: false,
+                        message: "Không tìm thấy mã QR hợp lệ trong hình ảnh tải lên. Vui lòng chọn ảnh mã QR rõ nét hoặc nhập mã thủ công."
+                    });
                 } finally {
                     qrFileInput.value = "";
                 }
@@ -603,7 +718,8 @@
                 e.preventDefault();
                 const val = manualInput.value;
                 if (!val || !val.trim()) return;
-                submitScan(val);
+                isTicketAccepted = false;
+                submitScan(val, true);
                 manualInput.value = "";
             });
         })();
