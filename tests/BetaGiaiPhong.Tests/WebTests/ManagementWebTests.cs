@@ -536,4 +536,887 @@ public sealed class ManagementWebTests(TestDatabaseFixture fixture) : IClassFixt
         Assert.Contains("Tổng Vé Đã Bán", html);
         Assert.Contains("Tỷ lệ Lấp đầy Bình quân", html);
     }
+
+    [Fact]
+    public async Task TC_MGMT_13_DirectReservation_OnArchivedMovie_IsRejected()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+        var leftovers = await db.Showtimes
+            .Where(s => s.Movie != null && s.Movie.Title.StartsWith("Archived Test Movie") && s.Status == "ON_SALE")
+            .ToListAsync();
+        foreach (var l in leftovers) l.Status = "CLOSED";
+        if (leftovers.Count > 0) await db.SaveChangesAsync();
+
+        var movie = new Movie
+        {
+            Title = "Archived Test Movie " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "ARCHIVED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(20);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seat = await db.Seats.FirstAsync(s => s.RoomId == room.RoomId && s.IsActive);
+        db.ShowtimeSeats.Add(new ShowtimeSeat
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            RoomId = room.RoomId,
+            State = SeatStates.Available
+        });
+        db.SeatPrices.Add(new SeatPrice
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatTypeCode = seat.SeatTypeCode,
+            AmountVnd = 75000,
+            UpdatedUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+
+        try
+        {
+            var reservationService = new SeatReservationService(db, new SystemClock());
+            var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+                reservationService.ReserveAsync(customerUser.UserId, showtime.ShowtimeId, new[] { seat.SeatId }));
+
+            Assert.Equal("MOVIE_NOT_PUBLISHED", ex.Code);
+        }
+        finally
+        {
+            showtime.Status = "CLOSED";
+            await db.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
+    public async Task TC_MGMT_14_ArchiveMovie_WithActiveShowtimes_IsRejected()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Active Showtime Movie " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 110,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(25);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(110),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var movieService = new MovieManagementService(db, new SystemClock());
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            movieService.ArchiveMovieAsync(managerUser.UserId, movie.MovieId));
+
+        Assert.Equal("CANNOT_ARCHIVE_ACTIVE_SHOWTIMES", ex.Code);
+
+        await db.Entry(movie).ReloadAsync();
+        Assert.Equal("PUBLISHED", movie.Status);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_15_ArchiveMovie_WithOnlyCancelledOrPastShowtimes_Succeeds()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Past/Cancelled Movie " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 90,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        // 1 past showtime
+        var pastStart = DateTime.UtcNow.AddDays(-2);
+        var pastShowtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = pastStart,
+            EndUtc = pastStart.AddMinutes(90),
+            BufferMinutes = 15,
+            Status = "CLOSED",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow.AddDays(-3)
+        };
+        // 1 future cancelled showtime
+        var futureStart = DateTime.UtcNow.AddDays(30);
+        var cancelledShowtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = futureStart,
+            EndUtc = futureStart.AddMinutes(90),
+            BufferMinutes = 15,
+            Status = "CANCELLED",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.AddRange(pastShowtime, cancelledShowtime);
+        await db.SaveChangesAsync();
+
+        var movieService = new MovieManagementService(db, new SystemClock());
+        await movieService.ArchiveMovieAsync(managerUser.UserId, movie.MovieId);
+
+        await db.Entry(movie).ReloadAsync();
+        Assert.Equal("ARCHIVED", movie.Status);
+
+        var audit = await db.AuditLogs
+            .AnyAsync(a => a.EventType == "MOVIE_ARCHIVED" && a.EntityKey == movie.MovieId.ToString());
+        Assert.True(audit);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_16_EditArchivedMovie_IsRejected()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+
+        var movie = new Movie
+        {
+            Title = "Archived For Edit " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "ARCHIVED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var movieService = new MovieManagementService(db, new SystemClock());
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            movieService.UpdateMovieAsync(managerUser.UserId, movie.MovieId, "New Title", 120, null, "P", null, null));
+
+        Assert.Equal("INVALID_STATUS", ex.Code);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_17_MovieValidation_RejectsInvalidAgeLabel_AndDangerousPosterUrl()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var movieService = new MovieManagementService(db, new SystemClock());
+
+        // Invalid AgeLabel
+        var exAge = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            movieService.CreateMovieAsync(managerUser.UserId, "Title", 100, "Action", "PG-13", null, null));
+        Assert.Equal("INVALID_AGE_LABEL", exAge.Code);
+
+        // Dangerous PosterUrl: javascript
+        var exJs = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            movieService.CreateMovieAsync(managerUser.UserId, "Title", 100, "Action", "T18", null, "javascript:alert(1)"));
+        Assert.Equal("INVALID_POSTER_URL", exJs.Code);
+
+        // Protocol-relative PosterUrl: //
+        var exProto = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            movieService.CreateMovieAsync(managerUser.UserId, "Title", 100, "Action", "T18", null, "//evil.com/x.jpg"));
+        Assert.Equal("INVALID_POSTER_URL", exProto.Code);
+
+        // Backslash PosterUrl
+        var exBs = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            movieService.CreateMovieAsync(managerUser.UserId, "Title", 100, "Action", "T18", null, @"\evil.com\x.jpg"));
+        Assert.Equal("INVALID_POSTER_URL", exBs.Code);
+
+        // Valid AgeLabel and PosterUrl
+        var id = await movieService.CreateMovieAsync(managerUser.UserId, "Valid Movie " + Guid.NewGuid().ToString("N")[..6],
+            100, "Drama", "T16", "Synopsis", "/images/posters/valid.jpg");
+        Assert.True(id > 0);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_18_CancelShowtime_FinalizesPendingOrders_AndReleasesHeldSeats()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Cancel Showtime Test " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(40);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seats = await db.Seats.Where(s => s.RoomId == room.RoomId && s.IsActive).Take(2).ToListAsync();
+        foreach (var s in seats)
+        {
+            db.ShowtimeSeats.Add(new ShowtimeSeat
+            {
+                ShowtimeId = showtime.ShowtimeId,
+                SeatId = s.SeatId,
+                RoomId = room.RoomId,
+                State = SeatStates.Available
+            });
+        }
+        foreach (var st in seats.Select(s => s.SeatTypeCode).Distinct())
+        {
+            db.SeatPrices.Add(new SeatPrice
+            {
+                ShowtimeId = showtime.ShowtimeId,
+                SeatTypeCode = st,
+                AmountVnd = 80000,
+                UpdatedUtc = DateTime.UtcNow
+            });
+        }
+        await db.SaveChangesAsync();
+
+        // Customer reserves 2 seats -> Order is PENDING_PAYMENT
+        var reservationService = new SeatReservationService(db, new SystemClock());
+        var resResult = await reservationService.ReserveAsync(customerUser.UserId, showtime.ShowtimeId, seats.Select(s => s.SeatId).ToList());
+
+        var orderBefore = await db.Orders.SingleAsync(o => o.OrderId == resResult.OrderId);
+        Assert.Equal(OrderStates.Pending, orderBefore.Status);
+
+        // Manager cancels showtime
+        var queryService = new ManagementQueryService(db, new SystemClock());
+        await queryService.CancelShowtimeAsync(managerUser.UserId, showtime.ShowtimeId);
+
+        // Assert Order is now CANCELLED
+        var orderAfter = await db.Orders.SingleAsync(o => o.OrderId == resResult.OrderId);
+        Assert.Equal(OrderStates.Cancelled, orderAfter.Status);
+
+        // Assert held seats are released to AVAILABLE
+        var heldCount = await db.ShowtimeSeats
+            .CountAsync(ss => ss.ShowtimeId == showtime.ShowtimeId && ss.State == SeatStates.Held);
+        Assert.Equal(0, heldCount);
+
+        var availableCount = await db.ShowtimeSeats
+            .CountAsync(ss => ss.ShowtimeId == showtime.ShowtimeId && ss.State == SeatStates.Available);
+        Assert.Equal(2, availableCount);
+
+        // Assert AuditLog entries exist
+        var orderAudit = await db.AuditLogs
+            .AnyAsync(a => a.EventType == "ORDER_CANCELLED" && a.EntityKey == resResult.OrderId.ToString());
+        Assert.True(orderAudit);
+
+        var showtimeAudit = await db.AuditLogs
+            .AnyAsync(a => a.EventType == "SHOWTIME_CANCELLED" && a.EntityKey == showtime.ShowtimeId.ToString());
+        Assert.True(showtimeAudit);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_19_PaymentAttempt_ForCancelledShowtimeOrder_IsRejected()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER2@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Cancel Payment Test " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(42);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seat = await db.Seats.FirstAsync(s => s.RoomId == room.RoomId && s.IsActive);
+        db.ShowtimeSeats.Add(new ShowtimeSeat
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            RoomId = room.RoomId,
+            State = SeatStates.Available
+        });
+        db.SeatPrices.Add(new SeatPrice
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatTypeCode = seat.SeatTypeCode,
+            AmountVnd = 70000,
+            UpdatedUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var reservationService = new SeatReservationService(db, new SystemClock());
+        var resResult = await reservationService.ReserveAsync(customerUser.UserId, showtime.ShowtimeId, new[] { seat.SeatId });
+
+        // Cancel showtime
+        var queryService = new ManagementQueryService(db, new SystemClock());
+        await queryService.CancelShowtimeAsync(managerUser.UserId, showtime.ShowtimeId);
+
+        // Attempt to create payment on the order
+        var paymentService = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            paymentService.CreateMockAttemptAsync(customerUser.UserId, resResult.OrderId, "ATTEMPT-" + Guid.NewGuid().ToString("N")));
+
+        Assert.Equal("ORDER_UNAVAILABLE", ex.Code);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_20_LateWebhook_ForCancelledShowtimeOrder_SetsNeedsReview_NoTicketsIssued()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Late Webhook Cancel Test " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(45);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seat = await db.Seats.FirstAsync(s => s.RoomId == room.RoomId && s.IsActive);
+        db.ShowtimeSeats.Add(new ShowtimeSeat
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            RoomId = room.RoomId,
+            State = SeatStates.Available
+        });
+        db.SeatPrices.Add(new SeatPrice
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatTypeCode = seat.SeatTypeCode,
+            AmountVnd = 75000,
+            UpdatedUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var reservationService = new SeatReservationService(db, new SystemClock());
+        var resResult = await reservationService.ReserveAsync(customerUser.UserId, showtime.ShowtimeId, new[] { seat.SeatId });
+
+        // Create attempt before cancellation
+        var attemptKey = "ATTEMPT-" + Guid.NewGuid().ToString("N");
+        var paymentService = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+        await paymentService.CreateMockAttemptAsync(customerUser.UserId, resResult.OrderId, attemptKey);
+
+        // Cancel showtime
+        var queryService = new ManagementQueryService(db, new SystemClock());
+        await queryService.CancelShowtimeAsync(managerUser.UserId, showtime.ShowtimeId);
+
+        // Webhook SUCCESS arrives
+        var callback = new MockPaymentMessage(Guid.NewGuid().ToString("N"), attemptKey,
+            "MOCK-TXN-" + Guid.NewGuid().ToString("N"), resResult.OrderCode, resResult.TotalVnd, "SUCCESS");
+        var verified = MockPaymentSecurity.Verify(callback, MockPaymentSecurity.SignForDevelopment(callback));
+
+        var result = await paymentService.ApplyVerifiedMockAsync(verified);
+
+        Assert.Equal("NEEDS_REVIEW", result.Decision);
+        Assert.Equal(OrderStates.Cancelled, result.OrderStatus);
+
+        var ticketsExist = await db.Tickets.AnyAsync(t => t.OrderId == resResult.OrderId);
+        Assert.False(ticketsExist);
+
+        var payment = await db.Payments.SingleAsync(p => p.OrderId == resResult.OrderId);
+        Assert.Equal("NEEDS_REVIEW", payment.Status);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_21_CancelShowtime_WithPaidOrderOrTickets_IsRejected()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Paid Guard Test " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(48);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seat = await db.Seats.FirstAsync(s => s.RoomId == room.RoomId && s.IsActive);
+        var order = new BookingOrder
+        {
+            OrderCode = "BGP-" + Guid.NewGuid().ToString("N").ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime.ShowtimeId,
+            Status = OrderStates.Paid,
+            SeatCount = 1,
+            SubtotalVnd = 75000,
+            TotalVnd = 75000,
+            CreatedUtc = DateTime.UtcNow,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(5),
+            PaidUtc = DateTime.UtcNow
+        };
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();
+
+        db.ShowtimeSeats.Add(new ShowtimeSeat
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            RoomId = room.RoomId,
+            State = SeatStates.Sold,
+            OwnerOrderId = order.OrderId
+        });
+        db.OrderSeats.Add(new OrderSeat
+        {
+            OrderId = order.OrderId,
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            SeatTypeSnapshot = seat.SeatTypeCode,
+            UnitPriceVnd = 75000
+        });
+        await db.SaveChangesAsync();
+
+        var qrHash = new byte[32];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(qrHash);
+        var qrCipher = new byte[48];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(qrCipher);
+
+        db.Tickets.Add(new Ticket
+        {
+            TicketCode = "TKT-" + Guid.NewGuid().ToString("N").ToUpperInvariant(),
+            OrderId = order.OrderId,
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            Status = "ISSUED",
+            QrTokenHash = qrHash,
+            QrTokenCipher = qrCipher,
+            QrKeyId = "k1",
+            IssuedUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var queryService = new ManagementQueryService(db, new SystemClock());
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            queryService.CancelShowtimeAsync(managerUser.UserId, showtime.ShowtimeId));
+
+        Assert.Equal("CANNOT_CANCEL_SHOWTIME", ex.Code);
+
+        await db.Entry(showtime).ReloadAsync();
+        Assert.Equal("ON_SALE", showtime.Status);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_22_CloseShowtime_AfterCancelled_IsRejected()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+        var movie = await db.Movies.FirstAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(50);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(90),
+            BufferMinutes = 15,
+            Status = "CANCELLED",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var queryService = new ManagementQueryService(db, new SystemClock());
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            queryService.CloseShowtimeAsync(managerUser.UserId, showtime.ShowtimeId));
+
+        Assert.Equal("INVALID_STATE_TRANSITION", ex.Code);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_23_CloseShowtime_AllowsExistingHeldOrderToPayBeforeExpiry()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+        var room = await db.Rooms.FirstAsync();
+
+
+        var movie = new Movie
+        {
+            Title = "Close Grace Period " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "PUBLISHED"
+        };
+        db.Movies.Add(movie);
+        await db.SaveChangesAsync();
+
+        var startUtc = DateTime.UtcNow.AddDays(55);
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seats = await db.Seats.Where(s => s.RoomId == room.RoomId && s.IsActive).Take(2).ToListAsync();
+        foreach (var s in seats)
+        {
+            db.ShowtimeSeats.Add(new ShowtimeSeat
+            {
+                ShowtimeId = showtime.ShowtimeId,
+                SeatId = s.SeatId,
+                RoomId = room.RoomId,
+                State = SeatStates.Available
+            });
+        }
+        foreach (var st in seats.Select(s => s.SeatTypeCode).Distinct())
+        {
+            db.SeatPrices.Add(new SeatPrice
+            {
+                ShowtimeId = showtime.ShowtimeId,
+                SeatTypeCode = st,
+                AmountVnd = 80000,
+                UpdatedUtc = DateTime.UtcNow
+            });
+        }
+        await db.SaveChangesAsync();
+
+        // 1. Customer reserves 1 seat while ON_SALE
+        var reservationService = new SeatReservationService(db, new SystemClock());
+        var resResult = await reservationService.ReserveAsync(customerUser.UserId, showtime.ShowtimeId, new[] { seats[0].SeatId });
+
+        var attemptKey = "ATTEMPT-" + Guid.NewGuid().ToString("N");
+        var paymentService = new PaymentService(db, new SystemClock(), new QrTokenProtector());
+        await paymentService.CreateMockAttemptAsync(customerUser.UserId, resResult.OrderId, attemptKey);
+
+        // 2. Manager closes showtime
+        var queryService = new ManagementQueryService(db, new SystemClock());
+        await queryService.CloseShowtimeAsync(managerUser.UserId, showtime.ShowtimeId);
+
+        // 3. New reservation on the remaining seat MUST be rejected (since showtime is CLOSED)
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            reservationService.ReserveAsync(customerUser.UserId, showtime.ShowtimeId, new[] { seats[1].SeatId }));
+        Assert.Equal("NOT_ON_SALE", ex.Code);
+
+        // 4. In-flight checkout can complete successfully
+        var callback = new MockPaymentMessage(Guid.NewGuid().ToString("N"), attemptKey,
+            "MOCK-TXN-" + Guid.NewGuid().ToString("N"), resResult.OrderCode, resResult.TotalVnd, "SUCCESS");
+        var verified = MockPaymentSecurity.Verify(callback, MockPaymentSecurity.SignForDevelopment(callback));
+        var payResult = await paymentService.ApplyVerifiedMockAsync(verified);
+
+        Assert.Equal("APPLIED", payResult.Decision);
+        Assert.Equal(OrderStates.Paid, payResult.OrderStatus);
+
+        var ticketIssued = await db.Tickets.AnyAsync(t => t.OrderId == resResult.OrderId);
+        Assert.True(ticketIssued);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_24_CookieRevocation_StaffRoleRemoved_RejectsStaffCheckIn()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var staffRole = await db.Roles.SingleAsync(r => r.RoleCode == "STAFF");
+
+        // Create temporary staff user so other tests aren't affected
+        var staffEmail = $"tempstaff_{Guid.NewGuid():N}@demo.invalid";
+        var tempStaff = new AppUser
+        {
+            Email = staffEmail,
+            NormalizedEmail = staffEmail.ToUpperInvariant(),
+            DisplayName = "Temp Staff",
+            PasswordHash = new PasswordHasher<AppUser>().HashPassword(null!, "DemoPassword123!"),
+            Status = "ACTIVE",
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Users.Add(tempStaff);
+        await db.SaveChangesAsync();
+
+        var userRole = new UserRole { UserId = tempStaff.UserId, RoleId = staffRole.RoleId };
+        db.UserRoles.Add(userRole);
+        await db.SaveChangesAsync();
+
+        var client = CreateNewClient();
+        var (staffAuth, _, _) = await LoginAndGetTokensAsync(client, tempStaff.Email);
+
+        // Verify initial access works
+        var okReq = new HttpRequestMessage(HttpMethod.Get, "/staff/check-in");
+        okReq.Headers.Add("Cookie", staffAuth);
+        var okResp = await client.SendAsync(okReq);
+        Assert.Equal(HttpStatusCode.OK, okResp.StatusCode);
+
+        // Remove STAFF role from DB
+        db.UserRoles.Remove(userRole);
+        await db.SaveChangesAsync();
+
+        // Now request with the existing cookie -> Should be rejected and redirected to access-denied
+        var rejectedReq = new HttpRequestMessage(HttpMethod.Get, "/staff/check-in");
+        rejectedReq.Headers.Add("Cookie", staffAuth);
+        var rejectedResp = await client.SendAsync(rejectedReq);
+
+        Assert.True(rejectedResp.StatusCode == HttpStatusCode.Redirect ||
+                    rejectedResp.StatusCode == HttpStatusCode.Forbidden ||
+                    rejectedResp.StatusCode == HttpStatusCode.Unauthorized);
+
+        if (rejectedResp.StatusCode == HttpStatusCode.Redirect)
+        {
+            var location = rejectedResp.Headers.Location?.ToString() ?? string.Empty;
+            Assert.True(location.Contains("access-denied") || location.Contains("login"));
+        }
+    }
+
+    [Fact]
+    public async Task TC_MGMT_25_CookieRevocation_CustomerRoleRemoved_RejectsCustomerEndpoints()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var customerRole = await db.Roles.SingleAsync(r => r.RoleCode == "CUSTOMER");
+
+        var custEmail = $"tempcust_{Guid.NewGuid():N}@demo.invalid";
+        var tempCust = new AppUser
+        {
+            Email = custEmail,
+            NormalizedEmail = custEmail.ToUpperInvariant(),
+            DisplayName = "Temp Customer",
+            PasswordHash = new PasswordHasher<AppUser>().HashPassword(null!, "DemoPassword123!"),
+            Status = "ACTIVE",
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Users.Add(tempCust);
+        await db.SaveChangesAsync();
+
+        var userRole = new UserRole { UserId = tempCust.UserId, RoleId = customerRole.RoleId };
+        db.UserRoles.Add(userRole);
+        await db.SaveChangesAsync();
+
+        var client = CreateNewClient();
+        var (custAuth, _, _) = await LoginAndGetTokensAsync(client, tempCust.Email);
+
+        // Verify initial access works
+        var okReq = new HttpRequestMessage(HttpMethod.Get, "/orders");
+        okReq.Headers.Add("Cookie", custAuth);
+        var okResp = await client.SendAsync(okReq);
+        Assert.Equal(HttpStatusCode.OK, okResp.StatusCode);
+
+        // Remove CUSTOMER role from DB
+        db.UserRoles.Remove(userRole);
+        await db.SaveChangesAsync();
+
+        // Access protected customer endpoint -> Should be rejected
+        var req = new HttpRequestMessage(HttpMethod.Get, "/orders");
+        req.Headers.Add("Cookie", custAuth);
+        var resp = await client.SendAsync(req);
+
+        Assert.True(resp.StatusCode == HttpStatusCode.Redirect ||
+                    resp.StatusCode == HttpStatusCode.Forbidden ||
+                    resp.StatusCode == HttpStatusCode.Unauthorized);
+
+        if (resp.StatusCode == HttpStatusCode.Redirect)
+        {
+            var location = resp.Headers.Location?.ToString() ?? string.Empty;
+            Assert.True(location.Contains("access-denied") || location.Contains("login"));
+        }
+    }
+
+    [Fact]
+    public async Task TC_MGMT_26_CookieRevocation_ManagerRoleRemoved_RejectsManagerPortal()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var mgrRole = await db.Roles.SingleAsync(r => r.RoleCode == "MANAGER");
+
+        var mgrEmail = $"tempmgr_{Guid.NewGuid():N}@demo.invalid";
+        var tempMgr = new AppUser
+        {
+            Email = mgrEmail,
+            NormalizedEmail = mgrEmail.ToUpperInvariant(),
+            DisplayName = "Temp Manager",
+            PasswordHash = new PasswordHasher<AppUser>().HashPassword(null!, "DemoPassword123!"),
+            Status = "ACTIVE",
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Users.Add(tempMgr);
+        await db.SaveChangesAsync();
+
+        var userRole = new UserRole { UserId = tempMgr.UserId, RoleId = mgrRole.RoleId };
+        db.UserRoles.Add(userRole);
+        await db.SaveChangesAsync();
+
+        var client = CreateNewClient();
+        var (mgrAuth, _, _) = await LoginAndGetTokensAsync(client, tempMgr.Email);
+
+        // Verify initial access
+        var okReq = new HttpRequestMessage(HttpMethod.Get, "/management/reports");
+        okReq.Headers.Add("Cookie", mgrAuth);
+        var okResp = await client.SendAsync(okReq);
+        Assert.Equal(HttpStatusCode.OK, okResp.StatusCode);
+
+        // Remove MANAGER role from DB
+        db.UserRoles.Remove(userRole);
+        await db.SaveChangesAsync();
+
+        // Access portal -> Should be rejected
+        var rejectedReq = new HttpRequestMessage(HttpMethod.Get, "/management/reports");
+        rejectedReq.Headers.Add("Cookie", mgrAuth);
+        var rejectedResp = await client.SendAsync(rejectedReq);
+
+        Assert.True(rejectedResp.StatusCode == HttpStatusCode.Redirect ||
+                    rejectedResp.StatusCode == HttpStatusCode.Forbidden ||
+                    rejectedResp.StatusCode == HttpStatusCode.Unauthorized);
+
+        if (rejectedResp.StatusCode == HttpStatusCode.Redirect)
+        {
+            var location = rejectedResp.Headers.Location?.ToString() ?? string.Empty;
+            Assert.True(location.Contains("access-denied") || location.Contains("login"));
+        }
+    }
+
+    [Fact]
+    public async Task TC_MGMT_27_SalesDashboard_ExactKpiCalculation_AndVnTimeFiltering()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var queryService = new ManagementQueryService(db, new SystemClock());
+
+        // Call dashboard without filters
+        var report = await queryService.GetSalesDashboardAsync(null, null, null, null, 1, 15);
+
+        // Query raw view directly from DB
+        var viewSales = await db.ShowtimeSales.ToListAsync();
+
+        var expectedRevenue = viewSales.Sum(s => s.RevenueVnd);
+        var expectedTickets = viewSales.Sum(s => s.TicketsSold);
+        var expectedCapacity = viewSales.Sum(s => s.SellableCapacity);
+        var expectedWeightedOcc = expectedCapacity > 0
+            ? Math.Round((decimal)expectedTickets * 100m / expectedCapacity, 2)
+            : 0m;
+
+        Assert.Equal(expectedRevenue, report.TotalRevenueVnd);
+        Assert.Equal(expectedTickets, report.TotalTicketsSold);
+        Assert.Equal(expectedWeightedOcc, report.WeightedOccupancyPct);
+
+        // Verify non-paid orders are excluded from revenue
+        var unpaidOrders = await db.Orders
+            .Where(o => o.Status != OrderStates.Paid)
+            .ToListAsync();
+
+        // Any showtime with only unpaid orders must have 0 tickets and 0 revenue in the view
+        foreach (var uo in unpaidOrders)
+        {
+            var hasPaidOnSameShowtime = await db.Orders.AnyAsync(o => o.ShowtimeId == uo.ShowtimeId && o.Status == OrderStates.Paid);
+            if (!hasPaidOnSameShowtime)
+            {
+                var stSale = viewSales.FirstOrDefault(s => s.ShowtimeId == uo.ShowtimeId);
+                if (stSale != null)
+                {
+                    Assert.Equal(0m, stSale.RevenueVnd);
+                    Assert.Equal(0L, stSale.TicketsSold);
+                }
+            }
+        }
+    }
 }

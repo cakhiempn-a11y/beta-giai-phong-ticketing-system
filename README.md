@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-144%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-159%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -46,7 +46,7 @@ The solution adheres to clean data-driven and modular monolith design patterns:
 - **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, dynamic QR code generation, staff check-in portal with browser camera & USB 2D barcode scanning (`/staff/check-in`), check-in history audit log viewer (`/staff/check-in/history`), background worker (`ReservationExpiryWorker`) for automatic cleanup of expired reservations, and management portal (`/management/movies`, `/management/showtimes`, `/management/rooms`, `/management/reports`) for movie lifecycle transitions, showtime publishing, and sales dashboard. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`, `MovieManagementService`, `ManagementQueryService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios. Directly references `BetaGiaiPhong.Data`.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (144 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (159 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -398,9 +398,9 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Compilation:** 0 errors, 0 warnings across all 4 projects (`Data`, `Runner`, `Web`, `Tests`) in Debug and Release.
 - **EF Core Model Drift Check:** Clean (0 pending changes).
 - **Vulnerability Audit:** Clean (0 vulnerable packages).
-- **Test Suite Pass Rate:** 100% (144/144 tests passed: 28 Data/Domain tests + 116 Web integration tests).
+- **Test Suite Pass Rate:** 100% (159/159 tests passed: 28 Data/Domain tests + 131 Web integration tests).
 - **Static Schema Check:** Pass (17 tables, 116 columns, 22 foreign keys verified via `scripts/static_schema_checks.py`).
-- **Database Multi-Table Invariants:** 6/6 checks passed with 0 violations via `BetaGiaiPhong.Runner verify`.
+- **Database Multi-Table Invariants:** 9/9 checks passed with 0 violations via `BetaGiaiPhong.Runner verify`.
 
 ---
 
@@ -434,12 +434,12 @@ dotnet run --project .\src\BetaGiaiPhong.Web
 - **Quality Assurance:** 28 integration and web tests (`TC_QR_01` to `TC_QR_06`, `TC_WORKER_01` to `TC_WORKER_07`, and `TC_WEB_STAFF_01` to `TC_WEB_STAFF_14`).
 
 ### 14.5. Phase BE-04B (Completed — Manager & Admin Operations, Showtime Publishing & Sales Dashboard)
-- **Manager Security & Dynamic Principal Validation:** `RequireManager` authorization policy with dynamic database account check (`OnValidatePrincipal`) rejecting locked/disabled accounts immediately.
-- **Movie Lifecycle Management:** Complete state machine (`DRAFT` -> `PUBLISHED` -> `ARCHIVED`), strict duration lock when active showtimes exist, automatic showtime closure on archive, and audit logging.
-- **Showtime Management & Publishing:** Integrated with `ShowtimePublishingService.PublishAsync`, Vietnam local time to UTC conversion, room schedule overlap check, multi-criteria filtering, and ticketed showtime cancellation safeguards.
+- **Manager Security & Dynamic Principal Validation:** `RequireManager` authorization policy with dynamic database account check (`OnValidatePrincipal`) rejecting locked/disabled accounts and dynamically revoking roles across all roles (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`).
+- **Movie Lifecycle Management:** Complete state machine (`DRAFT` -> `PUBLISHED` -> `ARCHIVED`), strict duration lock when active showtimes exist, automatic showtime closure on archive, bookable showtime guards in `SeatReservationService`, age label validation, safe poster URL sanitization, and audit logging.
+- **Showtime Management & Publishing:** Integrated with `ShowtimePublishingService.PublishAsync`, Vietnam local time to UTC conversion, room schedule overlap check, multi-criteria filtering, and ticketed showtime cancellation safeguards with automatic in-flight pending order cancellation and held seat release.
 - **Room & Physical Seat Reference:** Read-only inspection of room layouts, capacities, and physical seat matrices.
 - **Sales & Operations Dashboard:** Grounded in `dbo.vw_ShowtimeSales`, calculating valid paid revenue, tickets sold, and mathematically correct weighted occupancy.
-- **Quality Assurance:** 12 dedicated web integration tests (`TC_MGMT_01` to `TC_MGMT_12`), bringing the test suite to 144/144 PASS.
+- **Quality Assurance:** 27 dedicated web integration tests (`TC_MGMT_01` to `TC_MGMT_27`), bringing the test suite to 159/159 PASS.
 
 ---
 

@@ -16,11 +16,13 @@ public sealed class CreateMovieRequest
     public string? GenreText { get; set; }
 
     [StringLength(24, ErrorMessage = "Nhãn độ tuổi không được vượt quá 24 ký tự.")]
+    [AllowedValues("P", "K", "T13", "T16", "T18", "C", ErrorMessage = "Nhãn độ tuổi không hợp lệ. Chỉ chấp nhận: P, K, T13, T16, T18, C.")]
     public string? AgeLabel { get; set; }
 
     public string? Synopsis { get; set; }
 
     [StringLength(500, ErrorMessage = "Đường dẫn poster không được vượt quá 500 ký tự.")]
+    [RegularExpression(@"^(/(?!/)[^\\<>'""\s]*|https?://[^\s\\<>'""$]+)$", ErrorMessage = "Đường dẫn poster phải là URL HTTP/HTTPS hợp lệ hoặc đường dẫn tương đối an toàn bắt đầu bằng '/'.")]
     public string? PosterUrl { get; set; }
 }
 
@@ -41,11 +43,13 @@ public sealed class EditMovieRequest
     public string? GenreText { get; set; }
 
     [StringLength(24, ErrorMessage = "Nhãn độ tuổi không được vượt quá 24 ký tự.")]
+    [AllowedValues("P", "K", "T13", "T16", "T18", "C", ErrorMessage = "Nhãn độ tuổi không hợp lệ. Chỉ chấp nhận: P, K, T13, T16, T18, C.")]
     public string? AgeLabel { get; set; }
 
     public string? Synopsis { get; set; }
 
     [StringLength(500, ErrorMessage = "Đường dẫn poster không được vượt quá 500 ký tự.")]
+    [RegularExpression(@"^(/(?!/)[^\\<>'""\s]*|https?://[^\s\\<>'""$]+)$", ErrorMessage = "Đường dẫn poster phải là URL HTTP/HTTPS hợp lệ hoặc đường dẫn tương đối an toàn bắt đầu bằng '/'.")]
     public string? PosterUrl { get; set; }
 }
 

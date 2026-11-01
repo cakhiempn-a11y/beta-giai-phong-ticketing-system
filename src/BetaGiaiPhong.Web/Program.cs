@@ -124,7 +124,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             }
 
             var claimedRoles = context.Principal?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
-            if (claimedRoles.Any(r => r is "MANAGER" or "ADMIN" && !user.Roles.Contains(r)))
+            var dbRoleSet = new HashSet<string>(user.Roles, StringComparer.OrdinalIgnoreCase);
+            if (claimedRoles.Any(r => !dbRoleSet.Contains(r)))
             {
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

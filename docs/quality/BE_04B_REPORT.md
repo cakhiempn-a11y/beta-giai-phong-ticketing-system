@@ -151,27 +151,90 @@ Giai đoạn BE-04B hoàn thiện toàn bộ năng lực vận hành dành cho N
    dotnet test .\BetaGiaiPhong.slnx --logger "console;verbosity=normal"
    ```
    - **Kết quả:**
-     - **Tổng số ca kiểm thử:** **144 tests**.
-     - **Trạng thái:** **144 Passed (100%)**, 0 Failed, 0 Skipped.
-     - **Thời gian chạy:** ~1.2 phút.
+     - **Tổng số ca kiểm thử:** **159 tests** (vượt baseline 132 tests ban đầu và 144 tests ở giai đoạn khởi tạo).
+     - **Trạng thái:** **159 Passed (100%)**, 0 Failed, 0 Skipped.
+     - **Thời gian chạy:** ~1.4 phút.
 
 6. **Kiểm tra tính toàn vẹn cơ sở dữ liệu nhiều bảng (Database Multi-Table Invariant Verification):**
    ```powershell
    dotnet run --project .\src\BetaGiaiPhong.Runner -- verify
    ```
-   - **Kết quả kiểm tra thực tế:**
+   - **Kết quả kiểm tra thực tế (9 ràng buộc bất biến đa bảng):**
      - `Wrong room/seat:` **0 violation(s)**
      - `SOLD seat without PAID order:` **0 violation(s)**
      - `PAID orders missing tickets:` **0 violation(s)**
      - `Order price snapshot mismatch:` **0 violation(s)**
      - `Late payment improperly SUCCESS:` **0 violation(s)**
      - `Dead order still holds seat:` **0 violation(s)**
+     - `Cancelled showtime with pending order:` **0 violation(s)**
+     - `Archived movie with bookable showtime:` **0 violation(s)**
+     - `Ticket issued on unpaid order or cancelled showtime:` **0 violation(s)**
      - `INTEGRITY PASSED`
 
 ---
 
-### 5. KẾT LUẬN & TRẠNG THÁI SẴN SÀNG
+### 5. GIAI ĐOẠN FINAL HARDENING & KHẮC PHỤC TOÀN VẸN LIÊN MODULE (CROSS-MODULE INTEGRITY)
 
-Giai đoạn **BE-04B** đã được triển khai hoàn chỉnh, tuân thủ nghiêm ngặt các nguyên tắc bảo mật ASP.NET Core, tính toán tài chính nhất quán dựa trên view `dbo.vw_ShowtimeSales`, bảo vệ toàn vẹn lịch chiếu và vượt qua toàn bộ 144 bài kiểm thử tự động.
+Nhằm đảm bảo tính sẵn sàng tối đa khi sáp nhập vào `main`, nhánh `feat/manager-operations` đã được tăng cường toàn diện:
 
-Nhánh `feat/manager-operations` đã sẵn sàng để tạo commit cục bộ theo đúng quy định.
+1. **P1-01 — Toàn vẹn Vòng đời Phim & Suất chiếu:**
+   - Tại `SeatReservationService.cs`: Bổ sung kiểm tra bắt buộc `Movie.Status == "PUBLISHED"`. Mọi nỗ lực đặt giữ ghế cho phim ở trạng thái `DRAFT` hoặc `ARCHIVED` đều bị từ chối với mã lỗi `MOVIE_NOT_PUBLISHED`.
+   - Tại `MovieManagementService.cs`: Khi thực hiện `ArchiveMovieAsync`, kiểm tra chặt chẽ nếu còn suất chiếu tương lai hiệu lực (`s.Status != "CANCELLED" && s.EndUtc > now`), hệ thống từ chối lưu trữ với mã lỗi `CANNOT_ARCHIVE_ACTIVE_SHOWTIMES`. Khi đã lưu trữ, cấm hoàn toàn việc chỉnh sửa thông tin phim (`INVALID_STATUS`).
+
+2. **P1-02 — Máy trạng thái Suất chiếu (Showtime State Machine) & Hủy suất:**
+   - Tại `ManagementQueryService.cs`:
+     - `CloseShowtimeAsync`: Đặt trong giao dịch `IsolationLevel.Serializable` với khóa độc quyền `SqlServerLocks.ShowtimeAsync`. Nghiêm cấm đóng một suất chiếu đã bị hủy (`CANCELLED`), chặn chuyển trạng thái bất hợp lệ với `INVALID_STATE_TRANSITION`. Suất ở trạng thái `CLOSED` vẫn cho phép các đơn hàng đã giữ ghế trước đó tiếp tục thanh toán trong thời hạn giữ chỗ, nhưng chặn triệt để đặt giữ ghế mới.
+     - `CancelShowtimeAsync`: Đặt trong giao dịch `IsolationLevel.Serializable`. Kiểm tra tuyệt đối: Suất chiếu chỉ được hủy khi chưa phát sinh vé (`Tickets.Any() == false`), không có đơn hàng `PAID` và không có ghế `SOLD`. Khi hủy hợp lệ, tự động chuyển toàn bộ đơn hàng `PENDING_PAYMENT` gắn với suất chiếu sang `CANCELLED`, giải phóng toàn bộ ghế `HELD` về `AVAILABLE`, ghi vết kiểm toán `ORDER_CANCELLED` và `SHOWTIME_CANCELLED`.
+   - Bảo vệ thanh toán trễ: Nếu thanh toán hoặc Webhook trễ gửi đến cho đơn hàng thuộc suất chiếu đã hủy, `OrderLifecycleService` và `PaymentService` đánh dấu đơn hàng `NEEDS_REVIEW` và từ chối phát hành vé (`ORDER_UNAVAILABLE`).
+
+3. **P1-03 — Thu hồi quyền linh hoạt trên Cookie Authentication (Role Revocation):**
+   - Tại `Program.cs`: Nâng cấp sự kiện `OnValidatePrincipal` kiểm tra đối chiếu trực tiếp với database cho **mọi vai trò** (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`).
+   - Nếu tài khoản chuyển sang `DISABLED` hoặc danh sách vai trò hiện tại trong database bị thiếu bất kỳ claim vai trò nào có trong cookie, yêu cầu bị từ chối ngay lập tức, phiên đăng nhập bị hủy qua `SignOutAsync()` và chuyển hướng người dùng về trang đăng nhập/từ chối truy cập.
+
+4. **P1-04 — Chuẩn hóa & Bảo mật Dữ liệu Phim:**
+   - Chuẩn hóa nhãn độ tuổi bắt buộc: Chỉ chấp nhận 6 nhãn kiểm duyệt điện ảnh Việt Nam chuẩn: `P`, `K`, `T13`, `T16`, `T18`, `C` (DataAnnotation `[AllowedValues]` và domain validation ném `INVALID_AGE_LABEL`).
+   - Khử độc URL Poster (`PosterUrl`): Chỉ chấp nhận URL an toàn bắt đầu bằng `/` (đường dẫn tương đối nội bộ) hoặc `http://` / `https://`. Ngăn chặn hoàn toàn các giao thức nguy hiểm như `javascript:`, `data:`, `vbscript:`, đường dẫn tương đối phi chuẩn `//` hoặc `\` (ném `INVALID_POSTER_URL`).
+
+5. **P2-01 — Bổ sung Ràng buộc Bất biến Đa bảng (Runner Integrity Invariants):**
+   - Mở rộng lệnh `verify` trong `src/BetaGiaiPhong.Runner/Program.cs` thêm các câu truy vấn kiểm tra toàn vẹn đa bảng:
+     - Không có suất chiếu `CANCELLED` mà còn đơn hàng `PENDING_PAYMENT`.
+     - Không có phim `ARCHIVED` mà còn suất chiếu `ON_SALE` tương lai.
+     - Không có đơn hàng đã chết (`CANCELLED`, `EXPIRED`, `FAILED`, `NEEDS_REVIEW`) mà còn chiếm giữ ghế (`HELD`).
+     - Không có vé phát hành gắn với đơn hàng chưa thanh toán hoặc suất chiếu đã hủy.
+
+6. **P2-02 — Minh bạch Nhãn Báo cáo Doanh thu:**
+   - Tại `Reports.cshtml`: Làm rõ tiêu đề "Doanh thu theo Ngày chiếu (Giờ VN)" và "Ngày chiếu (VN)" để tránh nhầm lẫn giữa ngày đặt vé (`created_utc`) và ngày diễn ra suất chiếu (`start_utc` quy đổi theo múi giờ UTC+7).
+
+7. **P3-01 — Bổ sung 15 Ca Kiểm thử Tự động Chuyên sâu (TC_MGMT_13 đến TC_MGMT_27):**
+   - `TC_MGMT_13`: Đặt ghế trực tiếp cho phim `ARCHIVED` bị từ chối (`MOVIE_NOT_PUBLISHED`).
+   - `TC_MGMT_14`: Lưu trữ phim khi đang có suất chiếu hiệu lực bị từ chối (`CANNOT_ARCHIVE_ACTIVE_SHOWTIMES`).
+   - `TC_MGMT_15`: Lưu trữ phim thành công khi chỉ có suất chiếu đã kết thúc hoặc đã hủy.
+   - `TC_MGMT_16`: Chỉnh sửa thông tin phim đã lưu trữ (`ARCHIVED`) bị từ chối (`INVALID_STATUS`).
+   - `TC_MGMT_17`: Kiểm tra dữ liệu phim từ chối nhãn độ tuổi không hợp lệ và URL poster độc hại.
+   - `TC_MGMT_18`: Hủy suất chiếu hợp lệ tự động hủy đơn `PENDING_PAYMENT` và giải phóng ghế `HELD`.
+   - `TC_MGMT_19`: Cố gắng thanh toán đơn hàng thuộc suất chiếu đã hủy bị từ chối (`ORDER_UNAVAILABLE`).
+   - `TC_MGMT_20`: Webhook trễ báo thành công cho đơn thuộc suất chiếu đã hủy dẫn đến `NEEDS_REVIEW` và không phát hành vé.
+   - `TC_MGMT_21`: Hủy suất chiếu có đơn đã thanh toán hoặc có vé phát hành bị từ chối (`CANNOT_CANCEL_SHOWTIME`).
+   - `TC_MGMT_22`: Đóng suất chiếu sau khi đã hủy bị từ chối (`INVALID_STATE_TRANSITION`).
+   - `TC_MGMT_23`: Đóng suất chiếu cho phép đơn đang giữ chỗ hoàn tất thanh toán trước khi hết hạn hold, đồng thời chặn giữ chỗ mới.
+   - `TC_MGMT_24`: Thu hồi vai trò `STAFF` chặn ngay lập tức quyền truy cập `/staff/check-in`.
+   - `TC_MGMT_25`: Thu hồi vai trò `CUSTOMER` chặn ngay lập tức quyền truy cập `/orders`.
+   - `TC_MGMT_26`: Thu hồi vai trò `MANAGER` chặn ngay lập tức quyền truy cập `/management/reports`.
+   - `TC_MGMT_27`: Kiểm tra số học bảng điều khiển doanh thu khớp chính xác 100% với view `dbo.vw_ShowtimeSales`.
+
+---
+
+### 6. KẾT LUẬN & ĐÁNH GIÁ SẴN SÀNG MERGE (MERGE READINESS VERDICT)
+
+| Tiêu chí đánh giá | Trạng thái | Ghi chú / Bằng chứng |
+|---|:---:|---|
+| **Biên dịch Release** | **PASS** | 0 Warning(s), 0 Error(s) |
+| **Model Drift Check** | **PASS** | `No changes have been made to the model since the last migration` (0 migration mới) |
+| **Bảo mật thư viện** | **PASS** | 0 lỗ hổng bảo mật trong 4 projects |
+| **Lược đồ CSDL** | **PASS** | 17 bảng, 116 cột, 22 khóa ngoại nhất quán |
+| **Kiểm thử tự động** | **PASS** | **159 / 159 tests PASS (100%)** |
+| **Toàn vẹn đa bảng** | **PASS** | 9/9 invariant checks đạt 0 vi phạm (`INTEGRITY PASSED`) |
+| **Máy trạng thái** | **PASS** | Vòng đời Phim & Suất chiếu khóa chặt, không có đường dẫn chuyển đổi sai |
+| **Phân quyền & Phiên** | **PASS** | Thu hồi quyền động cho 100% các vai trò người dùng |
+
+**ĐÁNH GIÁ CUỐI CÙNG:** **SẴN SÀNG SÁP NHẬP VÀO MAIN (READY TO MERGE)**.

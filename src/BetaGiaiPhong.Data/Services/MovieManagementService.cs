@@ -7,6 +7,10 @@ namespace BetaGiaiPhong.Data.Services;
 
 public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
 {
+    private static readonly HashSet<string> AllowedAgeLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "P", "K", "T13", "T16", "T18", "C"
+    };
     public async Task<long> CreateMovieAsync(
         long managerId,
         string title,
@@ -63,6 +67,12 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
 
         var movie = await db.Movies.SingleOrDefaultAsync(m => m.MovieId == movieId, ct)
             ?? throw new BusinessRuleException("MOVIE_NOT_FOUND", "Không tìm thấy phim yêu cầu.");
+
+        if (movie.Status == "ARCHIVED")
+        {
+            throw new BusinessRuleException("INVALID_STATUS",
+                "Không thể chỉnh sửa phim đã lưu trữ.");
+        }
 
         // Guard: Cannot alter duration if movie has ongoing or upcoming uncancelled showtimes
         if (movie.DurationMin != durationMin)
@@ -129,22 +139,22 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
             return;
         }
 
-        movie.Status = "ARCHIVED";
         var now = clock.UtcNow;
 
-        // Consistent showtime handling: For upcoming ON_SALE showtimes with NO tickets sold, close them
-        var emptyUpcomingShowtimes = await db.Showtimes
-            .Where(s => s.MovieId == movieId && s.Status == "ON_SALE" && s.StartUtc > now &&
-                        !db.Tickets.Any(t => t.ShowtimeId == s.ShowtimeId))
-            .ToListAsync(ct);
+        // Strict guard: Do not archive if movie still has active or upcoming uncancelled showtimes
+        var hasActiveShowtimes = await db.Showtimes
+            .AnyAsync(s => s.MovieId == movieId && s.Status != "CANCELLED" && s.EndUtc > now, ct);
 
-        foreach (var st in emptyUpcomingShowtimes)
+        if (hasActiveShowtimes)
         {
-            st.Status = "CLOSED";
+            throw new BusinessRuleException("CANNOT_ARCHIVE_ACTIVE_SHOWTIMES",
+                "Không thể lưu trữ phim khi vẫn còn suất chiếu chưa kết thúc hoặc chưa hủy.");
         }
 
+        movie.Status = "ARCHIVED";
+
         db.AuditLogs.Add(Auditing.Event(managerId, "MOVIE_ARCHIVED", "Movie",
-            movie.MovieId.ToString(), new { movie.Title, ClosedShowtimes = emptyUpcomingShowtimes.Count }, now));
+            movie.MovieId.ToString(), new { movie.Title }, now));
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -165,8 +175,15 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
         if (genreText != null && genreText.Trim().Length > 160)
             throw new BusinessRuleException("INVALID_GENRE", "Thể loại phim không được vượt quá 160 ký tự.");
 
-        if (ageLabel != null && ageLabel.Trim().Length > 24)
-            throw new BusinessRuleException("INVALID_AGE_LABEL", "Nhãn độ tuổi không được vượt quá 24 ký tự.");
+        if (!string.IsNullOrWhiteSpace(ageLabel))
+        {
+            var trimmedAge = ageLabel.Trim().ToUpperInvariant();
+            if (trimmedAge.Length > 24 || !AllowedAgeLabels.Contains(trimmedAge))
+            {
+                throw new BusinessRuleException("INVALID_AGE_LABEL",
+                    $"Nhãn độ tuổi không hợp lệ. Các giá trị được phép: {string.Join(", ", AllowedAgeLabels)}.");
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(posterUrl))
         {
@@ -174,15 +191,28 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
             if (trimmed.Length > 500)
                 throw new BusinessRuleException("INVALID_POSTER_URL", "Đường dẫn poster không được vượt quá 500 ký tự.");
 
+            // Reject dangerous patterns: javascript:, data:, protocol-relative //, backslash tricks
+            if (trimmed.StartsWith("//", StringComparison.Ordinal) ||
+                trimmed.StartsWith("\\", StringComparison.Ordinal) ||
+                trimmed.Contains('\\') ||
+                trimmed.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("vbscript:", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BusinessRuleException("INVALID_POSTER_URL",
+                    "Đường dẫn poster không an toàn hoặc chứa ký tự không hợp lệ.");
+            }
+
             if (trimmed.StartsWith("/", StringComparison.Ordinal))
-                return; // Relative path
+                return; // Safe relative path
 
             if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) &&
-                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+                !string.IsNullOrWhiteSpace(uri.Host))
                 return;
 
             throw new BusinessRuleException("INVALID_POSTER_URL",
-                "Đường dẫn poster phải là URL HTTP/HTTPS hợp lệ hoặc đường dẫn tương đối an toàn.");
+                "Đường dẫn poster phải là URL HTTP/HTTPS hợp lệ hoặc đường dẫn tương đối bắt đầu bằng '/'.");
         }
     }
 }

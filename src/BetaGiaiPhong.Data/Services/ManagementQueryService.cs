@@ -313,11 +313,20 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
 
     public async Task CloseShowtimeAsync(long managerId, long showtimeId, CancellationToken ct = default)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (!await SqlServerLocks.ShowtimeAsync(db, showtimeId, ct))
+            throw new BusinessRuleException("SHOWTIME_NOT_FOUND", "Không tìm thấy suất chiếu yêu cầu.");
+
         await SecurityRules.EnsureRoleAsync(db, managerId, ct, "MANAGER", "ADMIN");
 
         var showtime = await db.Showtimes.SingleOrDefaultAsync(s => s.ShowtimeId == showtimeId, ct)
             ?? throw new BusinessRuleException("SHOWTIME_NOT_FOUND", "Không tìm thấy suất chiếu yêu cầu.");
+
+        if (showtime.Status == "CANCELLED")
+        {
+            throw new BusinessRuleException("INVALID_STATE_TRANSITION",
+                "Suất chiếu đã bị hủy không thể chuyển sang trạng thái đóng.");
+        }
 
         if (showtime.Status == "CLOSED")
             return;
@@ -356,6 +365,20 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
                 "Không thể hủy suất chiếu đã phát hành vé hoặc có đơn hàng thanh toán thành công.");
         }
 
+        var now = clock.UtcNow;
+
+        // Finalize all PENDING_PAYMENT orders belonging to this showtime
+        var pendingOrders = await db.Orders
+            .Where(o => o.ShowtimeId == showtimeId && o.Status == OrderStates.Pending)
+            .ToListAsync(ct);
+
+        foreach (var order in pendingOrders)
+        {
+            order.Status = OrderStates.Cancelled;
+            db.AuditLogs.Add(Auditing.Event(managerId, "ORDER_CANCELLED", "Order",
+                order.OrderId.ToString(), new { order.OrderId, showtimeId, Reason = "SHOWTIME_CANCELLED" }, now));
+        }
+
         // Release any pending held seats back to AVAILABLE
         var heldSeats = await db.ShowtimeSeats
             .Where(ss => ss.ShowtimeId == showtimeId && ss.State == SeatStates.Held)
@@ -369,9 +392,8 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
         }
 
         showtime.Status = "CANCELLED";
-        var now = clock.UtcNow;
         db.AuditLogs.Add(Auditing.Event(managerId, "SHOWTIME_CANCELLED", "Showtime",
-            showtime.ShowtimeId.ToString(), new { showtime.ShowtimeId, ReleasedHeldSeats = heldSeats.Count }, now));
+            showtime.ShowtimeId.ToString(), new { showtime.ShowtimeId, CancelledOrders = pendingOrders.Count, ReleasedHeldSeats = heldSeats.Count }, now));
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
