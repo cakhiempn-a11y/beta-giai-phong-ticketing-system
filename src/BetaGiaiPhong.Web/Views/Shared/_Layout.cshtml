@@ -33,6 +33,17 @@
                                 <a class="nav-link" asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a>
                             </li>
                         }
+                        @if (User.IsInRole("STAFF") || User.IsInRole("MANAGER") || User.IsInRole("ADMIN"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-warning fw-semibold" asp-controller="StaffCheckIn" asp-action="Index">
+                                    <span class="badge bg-warning text-dark me-1">Soát vé</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="StaffCheckIn" asp-action="History">Lịch sử soát vé</a>
+                            </li>
+                        }
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Home" asp-action="Privacy">Giới thiệu & Quy chế</a>
                         </li>
@@ -50,6 +61,11 @@
                                     @if (User.IsInRole("CUSTOMER"))
                                     {
                                         <li><a class="dropdown-item" asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
+                                    }
+                                    @if (User.IsInRole("STAFF") || User.IsInRole("MANAGER") || User.IsInRole("ADMIN"))
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="StaffCheckIn" asp-action="Index">Màn hình soát vé</a></li>
+                                        <li><a class="dropdown-item" asp-controller="StaffCheckIn" asp-action="History">Lịch sử soát vé</a></li>
                                     }
                                     <li><hr class="dropdown-divider my-1"></li>
                                     <li>

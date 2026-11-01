@@ -105,4 +105,88 @@ public sealed class ReportingAndIntegrityTests(TestDatabaseFixture fixture)
         Assert.Equal(10, summaryAfter.SellableCapacity);
         Assert.Equal(10.00m, summaryAfter.OccupancyPct);
     }
+
+    [Fact]
+    public async Task TC_INT_02_TestDatabaseFixture_DoesNotSilentlyDeleteInconsistentOrders()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var movie = await db.Movies.FirstAsync();
+        var room = await db.Rooms.FirstAsync();
+        var manager = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customer = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+
+        var showtime = new Showtime
+        {
+            MovieId = movie.MovieId,
+            RoomId = room.RoomId,
+            StartUtc = DateTime.UtcNow.AddHours(3),
+            EndUtc = DateTime.UtcNow.AddHours(5),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = manager.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.Add(showtime);
+        await db.SaveChangesAsync();
+
+        var seat = await db.Seats.FirstAsync(s => s.RoomId == room.RoomId && s.IsActive);
+        db.ShowtimeSeats.Add(new ShowtimeSeat
+        {
+            ShowtimeId = showtime.ShowtimeId,
+            SeatId = seat.SeatId,
+            RoomId = room.RoomId,
+            State = SeatStates.Available
+        });
+        foreach (var st in await db.SeatTypes.ToListAsync())
+        {
+            db.SeatPrices.Add(new SeatPrice
+            {
+                ShowtimeId = showtime.ShowtimeId,
+                SeatTypeCode = st.SeatTypeCode,
+                AmountVnd = 70000,
+                UpdatedUtc = DateTime.UtcNow
+            });
+        }
+        await db.SaveChangesAsync();
+
+        // Create a reservation
+        var res = await new SeatReservationService(db, new SystemClock())
+            .ReserveAsync(customer.UserId, showtime.ShowtimeId, [seat.SeatId]);
+
+        // Deliberately create an inconsistent state: PAID order without tickets
+        var testOrder = await db.Orders.SingleAsync(o => o.OrderId == res.OrderId);
+        testOrder.Status = OrderStates.Paid;
+        testOrder.PaidUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        try
+        {
+            // Execute fixture initialization (simulating next test run)
+            var newFixture = new TestDatabaseFixture();
+            await newFixture.InitializeAsync();
+
+            // Verify that the fixture did NOT delete the inconsistent order to cover up evidence
+            await using var verifyDb = await newFixture.CreateDbContextAsync();
+            var orderStillExists = await verifyDb.Orders.AnyAsync(o => o.OrderId == testOrder.OrderId);
+            Assert.True(orderStillExists, "TestDatabaseFixture must preserve database records and never silently delete inconsistent orders.");
+        }
+        finally
+        {
+            // Clean up the deliberately inconsistent test order so other tests are not affected
+            await using var cleanupDb = await fixture.CreateDbContextAsync();
+            var delSeats = await cleanupDb.OrderSeats.Where(os => os.OrderId == testOrder.OrderId).ToListAsync();
+            cleanupDb.OrderSeats.RemoveRange(delSeats);
+            var delHolds = await cleanupDb.ShowtimeSeats.Where(ss => ss.OwnerOrderId == testOrder.OrderId).ToListAsync();
+            foreach (var h in delHolds)
+            {
+                h.State = SeatStates.Available;
+                h.OwnerOrderId = null;
+                h.HoldExpiresUtc = null;
+            }
+            var delOrder = await cleanupDb.Orders.SingleOrDefaultAsync(o => o.OrderId == testOrder.OrderId);
+            if (delOrder != null) cleanupDb.Orders.Remove(delOrder);
+            await cleanupDb.SaveChangesAsync();
+        }
+    }
 }

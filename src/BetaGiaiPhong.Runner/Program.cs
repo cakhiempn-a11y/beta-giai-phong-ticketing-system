@@ -1,4 +1,5 @@
 using System.Data;
+using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,8 @@ internal static class Program
                     return 0;
                 case "seed-demo":
                     await DemoSeeder.SeedAsync(db); return 0;
+                case "seed-checkin-demo":
+                    await SeedCheckInDemoAsync(options); return 0;
                 case "smoke":
                     await SmokeAsync(options); return 0;
                 case "race":
@@ -195,10 +198,171 @@ internal static class Program
         Console.WriteLine("INTEGRITY PASSED (static consistency checks; run race test separately).");
     }
 
+    private static async Task SeedCheckInDemoAsync(DbContextOptions<BetaDbContext> options)
+    {
+        var optInCheckin = Environment.GetEnvironmentVariable("BGP_ALLOW_CHECKIN_DEMO");
+        var optInDemo = Environment.GetEnvironmentVariable("BGP_ALLOW_DEMO_SEED");
+        if (!string.Equals(optInCheckin, "true", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(optInDemo, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Set BGP_ALLOW_CHECKIN_DEMO=true to enable demo ticket generation.");
+            return;
+        }
+
+        var conn = Environment.GetEnvironmentVariable("ConnectionStrings__BetaDb") ?? string.Empty;
+        if (conn.Contains("production", StringComparison.OrdinalIgnoreCase) ||
+            conn.Contains("prod.database", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("CHECKIN DEMO BLOCKED: Connection string appears to point to a PRODUCTION database. Refusing execution.");
+            return;
+        }
+
+        await using var db = new BetaDbContext(options);
+
+        var customer = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID")
+            ?? throw new InvalidOperationException("Demo user CUSTOMER1@DEMO.INVALID not found. Run 'seed-demo' first.");
+        var manager = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID")
+            ?? throw new InvalidOperationException("Demo user MANAGER@DEMO.INVALID not found. Run 'seed-demo' first.");
+
+        var movie = await db.Movies.FirstOrDefaultAsync(m => m.Status == "PUBLISHED")
+            ?? throw new InvalidOperationException("No PUBLISHED movies found in database. Run 'seed-demo' first.");
+
+        var now = DateTime.UtcNow;
+
+        // Look for an existing eligible showtime within check-in window (start_utc > now && start_utc <= now + 25m) with available seats
+        var showtime = await db.Showtimes
+            .Include(s => s.Movie)
+            .Include(s => s.Room)
+            .Where(s => s.Status == "ON_SALE" && s.StartUtc > now && s.StartUtc <= now.AddMinutes(25)
+                && db.ShowtimeSeats.Any(ss => ss.ShowtimeId == s.ShowtimeId && ss.State == SeatStates.Available))
+            .OrderByDescending(s => s.ShowtimeId)
+            .FirstOrDefaultAsync();
+
+        if (showtime == null)
+        {
+            // Publish a new showtime using ShowtimePublishingService to guarantee room schedule, buffer, and capacity rules
+            var activeRooms = await db.Rooms.Where(r => r.Status == "ACTIVE").ToListAsync();
+            Room? selectedRoom = null;
+            DateTime targetStartUtc = DateTime.SpecifyKind(now.AddMinutes(15), DateTimeKind.Utc);
+            var targetEndUtc = targetStartUtc.AddMinutes(movie.DurationMin);
+            const short bufferMinutes = 15;
+
+            foreach (var r in activeRooms)
+            {
+                var activeSeatsCount = await db.Seats.CountAsync(s => s.RoomId == r.RoomId && s.IsActive);
+                if (activeSeatsCount == 0) continue;
+
+                var hasOverlap = await db.Showtimes.AnyAsync(s => s.RoomId == r.RoomId && s.Status != "CANCELLED" &&
+                    targetStartUtc < s.EndUtc.AddMinutes(s.BufferMinutes) &&
+                    s.StartUtc < targetEndUtc.AddMinutes(bufferMinutes));
+
+                if (!hasOverlap)
+                {
+                    selectedRoom = r;
+                    break;
+                }
+            }
+
+            if (selectedRoom == null)
+            {
+                throw new InvalidOperationException(
+                    "Cannot publish demo showtime: all active rooms have overlapping schedules within the check-in window. Wait for existing showtimes to complete or resolve schedule conflicts.");
+            }
+
+            var activeRoomSeats = await db.Seats.Where(s => s.RoomId == selectedRoom.RoomId && s.IsActive).ToListAsync();
+            var seatTypesInRoom = activeRoomSeats.Select(s => s.SeatTypeCode).Distinct().ToList();
+            var priceInputs = seatTypesInRoom.Select(code => new SeatPriceInput(code, code == "VIP" ? 90000 : 75000)).ToList();
+
+            var publishingService = new ShowtimePublishingService(db, new SystemClock());
+            var newShowtimeId = await publishingService.PublishAsync(
+                manager.UserId, selectedRoom.RoomId, movie.MovieId, targetStartUtc, bufferMinutes, priceInputs);
+
+            showtime = await db.Showtimes
+                .Include(s => s.Movie)
+                .Include(s => s.Room)
+                .SingleAsync(s => s.ShowtimeId == newShowtimeId);
+        }
+
+        var availableSeat = await db.ShowtimeSeats
+            .Where(ss => ss.ShowtimeId == showtime.ShowtimeId && ss.State == SeatStates.Available)
+            .Select(ss => ss.SeatId)
+            .FirstOrDefaultAsync();
+
+        if (availableSeat == 0)
+        {
+            throw new InvalidOperationException($"No AVAILABLE seats left in showtime #{showtime.ShowtimeId}.");
+        }
+
+        var res = await new SeatReservationService(db, new SystemClock())
+            .ReserveAsync(customer.UserId, showtime.ShowtimeId, [availableSeat]);
+
+        var qrProtector = new QrTokenProtector();
+        var payments = new PaymentService(db, new SystemClock(), qrProtector);
+        var attemptKey = "DEMO-ATTEMPT-" + Guid.NewGuid().ToString("N");
+        await payments.CreateMockAttemptAsync(customer.UserId, res.OrderId, attemptKey);
+
+        var msg = new MockPaymentMessage(
+            ProviderEventRef: "EVT-" + Guid.NewGuid().ToString("N"),
+            AttemptKey: attemptKey,
+            ProviderTransactionRef: "TXN-DEMO-" + Guid.NewGuid().ToString("N"),
+            OrderCode: res.OrderCode,
+            AmountVnd: res.TotalVnd,
+            Outcome: "SUCCESS");
+        var verified = MockPaymentSecurity.Verify(msg, MockPaymentSecurity.SignForDevelopment(msg));
+        var applied = await payments.ApplyVerifiedMockAsync(verified);
+
+        if (applied.Decision != "APPLIED" || applied.OrderStatus != "PAID")
+        {
+            throw new InvalidOperationException($"Payment application failed: {applied.Decision} / {applied.OrderStatus}");
+        }
+
+        var ticket = await db.Tickets
+            .SingleAsync(t => t.OrderId == res.OrderId);
+        var seatEntity = await db.Seats
+            .SingleAsync(s => s.SeatId == ticket.SeatId);
+
+        var rawToken = qrProtector.Unseal(ticket.QrTokenCipher);
+
+        var showRawToken = string.Equals(Environment.GetEnvironmentVariable("BGP_SHOW_DEMO_QR_TOKEN"), "true", StringComparison.OrdinalIgnoreCase);
+        var baseUrl = Environment.GetEnvironmentVariable("BGP_BASE_URL") ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS")?.Split(';').FirstOrDefault() ?? "";
+        if (!string.IsNullOrEmpty(baseUrl)) baseUrl = baseUrl.TrimEnd('/');
+        var checkinPath = $"/staff/check-in?showtimeId={showtime.ShowtimeId}";
+        var ticketPath = $"/tickets/order/{res.OrderCode}";
+
+        Console.WriteLine();
+        Console.WriteLine("======================================================================");
+        Console.WriteLine("BETA GIAI PHONG — DEMO CHECK-IN TICKET GENERATED");
+        Console.WriteLine("======================================================================");
+        Console.WriteLine($"Showtime ID : {showtime.ShowtimeId}");
+        Console.WriteLine($"Movie       : {showtime.Movie?.Title ?? movie.Title}");
+        Console.WriteLine($"Room        : {showtime.Room?.RoomName}");
+        Console.WriteLine($"Start Time  : {showtime.StartUtc:yyyy-MM-dd HH:mm:ss} UTC (Active check-in window)");
+        Console.WriteLine($"Order Code  : {res.OrderCode}");
+        Console.WriteLine($"Ticket Code : {ticket.TicketCode}");
+        Console.WriteLine($"Seat        : {seatEntity.SeatCode} (Row {seatEntity.RowLabel}, Col {seatEntity.ColumnNo})");
+        Console.WriteLine($"Customer    : {customer.DisplayName} ({customer.Email})");
+        Console.WriteLine();
+        Console.WriteLine($"Customer Ticket Route : {ticketPath}");
+        Console.WriteLine($"Staff Check-In Route  : {(string.IsNullOrEmpty(baseUrl) ? checkinPath : $"{baseUrl}{checkinPath}")}");
+        Console.WriteLine();
+        if (showRawToken)
+        {
+            Console.WriteLine("[WARNING: BGP_SHOW_DEMO_QR_TOKEN=true] RAW QR TOKEN (Confidential — Development use only):");
+            Console.WriteLine(rawToken);
+        }
+        else
+        {
+            Console.WriteLine("Raw QR token is masked by default for security.");
+            Console.WriteLine("Set BGP_SHOW_DEMO_QR_TOKEN=true in your development shell to display raw token.");
+        }
+        Console.WriteLine("======================================================================");
+        Console.WriteLine();
+    }
+
     private static void PrintHelp()
     {
         Console.WriteLine("Beta Giải Phóng EF Core data runner (SQL Server, prototype)");
-        Console.WriteLine("Commands: migrate | status | seed-demo | smoke | race | late | expire | verify");
+        Console.WriteLine("Commands: migrate | status | seed-demo | seed-checkin-demo | smoke | race | late | expire | verify");
         Console.WriteLine("Environment: ConnectionStrings__BetaDb (required for commands)");
         Console.WriteLine("seed-demo: BGP_ALLOW_DEMO_SEED=true; BGP_DEMO_PASSWORD=... (>=12 chars)");
         Console.WriteLine("smoke: BGP_MOCK_HMAC_KEY_B64 and BGP_QR_AES_KEY_B64 (32 random bytes each)");

@@ -1,0 +1,556 @@
+@model BetaGiaiPhong.Web.Models.ViewModels.StaffCheckInIndexViewModel
+@{
+    ViewData["Title"] = "Màn hình Soát vé QR";
+}
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 border-bottom pb-3">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">
+                <span class="badge bg-warning text-dark me-2">STAFF</span>Màn hình Soát vé Điện tử
+            </h1>
+            <p class="text-secondary small mb-0">Hệ thống quét mã QR thời gian thực dành cho nhân viên kiểm soát vé tại rạp</p>
+        </div>
+        <div>
+            <a asp-action="History" class="btn btn-outline-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history me-1" viewBox="0 0 16 16">
+                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.123.331zm2.479 1.265a7 7 0 0 0-.751-.532l.474-.882a8 8 0 0 1 .86.607zm1.615 1.95a7 7 0 0 0-.46-.688l.682-.733q.368.345.69.726zm.944 2.45a7 7 0 0 0-.15-.815l.939-.333q.205.586.309 1.205zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+                </svg>
+                Xem lịch sử soát vé
+            </a>
+        </div>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <div class="row g-4">
+        <!-- Cột trái: Chọn Suất Chiếu & Máy Quét Camera -->
+        <div class="col-lg-7">
+            <!-- 1. Chọn Suất Chiếu -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title fw-bold mb-0">1. Chọn Suất Chiếu Kiểm Soát</h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Showtimes.Any())
+                    {
+                        <div class="alert alert-warning mb-0">
+                            Hiện không có suất chiếu nào đang mở bán hoặc gần khung giờ chiếu. Vui lòng kiểm tra lại lịch chiếu.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label for="showtimeSelect" class="form-label fw-semibold">Suất chiếu cần soát vé:</label>
+                            <select id="showtimeSelect" class="form-select form-select-lg">
+                                @foreach (var st in Model.Showtimes)
+                                {
+                                    <option value="@st.ShowtimeId" selected="@(st.ShowtimeId == Model.SelectedShowtimeId)">
+                                        @st.DisplayText (@st.SoldTickets/@st.TotalCapacity vé đã bán)
+                                    </option>
+                                }
+                            </select>
+                            <div class="form-text text-muted">
+                                <span class="badge bg-info text-dark me-1">Quy tắc</span> Vé chỉ được chấp nhận nếu đúng ID suất chiếu được chọn này.
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 2. Quét QR Camera -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title fw-bold mb-0">2. Quét Mã QR Bằng Camera</h5>
+                    <div>
+                        <button id="btnStartCamera" type="button" class="btn btn-primary btn-sm me-2">
+                            Bật Camera
+                        </button>
+                        <button id="btnStopCamera" type="button" class="btn btn-outline-danger btn-sm" disabled>
+                            Tắt Camera
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body text-center p-3">
+                    <div id="reader-container" class="position-relative mx-auto rounded overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="min-height: 280px; max-width: 500px;">
+                        <div id="reader" style="width: 100%;"></div>
+                        <div id="camera-placeholder" class="text-white p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-camera mb-3 text-secondary" viewBox="0 0 16 16">
+                                <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z"/>
+                                <path d="M8 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5m0 1a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7M3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
+                            </svg>
+                            <p class="mb-0">Nhấn <strong>"Bật Camera"</strong> để bắt đầu quét vé của khách hàng</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 text-start">
+                        <label for="qrFileInput" class="form-label small fw-semibold text-secondary">
+                            Hoặc tải ảnh mã QR từ thiết bị:
+                        </label>
+                        <input type="file" id="qrFileInput" class="form-control form-control-sm" accept="image/*" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Quét Thủ Công / Máy Quét Cầm Tay USB -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title fw-bold mb-0">3. Nhập Token / Quét Bằng Máy Quét USB</h5>
+                </div>
+                <div class="card-body">
+                    <form id="manualScanForm" class="row g-2">
+                        <div class="col-8">
+                            <input type="text" id="manualQrToken" class="form-control" placeholder="Dán mã QR token hoặc quét qua barcode scanner..." autocomplete="off" />
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-secondary w-100 fw-semibold" id="btnManualSubmit">
+                                Soát vé
+                            </button>
+                        </div>
+                    </form>
+                    <div class="form-text text-muted small mt-2">
+                        Hỗ trợ máy quét mã vạch 2D cầm tay cắm cổng USB (tự động điền token và submit).
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: Kết Quả Soát Vé Thời Gian Thực -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title fw-bold mb-0">Kết Quả Soát Vé</h5>
+                    <span id="scanStatusBadge" class="badge bg-secondary">Chờ quét...</span>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Khu vực hiển thị thông báo kết quả -->
+                    <div id="resultCard" class="text-center py-4">
+                        <div class="mb-3 text-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-qr-code-scan" viewBox="0 0 16 16">
+                                <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5M.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5M4 4h1v1H4z"/>
+                                <path d="M7 2H2v5h5zM3 3h3v3H3zm2 8H4v1h1z"/>
+                                <path d="M7 9H2v5h5zM3 10h3v3H3zm8-8H9v5h5zM10 3h3v3h-3zm1 8h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm4-2h1v1h-1zm0 2h1v1h-1z"/>
+                                <path d="M14 9h-5v5h5zM10 10h3v3h-3z"/>
+                            </svg>
+                        </div>
+                        <h6 class="fw-bold text-secondary">Chưa có lượt quét nào</h6>
+                        <p class="text-muted small">Hãy chọn đúng suất chiếu và quét mã QR của khách hàng để kiểm tra vé hợp lệ.</p>
+                    </div>
+
+                    <!-- Chi tiết vé sau khi quét -->
+                    <div id="ticketDetailsCard" class="d-none mt-3 border-top pt-3">
+                        <h6 class="fw-bold text-dark mb-3">Thông Tin Chi Tiết Vé</h6>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-secondary">Mã vé:</span>
+                                <strong id="resTicketCode" class="font-monospace text-dark">-</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-secondary">Phim:</span>
+                                <strong id="resMovieTitle" class="text-end text-dark">-</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-secondary">Phòng chiếu:</span>
+                                <strong id="resRoomName" class="text-dark">-</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-secondary">Ghế ngồi:</span>
+                                <strong id="resSeatLabel" class="badge bg-primary text-white fs-6">-</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-secondary">Giờ bắt đầu:</span>
+                                <strong id="resShowtime" class="text-dark">-</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-secondary">Thời điểm quét:</span>
+                                <span id="resScannedTime" class="text-dark">-</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer bg-light py-2 text-center text-muted small">
+                    Mã QR hợp lệ được xác thực mật mã học AES-256-GCM & SHA-256
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/html5-qrcode/html5-qrcode.min.js"></script>
+    <script>
+        (function () {
+            let html5QrCode = null;
+            let isScanning = false;
+            let isInFlight = false;
+            let isTicketAccepted = false;
+            let lastScannedToken = "";
+            let pendingRetryToken = null;
+
+            const btnStart = document.getElementById("btnStartCamera");
+            const btnStop = document.getElementById("btnStopCamera");
+            const placeholder = document.getElementById("camera-placeholder");
+            const showtimeSelect = document.getElementById("showtimeSelect");
+            const qrFileInput = document.getElementById("qrFileInput");
+            const manualForm = document.getElementById("manualScanForm");
+            const manualInput = document.getElementById("manualQrToken");
+            const resultCard = document.getElementById("resultCard");
+            const ticketDetailsCard = document.getElementById("ticketDetailsCard");
+            const statusBadge = document.getElementById("scanStatusBadge");
+
+            // Antiforgery token from form
+            function getAntiForgeryToken() {
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                return tokenInput ? tokenInput.value : "";
+            }
+
+            // Get anti-CSRF cookie token
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            }
+
+            // Reset UI state for scanning next ticket
+            function resetScanState(focusInput = false) {
+                isTicketAccepted = false;
+                lastScannedToken = "";
+                pendingRetryToken = null;
+                isInFlight = false;
+
+                statusBadge.className = "badge bg-secondary";
+                statusBadge.textContent = "Sẵn sàng quét";
+
+                ticketDetailsCard.classList.add("d-none");
+                resultCard.innerHTML = `
+                    <div class="mb-3 text-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-qr-code-scan" viewBox="0 0 16 16">
+                            <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5M.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5M4 4h1v1H4z"/>
+                            <path d="M7 2H2v5h5zM3 3h3v3H3zm2 8H4v1h1z"/>
+                            <path d="M7 9H2v5h5zM3 10h3v3H3zm8-8H9v5h5zM10 3h3v3h-3zm1 8h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm4-2h1v1h-1zm0 2h1v1h-1z"/>
+                            <path d="M14 9h-5v5h5zM10 10h3v3h-3z"/>
+                        </svg>
+                    </div>
+                    <h6 class="fw-bold text-secondary">Chưa có lượt quét nào</h6>
+                    <p class="text-muted small">Hãy chọn đúng suất chiếu và quét mã QR của khách hàng để kiểm tra vé hợp lệ.</p>
+                `;
+
+                manualInput.value = "";
+                if (focusInput) {
+                    manualInput.focus();
+                }
+            }
+
+            // Gửi yêu cầu soát vé lên máy chủ với cờ in-flight và kiểm soát trùng lặp
+            async function submitScan(qrToken, isExplicitRescan = false) {
+                if (isInFlight) return;
+
+                if (!qrToken || typeof qrToken !== "string") return;
+                qrToken = qrToken.trim();
+                if (qrToken.length === 0) return;
+
+                // Client-side validation: chặn token quá dài trước khi gửi lên mạng
+                if (qrToken.length > 256) {
+                    renderResult({
+                        outcome: "ERROR",
+                        isSuccess: false,
+                        message: "Mã QR không đúng định dạng quy chuẩn (vượt quá 256 ký tự)."
+                    });
+                    return;
+                }
+
+                // Nếu vé vừa ACCEPTED và đây không phải là lượt bấm 'Quét lại vé này' chủ động, bỏ qua để chống camera lia trùng
+                if (isTicketAccepted && !isExplicitRescan) {
+                    return;
+                }
+
+                isInFlight = true;
+                lastScannedToken = qrToken;
+                pendingRetryToken = qrToken;
+
+                const showtimeId = parseInt(showtimeSelect ? showtimeSelect.value : "0", 10);
+                if (!showtimeId || showtimeId <= 0) {
+                    isInFlight = false;
+                    renderResult({
+                        outcome: "ERROR",
+                        isSuccess: false,
+                        message: "Vui lòng chọn một suất chiếu hợp lệ trước khi soát vé."
+                    });
+                    return;
+                }
+
+                statusBadge.className = "badge bg-info text-dark";
+                statusBadge.textContent = "Đang kiểm tra...";
+
+                try {
+                    const xsrfCookie = getCookie("XSRF-TOKEN");
+                    const token = xsrfCookie || getAntiForgeryToken();
+                    const headers = {
+                        "Content-Type": "application/json",
+                        "X-XSRF-TOKEN": token,
+                        "RequestVerificationToken": token
+                    };
+
+                    const response = await fetch("/api/staff/tickets/scan", {
+                        method: "POST",
+                        headers: headers,
+                        body: JSON.stringify({
+                            qrToken: qrToken,
+                            expectedShowtimeId: showtimeId
+                        })
+                    });
+
+                    const data = await response.json();
+                    renderResult(data);
+                } catch (err) {
+                    renderResult({
+                        outcome: "NETWORK_ERROR",
+                        isSuccess: false,
+                        message: "Không thể kết nối đến máy chủ để xác thực vé. Vui lòng kiểm tra mạng và thử lại."
+                    });
+                } finally {
+                    isInFlight = false;
+                }
+            }
+
+            // Hiển thị kết quả quét an toàn qua DOM APIs (không nội suy chuỗi vào innerHTML)
+            function renderResult(data) {
+                const outcome = data.outcome || "UNKNOWN";
+                const isSuccess = !!data.isSuccess;
+
+                let alertClass = "alert-danger";
+                let badgeClass = "bg-danger";
+                let badgeText = outcome;
+                let iconSvg = "";
+
+                switch (outcome) {
+                    case "ACCEPTED":
+                        isTicketAccepted = true;
+                        alertClass = "alert-success";
+                        badgeClass = "bg-success";
+                        badgeText = "HỢP LỆ";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-check-circle-fill text-success mb-2" viewBox="0 0 16 16">
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                        </svg>`;
+                        break;
+                    case "ALREADY_USED":
+                        isTicketAccepted = false;
+                        alertClass = "alert-warning";
+                        badgeClass = "bg-warning text-dark";
+                        badgeText = "ĐÃ SỬ DỤNG";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-exclamation-triangle-fill text-warning mb-2" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                        </svg>`;
+                        break;
+                    case "WRONG_SHOWTIME":
+                        isTicketAccepted = false;
+                        alertClass = "alert-warning";
+                        badgeClass = "bg-warning text-dark";
+                        badgeText = "SAI SUẤT CHIẾU";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-x-circle-fill text-warning mb-2" viewBox="0 0 16 16">
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                        </svg>`;
+                        break;
+                    case "OUTSIDE_WINDOW":
+                        isTicketAccepted = false;
+                        alertClass = "alert-secondary";
+                        badgeClass = "bg-secondary";
+                        badgeText = "NGOÀI GIỜ SOÁT VÉ";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-clock text-secondary mb-2" viewBox="0 0 16 16">
+                            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+                        </svg>`;
+                        break;
+                    case "NETWORK_ERROR":
+                        isTicketAccepted = false;
+                        alertClass = "alert-danger";
+                        badgeClass = "bg-danger";
+                        badgeText = "LỖI KẾT NỐI";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-wifi-off text-danger mb-2" viewBox="0 0 16 16">
+                            <path d="M10.706 3.294A12.6 12.6 0 0 0 8 3C5.259 3 2.723 3.882.663 5.379a.485.485 0 0 0-.048.736.52.52 0 0 0 .668.05A11.45 11.45 0 0 1 8 4c.63 0 1.249.05 1.852.148zM8 6c-1.905 0-3.68.56-5.166 1.526a.48.48 0 0 0-.053.727c.18.19.467.22.68.077A9.56 9.56 0 0 1 8 7c1.472 0 2.846.36 4.053 1.004l.78-.78A10.6 10.6 0 0 0 8 6"/>
+                            <path d="M10.74 9.26l.78-.78A8 8 0 0 0 8 8c-.99 0-1.92.203-2.77.568l.842.842C6.67 9.155 7.32 9 8 9c.99 0 1.91.248 2.74.678m.72 1.74l.78-.78A5.5 5.5 0 0 0 8 10c-.57 0-1.11.11-1.6.31l.86.86C7.51 11.06 7.75 11 8 11c.78 0 1.49.26 2.06.7"/>
+                        </svg>`;
+                        break;
+                    case "NOT_FOUND":
+                    case "REJECTED":
+                    default:
+                        isTicketAccepted = false;
+                        alertClass = "alert-danger";
+                        badgeClass = "bg-danger";
+                        badgeText = outcome === "NOT_FOUND" ? "KHÔNG TỒN TẠI" : "TỪ CHỐI";
+                        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-shield-slash-fill text-danger mb-2" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1.742 2.652A1.5 1.5 0 0 1 3.2 1.637l4.5-1.5a1.5 1.5 0 0 1 .998 0l4.5 1.5a1.5 1.5 0 0 1 1.058 1.015L15 5.5c0 4.14-2.827 7.733-6.52 8.918a1.5 1.5 0 0 1-.96 0C3.827 13.233 1 9.64 1 5.5zm11.75 8.948A7 7 0 0 0 14 5.5v-.553L9.5 3.447l-4.5 1.5V5.5c0 .324.017.643.05.955z"/>
+                        </svg>`;
+                        break;
+                }
+
+                statusBadge.className = `badge ${badgeClass}`;
+                statusBadge.textContent = badgeText;
+
+                // Xây dựng DOM container an toàn
+                resultCard.innerHTML = "";
+                const alertContainer = document.createElement("div");
+                alertContainer.className = `alert ${alertClass} text-center mb-0 p-3`;
+                alertContainer.innerHTML = iconSvg;
+
+                const heading = document.createElement("h5");
+                heading.className = "alert-heading fw-bold";
+                heading.textContent = badgeText;
+                alertContainer.appendChild(heading);
+
+                const messageP = document.createElement("p");
+                messageP.className = "mb-2";
+                messageP.textContent = data.message || "Đã xử lý yêu cầu.";
+                alertContainer.appendChild(messageP);
+
+                // Nút thao tác sau khi quét: "Quét vé tiếp theo", "Quét lại", hoặc "Thử lại kết nối"
+                const actionsDiv = document.createElement("div");
+                actionsDiv.className = "mt-3 d-flex justify-content-center gap-2 flex-wrap";
+
+                if (outcome === "ACCEPTED") {
+                    const btnNext = document.createElement("button");
+                    btnNext.id = "btnScanNext";
+                    btnNext.type = "button";
+                    btnNext.className = "btn btn-success btn-sm px-3 fw-bold";
+                    btnNext.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right-circle me-1" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0M4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5z"/>
+                        </svg> Quét vé tiếp theo
+                    `;
+                    btnNext.addEventListener("click", () => resetScanState(true));
+                    actionsDiv.appendChild(btnNext);
+
+                    const btnRescan = document.createElement("button");
+                    btnRescan.id = "btnRescanCurrent";
+                    btnRescan.type = "button";
+                    btnRescan.className = "btn btn-outline-secondary btn-sm";
+                    btnRescan.textContent = "Quét lại vé này (Kiểm tra lại)";
+                    btnRescan.addEventListener("click", () => submitScan(lastScannedToken, true));
+                    actionsDiv.appendChild(btnRescan);
+                } else if (outcome === "NETWORK_ERROR") {
+                    const btnRetry = document.createElement("button");
+                    btnRetry.type = "button";
+                    btnRetry.className = "btn btn-outline-danger btn-sm px-3";
+                    btnRetry.textContent = "Thử lại kết nối";
+                    btnRetry.addEventListener("click", () => submitScan(pendingRetryToken, true));
+                    actionsDiv.appendChild(btnRetry);
+                } else {
+                    const btnClear = document.createElement("button");
+                    btnClear.type = "button";
+                    btnClear.className = "btn btn-outline-secondary btn-sm px-3";
+                    btnClear.textContent = "Quét vé khác";
+                    btnClear.addEventListener("click", () => resetScanState(true));
+                    actionsDiv.appendChild(btnClear);
+                }
+
+                alertContainer.appendChild(actionsDiv);
+                resultCard.appendChild(alertContainer);
+
+                // Điền chi tiết vé an toàn qua textContent
+                if (data.ticketId) {
+                    ticketDetailsCard.classList.remove("d-none");
+                    document.getElementById("resTicketCode").textContent = data.ticketCode || `#${data.ticketId}`;
+                    document.getElementById("resMovieTitle").textContent = data.movieTitle || "-";
+                    document.getElementById("resRoomName").textContent = data.roomName || "-";
+                    document.getElementById("resSeatLabel").textContent = data.seatLabel || "-";
+                    document.getElementById("resShowtime").textContent = data.showtimeStartUtc ? new Date(data.showtimeStartUtc).toLocaleString("vi-VN") : "-";
+                    document.getElementById("resScannedTime").textContent = data.scannedUtc ? new Date(data.scannedUtc).toLocaleString("vi-VN") : new Date().toLocaleString("vi-VN");
+                } else {
+                    ticketDetailsCard.classList.add("d-none");
+                }
+            }
+
+            // Khởi động Camera qua Html5Qrcode
+            async function startCamera() {
+                if (isScanning) return;
+                try {
+                    placeholder.classList.add("d-none");
+                    html5QrCode = new Html5Qrcode("reader");
+
+                    const config = {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    };
+
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        (decodedText) => {
+                            submitScan(decodedText);
+                        },
+                        () => {
+                            // Ignored per-frame decoding misses
+                        }
+                    );
+
+                    isScanning = true;
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                } catch (err) {
+                    placeholder.classList.remove("d-none");
+                    alert("Không thể khởi động camera: " + (err.message || err));
+                }
+            }
+
+            // Dừng Camera an toàn
+            async function stopCamera() {
+                if (!isScanning || !html5QrCode) return;
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                } catch (e) {
+                    // Suppress harmless stop error
+                } finally {
+                    isScanning = false;
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    placeholder.classList.remove("d-none");
+                }
+            }
+
+            btnStart.addEventListener("click", startCamera);
+            btnStop.addEventListener("click", stopCamera);
+
+            // Xử lý khi thay đổi suất chiếu: Reset toàn bộ kết quả quét để tránh sai lệch
+            if (showtimeSelect) {
+                showtimeSelect.addEventListener("change", () => {
+                    resetScanState(false);
+                });
+            }
+
+            // Xử lý quét qua tải ảnh (ngắt camera trước nếu đang chạy để không chiếm trùng DOM reader)
+            qrFileInput.addEventListener("change", async (e) => {
+                if (e.target.files.length === 0) return;
+                const file = e.target.files[0];
+
+                if (isScanning) {
+                    await stopCamera();
+                }
+
+                try {
+                    const tempScanner = new Html5Qrcode("reader");
+                    const decodedText = await tempScanner.scanFile(file, true);
+                    tempScanner.clear();
+                    submitScan(decodedText);
+                } catch (err) {
+                    alert("Không tìm thấy mã QR hợp lệ trong hình ảnh tải lên.");
+                } finally {
+                    qrFileInput.value = "";
+                }
+            });
+
+            // Xử lý form quét thủ công / USB Barcode scanner
+            manualForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const val = manualInput.value;
+                if (!val || !val.trim()) return;
+                submitScan(val);
+                manualInput.value = "";
+            });
+        })();
+    </script>
+}

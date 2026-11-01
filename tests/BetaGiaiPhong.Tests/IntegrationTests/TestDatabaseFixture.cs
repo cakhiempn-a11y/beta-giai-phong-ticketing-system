@@ -54,6 +54,7 @@ END;";
         }
 
         // Clean up any historical dangling held seats from interrupted test runs to guarantee test isolation
+        // NOTE: Does NOT perform destructive deletion of orders or evidence of data inconsistency
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE dbo.ShowtimeSeats 
             SET state = 'AVAILABLE', owner_order_id = NULL, hold_expires_utc = NULL 

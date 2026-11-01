@@ -3,7 +3,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![EF Core 10](https://img.shields.io/badge/EF%20Core-10.0.14-512BD4?logo=dotnet)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2025%20%7C%202022-CC292B?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server/)
-[![Build & Tests](https://img.shields.io/badge/Tests-104%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
+[![Build & Tests](https://img.shields.io/badge/Tests-130%20Passed%20%7C%200%20Failed-brightgreen)](tests/BetaGiaiPhong.Tests)
 [![Security Scan](https://img.shields.io/badge/Vulnerabilities-0-brightgreen)](#7-security-architecture)
 
 > **Academic Disclaimer:**  
@@ -15,7 +15,7 @@
 
 - **Project Title:** Analysis, Design, and Implementation of an Online Cinema Ticketing Management System for Beta Giải Phóng Cinema.
 - **Context:** MIS Graduation Capstone Project.
-- **Scope Boundary:** This repository encompasses the full backend ticketing management system: the foundational **Data Layer, Entity Framework Core Relational Modeling, Transactional Services, and Concurrency Verification Suite**, alongside the **ASP.NET Core Web Application** providing Cookie Authentication, Role Authorization, Public Catalog, Interactive Seat Map, Transactional Reservation (BE-01/BE-02), and **Mock Payment, Secure HMAC Webhooks, Electronic Tickets & QR Code Generation (BE-03)**. Real payment gateways and physical turnstile hardware are simulated using academic cryptographic contracts.
+- **Scope Boundary:** This repository encompasses the full backend ticketing management system: the foundational **Data Layer, Entity Framework Core Relational Modeling, Transactional Services, and Concurrency Verification Suite** (BE-01), **ASP.NET Core Web Application** providing Cookie Authentication, Role Authorization, Public Catalog, Interactive Seat Map, Transactional Reservation (BE-02), **Mock Payment, Secure HMAC Webhooks, Electronic Tickets & QR Code Generation** (BE-03), and **Staff QR Ticket Check-in, Web Scanner & Periodic Reservation Expiry Background Worker** (BE-04A). Real payment gateways and physical turnstile hardware are simulated using academic cryptographic contracts.
 
 ---
 
@@ -43,10 +43,10 @@ The solution adheres to clean data-driven and modular monolith design patterns:
                                                 └───────────────────────────────────────┘
 ```
 
-- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, and dynamic QR code generation. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
+- **`BetaGiaiPhong.Web`:** ASP.NET Core host providing server-rendered Razor Views and RESTful JSON APIs for public catalog exploration (published movies, showtimes grouped by date, and real-time interactive seat maps), transactional seat reservation (1–8 seats with 5-minute hold), order lifecycle management, mock payment checkout with HMAC-SHA256 signature verification, electronic ticket issuance, dynamic QR code generation, staff check-in portal with browser camera & USB 2D barcode scanning (`/staff/check-in`), check-in history audit log viewer (`/staff/check-in/history`), and a background worker (`ReservationExpiryWorker`) for automatic cleanup of expired reservations. Implements secure Cookie Authentication and role authorization (`CUSTOMER`, `STAFF`, `MANAGER`, `ADMIN`) mapped to `dbo.Users` without extra Identity tables.
 - **`BetaGiaiPhong.Data`:** Contains 17 domain entities, `BetaDbContext`, Fluent API mappings (`BetaModelConfiguration`), EF Core Migrations, and core domain services (`SeatReservationService`, `PaymentService`, `TicketScanningService`, `OrderLifecycleService`, `ShowtimePublishingService`).
 - **`BetaGiaiPhong.Runner`:** Administrative CLI tool for applying database migrations, seeding synthetic demo data, and executing integration validation scenarios. Directly references `BetaGiaiPhong.Data`.
-- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (104 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
+- **`BetaGiaiPhong.Tests`:** Comprehensive automated xUnit test suite (130 tests) covering unit tests, live SQL Server integration scenarios (high-thread concurrency, webhook idempotency, QR cryptographic verification, worker sweeps, database integrity invariants), and Web application integration tests via `WebApplicationFactory`.
 
 ---
 
@@ -189,7 +189,28 @@ dotnet ef migrations has-pending-model-changes --project .\src\BetaGiaiPhong.Dat
 
 ## 9. Local Development Setup
 
+> [!CAUTION]
+> **Key Stability Warning:** `BGP_QR_AES_KEY_B64` encrypts and decrypts QR tokens in `dbo.Tickets`. **NEVER** rotate or overwrite this key on a database containing active tickets, or existing QR codes will fail decryption during staff check-in.
+
 ### 9.1. Environment Configuration
+Cryptographic keys (`BGP_MOCK_HMAC_KEY_B64`, `BGP_QR_AES_KEY_B64`) and connection strings are managed via .NET User Secrets or environment variables to prevent accidental credential leakage into Git.
+
+To configure stable 256-bit CSPRNG keys that persist across shell restarts:
+```powershell
+# Generate independent CSPRNG 32-byte keys and configure in .NET User Secrets
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$hmacBytes = New-Object byte[] 32; $rng.GetBytes($hmacBytes)
+$aesBytes = New-Object byte[] 32; $rng.GetBytes($aesBytes)
+$hmac = [Convert]::ToBase64String($hmacBytes)
+$aes  = [Convert]::ToBase64String($aesBytes)
+dotnet user-secrets set "BGP_MOCK_HMAC_KEY_B64" "$hmac" --project .\src\BetaGiaiPhong.Web
+dotnet user-secrets set "BGP_QR_AES_KEY_B64" "$aes" --project .\src\BetaGiaiPhong.Web
+Remove-Variable hmacBytes, aesBytes, hmac, aes -ErrorAction SilentlyContinue
+```
+
+> [!NOTE]
+> `BetaGiaiPhong.Web` automatically loads `.NET User Secrets` in the `Development` environment. However, CLI utilities like `BetaGiaiPhong.Runner` run outside the Web host context and require environment variables. `scripts/01_prepare_dev_session.ps1` synchronizes keys from User Secrets directly into your PowerShell session.
+
 Execute `scripts/01_prepare_dev_session.ps1` in Windows PowerShell 5.1 or PowerShell 7+:
 ```powershell
 # Set your local SQL Server connection string
@@ -197,7 +218,7 @@ $env:ConnectionStrings__BetaDb = "Server=localhost;Database=BetaGiaiPhong_Dev;Tr
 $env:BGP_ALLOW_DEMO_SEED = "true"
 $env:BGP_DEMO_PASSWORD = "DemoSecurePassword123!"
 
-# Run session preparation (generates ephemeral HMAC & AES keys in memory)
+# Synchronizes persistent keys from User Secrets (or issues fallback ephemeral keys with warning)
 .\scripts\01_prepare_dev_session.ps1
 ```
 
@@ -222,6 +243,12 @@ dotnet run --project .\src\BetaGiaiPhong.Runner -- status
 
 # Seed synthetic reference catalog & demo users
 dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-demo
+
+# Seed an active showtime & generate a paid demo ticket for staff check-in
+# Note: Requires BGP_ALLOW_CHECKIN_DEMO=true (set by 01_prepare_dev_session.ps1).
+# Raw QR token is masked by default; set BGP_SHOW_DEMO_QR_TOKEN=true to display raw plaintext token.
+dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-checkin-demo
+# Alternatively, run: .\scripts\03_seed_checkin_demo.ps1
 
 # Execute end-to-end smoke verification
 dotnet run --project .\src\BetaGiaiPhong.Runner -- smoke
