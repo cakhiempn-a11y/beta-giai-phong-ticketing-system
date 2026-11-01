@@ -61,6 +61,11 @@ public static class SqlServerLocks
             "SELECT [room_id] FROM dbo.[Rooms] WITH (UPDLOCK, HOLDLOCK) WHERE [room_id] = @id",
             roomId, ct);
 
+    public static Task<bool> MovieAsync(BetaDbContext db, long movieId, CancellationToken ct = default)
+        => ExistsWithUpdateLockAsync(db,
+            "SELECT [movie_id] FROM dbo.[Movies] WITH (UPDLOCK, HOLDLOCK) WHERE [movie_id] = @id",
+            movieId, ct);
+
     public static async Task<long?> TicketByHashAsync(BetaDbContext db, byte[] hash, CancellationToken ct = default)
     {
         await db.Database.OpenConnectionAsync(ct);

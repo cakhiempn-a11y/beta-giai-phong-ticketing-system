@@ -21,12 +21,15 @@ public sealed class ShowtimePublishingService(BetaDbContext db, ISystemClock clo
             throw new BusinessRuleException("INVALID_PRICE", "Exactly one positive price per seat type is required.");
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        // Lock hierarchy: Acquire Movie lock before Room lock across operations to avoid deadlocks
+        if (!await SqlServerLocks.MovieAsync(db, movieId, ct))
+            throw new BusinessRuleException("MOVIE_NOT_FOUND", "Unknown movie.");
         if (!await SqlServerLocks.RoomAsync(db, roomId, ct))
             throw new BusinessRuleException("ROOM_NOT_FOUND", "Unknown room.");
         await SecurityRules.EnsureRoleAsync(db, managerId, ct, "MANAGER", "ADMIN");
         var room = await db.Rooms.SingleAsync(x => x.RoomId == roomId, ct);
-        var movie = await db.Movies.SingleOrDefaultAsync(x => x.MovieId == movieId, ct);
-        if (room.Status != "ACTIVE" || movie is null || movie.Status != "PUBLISHED")
+        var movie = await db.Movies.SingleAsync(x => x.MovieId == movieId, ct);
+        if (room.Status != "ACTIVE" || movie.Status != "PUBLISHED")
             throw new BusinessRuleException("NOT_PUBLISHABLE", "An active room and a published movie are required.");
         var endUtc = startUtc.AddMinutes(movie.DurationMin);
         // Room lock makes this read-then-write overlap test serializable among cooperating writers.

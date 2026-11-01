@@ -62,7 +62,9 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
     {
         ValidateMovieInputs(title, durationMin, genreText, ageLabel, posterUrl);
 
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (!await SqlServerLocks.MovieAsync(db, movieId, ct))
+            throw new BusinessRuleException("MOVIE_NOT_FOUND", "Không tìm thấy phim yêu cầu.");
         await SecurityRules.EnsureRoleAsync(db, managerId, ct, "MANAGER", "ADMIN");
 
         var movie = await db.Movies.SingleOrDefaultAsync(m => m.MovieId == movieId, ct)
@@ -105,7 +107,9 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
 
     public async Task PublishMovieAsync(long managerId, long movieId, CancellationToken ct = default)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (!await SqlServerLocks.MovieAsync(db, movieId, ct))
+            throw new BusinessRuleException("MOVIE_NOT_FOUND", "Không tìm thấy phim yêu cầu.");
         await SecurityRules.EnsureRoleAsync(db, managerId, ct, "MANAGER", "ADMIN");
 
         var movie = await db.Movies.SingleOrDefaultAsync(m => m.MovieId == movieId, ct)
@@ -128,7 +132,9 @@ public sealed class MovieManagementService(BetaDbContext db, ISystemClock clock)
 
     public async Task ArchiveMovieAsync(long managerId, long movieId, CancellationToken ct = default)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (!await SqlServerLocks.MovieAsync(db, movieId, ct))
+            throw new BusinessRuleException("MOVIE_NOT_FOUND", "Không tìm thấy phim yêu cầu.");
         await SecurityRules.EnsureRoleAsync(db, managerId, ct, "MANAGER", "ADMIN");
 
         var movie = await db.Movies.SingleOrDefaultAsync(m => m.MovieId == movieId, ct)

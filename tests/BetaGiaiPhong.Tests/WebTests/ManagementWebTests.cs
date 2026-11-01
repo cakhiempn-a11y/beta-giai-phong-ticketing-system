@@ -1419,4 +1419,365 @@ public sealed class ManagementWebTests(TestDatabaseFixture fixture) : IClassFixt
             }
         }
     }
+
+    [Fact]
+    public async Task TC_MGMT_28_Dashboard_IndependentFinancialReconciliation_CalculatesCorrectly()
+    {
+        await using var db = await fixture.CreateDbContextAsync();
+        var managerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var customerUser = await db.Users.FirstAsync(u => u.NormalizedEmail == "CUSTOMER1@DEMO.INVALID");
+
+        // 1. Create two distinct movies
+        var movie1 = new Movie
+        {
+            Title = "Independent Alpha " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 100,
+            Status = "PUBLISHED"
+        };
+        var movie2 = new Movie
+        {
+            Title = "Independent Beta " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 110,
+            Status = "PUBLISHED"
+        };
+        db.Movies.AddRange(movie1, movie2);
+        await db.SaveChangesAsync();
+
+        // 2. Reference two distinct rooms
+        var room1 = await db.Rooms.FirstAsync();
+        var room2 = new Room
+        {
+            RoomCode = "ROOM_TEST_" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant(),
+            RoomName = "Phong Chieu 2 Test",
+            Status = "ACTIVE"
+        };
+        db.Rooms.Add(room2);
+        await db.SaveChangesAsync();
+
+        for (short col = 1; col <= 10; col++)
+        {
+            db.Seats.Add(new Seat
+            {
+                RoomId = room2.RoomId,
+                SeatCode = $"B{col:D2}",
+                RowLabel = "B",
+                ColumnNo = col,
+                SeatTypeCode = "VIP",
+                IsActive = true
+            });
+        }
+        await db.SaveChangesAsync();
+
+        // 3. Showtimes across UTC / VN boundary:
+        // Day 1 VN: 2028-05-10 16:00 UTC = 2028-05-10 23:00 VN (UTC+7)
+        // Day 2 VN: 2028-05-10 18:00 UTC = 2028-05-11 01:00 VN (UTC+7)
+        var startUtc1 = new DateTime(2028, 5, 10, 16, 0, 0, DateTimeKind.Utc);
+        var startUtc2 = new DateTime(2028, 5, 10, 18, 0, 0, DateTimeKind.Utc);
+
+        var showtime1 = new Showtime
+        {
+            MovieId = movie1.MovieId,
+            RoomId = room1.RoomId,
+            StartUtc = startUtc1,
+            EndUtc = startUtc1.AddMinutes(100),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 10,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        var showtime2 = new Showtime
+        {
+            MovieId = movie2.MovieId,
+            RoomId = room2.RoomId,
+            StartUtc = startUtc2,
+            EndUtc = startUtc2.AddMinutes(110),
+            BufferMinutes = 15,
+            Status = "ON_SALE",
+            SellableCapacitySnapshot = 20,
+            CreatedBy = managerUser.UserId,
+            CreatedUtc = DateTime.UtcNow
+        };
+        db.Showtimes.AddRange(showtime1, showtime2);
+        await db.SaveChangesAsync();
+
+        var room1Seats = await db.Seats.Where(s => s.RoomId == room1.RoomId && s.IsActive).Take(4).ToListAsync();
+        var room2Seats = await db.Seats.Where(s => s.RoomId == room2.RoomId && s.IsActive).Take(6).ToListAsync();
+
+        // 4. Create synthetic orders across various lifecycle statuses:
+        // Showtime 1 Orders:
+        // - Order 1: PAID (2 seats @ 75,000 = 150,000 VND) with 2 Tickets issued
+        var order1 = new BookingOrder
+        {
+            OrderCode = "BGP-FIN-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime1.ShowtimeId,
+            Status = OrderStates.Paid,
+            SeatCount = 2,
+            SubtotalVnd = 150000,
+            TotalVnd = 150000,
+            CreatedUtc = DateTime.UtcNow,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(15),
+            PaidUtc = DateTime.UtcNow
+        };
+        // - Order 2: CANCELLED (1 seat @ 75,000) - must NOT count
+        var order2 = new BookingOrder
+        {
+            OrderCode = "BGP-FIN-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime1.ShowtimeId,
+            Status = OrderStates.Cancelled,
+            SeatCount = 1,
+            SubtotalVnd = 75000,
+            TotalVnd = 75000,
+            CreatedUtc = DateTime.UtcNow,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
+        };
+        // - Order 3: EXPIRED (1 seat @ 75,000) - must NOT count
+        var order3 = new BookingOrder
+        {
+            OrderCode = "BGP-FIN-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime1.ShowtimeId,
+            Status = OrderStates.Expired,
+            SeatCount = 1,
+            SubtotalVnd = 75000,
+            TotalVnd = 75000,
+            CreatedUtc = DateTime.UtcNow.AddMinutes(-20),
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(-5)
+        };
+        db.Orders.AddRange(order1, order2, order3);
+        await db.SaveChangesAsync();
+
+        // Add OrderSeats and ShowtimeSeats for Showtime 1
+        db.OrderSeats.Add(new OrderSeat { OrderId = order1.OrderId, ShowtimeId = showtime1.ShowtimeId, SeatId = room1Seats[0].SeatId, SeatTypeSnapshot = "STANDARD", UnitPriceVnd = 75000 });
+        db.OrderSeats.Add(new OrderSeat { OrderId = order1.OrderId, ShowtimeId = showtime1.ShowtimeId, SeatId = room1Seats[1].SeatId, SeatTypeSnapshot = "STANDARD", UnitPriceVnd = 75000 });
+        db.OrderSeats.Add(new OrderSeat { OrderId = order2.OrderId, ShowtimeId = showtime1.ShowtimeId, SeatId = room1Seats[2].SeatId, SeatTypeSnapshot = "STANDARD", UnitPriceVnd = 75000 });
+        db.OrderSeats.Add(new OrderSeat { OrderId = order3.OrderId, ShowtimeId = showtime1.ShowtimeId, SeatId = room1Seats[3].SeatId, SeatTypeSnapshot = "STANDARD", UnitPriceVnd = 75000 });
+
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime1.ShowtimeId, RoomId = room1.RoomId, SeatId = room1Seats[0].SeatId, State = SeatStates.Sold, OwnerOrderId = order1.OrderId });
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime1.ShowtimeId, RoomId = room1.RoomId, SeatId = room1Seats[1].SeatId, State = SeatStates.Sold, OwnerOrderId = order1.OrderId });
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime1.ShowtimeId, RoomId = room1.RoomId, SeatId = room1Seats[2].SeatId, State = SeatStates.Available });
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime1.ShowtimeId, RoomId = room1.RoomId, SeatId = room1Seats[3].SeatId, State = SeatStates.Available });
+
+        var qr1 = new byte[32]; System.Security.Cryptography.RandomNumberGenerator.Fill(qr1);
+        var qr2 = new byte[32]; System.Security.Cryptography.RandomNumberGenerator.Fill(qr2);
+        db.Tickets.Add(new Ticket { TicketCode = "TKT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), OrderId = order1.OrderId, ShowtimeId = showtime1.ShowtimeId, SeatId = room1Seats[0].SeatId, Status = "ISSUED", QrTokenHash = qr1, QrTokenCipher = new byte[48], QrKeyId = "k1", IssuedUtc = DateTime.UtcNow });
+        db.Tickets.Add(new Ticket { TicketCode = "TKT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), OrderId = order1.OrderId, ShowtimeId = showtime1.ShowtimeId, SeatId = room1Seats[1].SeatId, Status = "ISSUED", QrTokenHash = qr2, QrTokenCipher = new byte[48], QrKeyId = "k1", IssuedUtc = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        // Showtime 2 Orders:
+        // - Order 4: PAID (3 seats @ 100,000 = 300,000 VND) with 3 Tickets issued + duplicate webhook simulation
+        var order4 = new BookingOrder
+        {
+            OrderCode = "BGP-FIN-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime2.ShowtimeId,
+            Status = OrderStates.Paid,
+            SeatCount = 3,
+            SubtotalVnd = 300000,
+            TotalVnd = 300000,
+            CreatedUtc = DateTime.UtcNow,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(15),
+            PaidUtc = DateTime.UtcNow
+        };
+        // - Order 5: FAILED (2 seats @ 100,000) - must NOT count
+        var order5 = new BookingOrder
+        {
+            OrderCode = "BGP-FIN-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime2.ShowtimeId,
+            Status = OrderStates.Failed,
+            SeatCount = 2,
+            SubtotalVnd = 200000,
+            TotalVnd = 200000,
+            CreatedUtc = DateTime.UtcNow,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
+        };
+        // - Order 6: NEEDS_REVIEW (1 seat @ 100,000) - must NOT count
+        var order6 = new BookingOrder
+        {
+            OrderCode = "BGP-FIN-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            UserId = customerUser.UserId,
+            ShowtimeId = showtime2.ShowtimeId,
+            Status = OrderStates.Review,
+            SeatCount = 1,
+            SubtotalVnd = 100000,
+            TotalVnd = 100000,
+            CreatedUtc = DateTime.UtcNow,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
+        };
+        db.Orders.AddRange(order4, order5, order6);
+        await db.SaveChangesAsync();
+
+        db.OrderSeats.Add(new OrderSeat { OrderId = order4.OrderId, ShowtimeId = showtime2.ShowtimeId, SeatId = room2Seats[0].SeatId, SeatTypeSnapshot = "VIP", UnitPriceVnd = 100000 });
+        db.OrderSeats.Add(new OrderSeat { OrderId = order4.OrderId, ShowtimeId = showtime2.ShowtimeId, SeatId = room2Seats[1].SeatId, SeatTypeSnapshot = "VIP", UnitPriceVnd = 100000 });
+        db.OrderSeats.Add(new OrderSeat { OrderId = order4.OrderId, ShowtimeId = showtime2.ShowtimeId, SeatId = room2Seats[2].SeatId, SeatTypeSnapshot = "VIP", UnitPriceVnd = 100000 });
+
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime2.ShowtimeId, RoomId = room2.RoomId, SeatId = room2Seats[0].SeatId, State = SeatStates.Sold, OwnerOrderId = order4.OrderId });
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime2.ShowtimeId, RoomId = room2.RoomId, SeatId = room2Seats[1].SeatId, State = SeatStates.Sold, OwnerOrderId = order4.OrderId });
+        db.ShowtimeSeats.Add(new ShowtimeSeat { ShowtimeId = showtime2.ShowtimeId, RoomId = room2.RoomId, SeatId = room2Seats[2].SeatId, State = SeatStates.Sold, OwnerOrderId = order4.OrderId });
+
+        var qr3 = new byte[32]; System.Security.Cryptography.RandomNumberGenerator.Fill(qr3);
+        var qr4 = new byte[32]; System.Security.Cryptography.RandomNumberGenerator.Fill(qr4);
+        var qr5 = new byte[32]; System.Security.Cryptography.RandomNumberGenerator.Fill(qr5);
+        db.Tickets.Add(new Ticket { TicketCode = "TKT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), OrderId = order4.OrderId, ShowtimeId = showtime2.ShowtimeId, SeatId = room2Seats[0].SeatId, Status = "ISSUED", QrTokenHash = qr3, QrTokenCipher = new byte[48], QrKeyId = "k1", IssuedUtc = DateTime.UtcNow });
+        db.Tickets.Add(new Ticket { TicketCode = "TKT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), OrderId = order4.OrderId, ShowtimeId = showtime2.ShowtimeId, SeatId = room2Seats[1].SeatId, Status = "ISSUED", QrTokenHash = qr4, QrTokenCipher = new byte[48], QrKeyId = "k1", IssuedUtc = DateTime.UtcNow });
+        db.Tickets.Add(new Ticket { TicketCode = "TKT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), OrderId = order4.OrderId, ShowtimeId = showtime2.ShowtimeId, SeatId = room2Seats[2].SeatId, Status = "ISSUED", QrTokenHash = qr5, QrTokenCipher = new byte[48], QrKeyId = "k1", IssuedUtc = DateTime.UtcNow });
+
+        // Add 2 SUCCESS payment events for Order 4 (simulating idempotent repeat webhook)
+        db.Payments.Add(new Payment { OrderId = order4.OrderId, Provider = "MOCK", AttemptKey = "att-1", ProviderTransactionRef = "tx-1", AmountVnd = 300000, Status = "SUCCESS", CreatedUtc = DateTime.UtcNow, ResolvedUtc = DateTime.UtcNow });
+        db.Payments.Add(new Payment { OrderId = order4.OrderId, Provider = "MOCK", AttemptKey = "att-2", ProviderTransactionRef = "tx-2", AmountVnd = 300000, Status = "SUCCESS", CreatedUtc = DateTime.UtcNow, ResolvedUtc = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        // 5. Independent Mathematical Expectations:
+        // Total Expected Revenue: 150,000 (Order 1) + 300,000 (Order 4) = 450,000 VND
+        // Total Expected Tickets: 2 + 3 = 5 tickets
+        // Total Expected Sellable Capacity: 10 (Room 1) + 20 (Room 2) = 30 seats
+        // Weighted Occupancy Percentage: (5 * 100m) / 30m = 16.67%
+        // Day 1 VN (2026-12-10): 150,000 VND
+        // Day 2 VN (2026-12-11): 300,000 VND
+        var queryService = new ManagementQueryService(db, new SystemClock());
+
+        // A. Combined Date Range (2028-05-10 to 2028-05-11 in VN time)
+        var fromUtcCombined = new DateTime(2028, 5, 10, 0, 0, 0, DateTimeKind.Utc).AddHours(-7);
+        var toUtcCombined = new DateTime(2028, 5, 11, 23, 59, 59, DateTimeKind.Utc).AddHours(-7);
+        var combinedReport = await queryService.GetSalesDashboardAsync(fromUtcCombined, toUtcCombined, null, null);
+
+        Assert.Equal(450000m, combinedReport.TotalRevenueVnd);
+        Assert.Equal(5L, combinedReport.TotalTicketsSold);
+        Assert.Equal(2, combinedReport.TotalShowtimes);
+        Assert.Equal(16.67m, combinedReport.WeightedOccupancyPct);
+
+        var mov1Rev = combinedReport.RevenueByMovie.First(m => m.MovieId == movie1.MovieId);
+        Assert.Equal(150000m, mov1Rev.RevenueVnd);
+        Assert.Equal(2L, mov1Rev.TicketsSold);
+
+        var mov2Rev = combinedReport.RevenueByMovie.First(m => m.MovieId == movie2.MovieId);
+        Assert.Equal(300000m, mov2Rev.RevenueVnd);
+        Assert.Equal(3L, mov2Rev.TicketsSold);
+
+        var rm1Rev = combinedReport.RevenueByRoom.First(r => r.RoomId == room1.RoomId);
+        Assert.Equal(150000m, rm1Rev.RevenueVnd);
+        Assert.Equal(2L, rm1Rev.TicketsSold);
+
+        var rm2Rev = combinedReport.RevenueByRoom.First(r => r.RoomId == room2.RoomId);
+        Assert.Equal(300000m, rm2Rev.RevenueVnd);
+        Assert.Equal(3L, rm2Rev.TicketsSold);
+
+        var day1Entry = combinedReport.RevenueByDay.First(d => d.DateVn == "2028-05-10");
+        Assert.Equal(150000m, day1Entry.RevenueVnd);
+
+        var day2Entry = combinedReport.RevenueByDay.First(d => d.DateVn == "2028-05-11");
+        Assert.Equal(300000m, day2Entry.RevenueVnd);
+
+        // B. Single Date Filter (Day 1 only: 2028-05-10 in VN time)
+        var fromUtcDay1 = new DateTime(2028, 5, 10, 0, 0, 0, DateTimeKind.Utc).AddHours(-7);
+        var toUtcDay1 = new DateTime(2028, 5, 10, 23, 59, 59, DateTimeKind.Utc).AddHours(-7);
+        var day1Report = await queryService.GetSalesDashboardAsync(fromUtcDay1, toUtcDay1, null, null);
+        Assert.Equal(150000m, day1Report.TotalRevenueVnd);
+        Assert.Equal(2L, day1Report.TotalTicketsSold);
+        Assert.Equal(1, day1Report.TotalShowtimes);
+        Assert.Equal(20.00m, day1Report.WeightedOccupancyPct);
+
+        // C. Movie Filter (Movie 2 only)
+        var mov2Report = await queryService.GetSalesDashboardAsync(fromUtcCombined, toUtcCombined, movie2.MovieId, null);
+        Assert.Equal(300000m, mov2Report.TotalRevenueVnd);
+        Assert.Equal(3L, mov2Report.TotalTicketsSold);
+        Assert.Equal(1, mov2Report.TotalShowtimes);
+        Assert.Equal(15.00m, mov2Report.WeightedOccupancyPct);
+
+        // D. Room Filter (Room 1 only)
+        var room1Report = await queryService.GetSalesDashboardAsync(fromUtcCombined, toUtcCombined, null, room1.RoomId);
+        Assert.Equal(150000m, room1Report.TotalRevenueVnd);
+        Assert.Equal(2L, room1Report.TotalTicketsSold);
+        Assert.Equal(1, room1Report.TotalShowtimes);
+        Assert.Equal(20.00m, room1Report.WeightedOccupancyPct);
+    }
+
+    [Fact]
+    public async Task TC_MGMT_29_MovieArchive_ShowtimePublish_Concurrency_PreservesInvariants()
+    {
+        await using var dbSetup = await fixture.CreateDbContextAsync();
+        var managerUser = await dbSetup.Users.FirstAsync(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID");
+        var room = await dbSetup.Rooms.FirstAsync(r => r.RoomId == 1 && r.Status == "ACTIVE");
+
+        // 1. Create a published movie with no showtimes
+        var movie = new Movie
+        {
+            Title = "Concurrency Movie " + Guid.NewGuid().ToString("N")[..6],
+            DurationMin = 90,
+            Status = "PUBLISHED"
+        };
+        dbSetup.Movies.Add(movie);
+        await dbSetup.SaveChangesAsync();
+
+        var seatTypes = await dbSetup.SeatTypes.ToListAsync();
+        var prices = seatTypes.Select(st => new SeatPriceInput(st.SeatTypeCode, 80000)).ToList();
+
+        // 2. Concurrently execute Archive and Publish on two independent DbContext instances
+        await using var dbArchive = await fixture.CreateDbContextAsync();
+        await using var dbPublish = await fixture.CreateDbContextAsync();
+
+        var movieService = new MovieManagementService(dbArchive, new SystemClock());
+        var publishingService = new ShowtimePublishingService(dbPublish, new SystemClock());
+
+        var futureShowtimeUtc = DateTime.UtcNow.AddDays(7);
+
+        Exception? archiveException = null;
+        Exception? publishException = null;
+
+        var taskArchive = Task.Run(async () =>
+        {
+            try
+            {
+                await movieService.ArchiveMovieAsync(managerUser.UserId, movie.MovieId);
+            }
+            catch (Exception ex)
+            {
+                archiveException = ex;
+            }
+        });
+
+        var taskPublish = Task.Run(async () =>
+        {
+            try
+            {
+                await publishingService.PublishAsync(
+                    managerUser.UserId, room.RoomId, movie.MovieId, futureShowtimeUtc, 15, prices);
+            }
+            catch (Exception ex)
+            {
+                publishException = ex;
+            }
+        });
+
+        await Task.WhenAll(taskArchive, taskPublish);
+
+        // 3. Verify Database Invariant via fresh DbContext:
+        await using var dbVerify = await fixture.CreateDbContextAsync();
+        var reloadedMovie = await dbVerify.Movies.SingleAsync(m => m.MovieId == movie.MovieId);
+        var activeShowtimes = await dbVerify.Showtimes
+            .Where(s => s.MovieId == movie.MovieId && s.Status != "CANCELLED" && s.EndUtc > DateTime.UtcNow)
+            .ToListAsync();
+
+        // Strict invariant: Under NO circumstance does an ARCHIVED movie have an ON_SALE future showtime
+        if (reloadedMovie.Status == "ARCHIVED")
+        {
+            Assert.Empty(activeShowtimes);
+            Assert.Null(archiveException);
+            Assert.NotNull(publishException);
+            var bEx = Assert.IsAssignableFrom<BusinessRuleException>(publishException);
+            Assert.Equal("NOT_PUBLISHABLE", bEx.Code);
+        }
+        else
+        {
+            Assert.Equal("PUBLISHED", reloadedMovie.Status);
+            Assert.NotEmpty(activeShowtimes);
+            Assert.Null(publishException);
+            Assert.NotNull(archiveException);
+            var bEx = Assert.IsAssignableFrom<BusinessRuleException>(archiveException);
+            Assert.Equal("CANNOT_ARCHIVE_ACTIVE_SHOWTIMES", bEx.Code);
+        }
+    }
 }
