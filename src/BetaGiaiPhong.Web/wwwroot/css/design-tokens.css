@@ -1,0 +1,121 @@
+/* ==========================================================================
+   Beta Giai Phong Cinema Ticketing System
+   UI-01 / UI-01A: Netflix-Inspired Dark Foundation - Design Tokens
+   ========================================================================== */
+
+:root {
+    /* --- Core Palette (Netflix Reference) --- */
+    --bgp-color-page-bg: #141414;
+    --bgp-color-header-bg: #090909;
+    --bgp-color-surface: #1F1F1F;
+    --bgp-color-surface-elevated: #292929;
+    --bgp-color-surface-hover: #333333;
+    
+    /* --- Brand & Action Color --- */
+    --bgp-color-primary: #E50914;
+    --bgp-color-primary-hover: #B20710;
+    --bgp-color-primary-active: #99060E;
+    --bgp-color-primary-subtle: rgba(229, 9, 20, 0.15);
+    
+    /* --- Text & Content Hierarchy --- */
+    --bgp-color-text-main: #F5F5F1;
+    --bgp-color-text-secondary: #B3B3B3;
+    --bgp-color-text-muted: #808080;
+    --bgp-color-text-inverse: #141414;
+
+    /* --- Borders & Outlines --- */
+    --bgp-color-border-divider: #333333;
+    /* #767676 provides 3.58:1 contrast against #212121 and 3.64:1 against #1F1F1F, exceeding WCAG 1.4.11 >= 3:1 */
+    --bgp-color-border-control: #767676;
+    --bgp-color-border-control-hover: #B3B3B3;
+    --bgp-color-border-focus: #FFFFFF;
+    --bgp-color-focus-ring: #E50914;
+    --bgp-color-focus-ring-outer: rgba(229, 9, 20, 0.45);
+
+    /* --- Semantic Status Colors (Preserved Intent) --- */
+    --bgp-color-success: #46d369;
+    --bgp-color-success-bg: #0d2818;
+    --bgp-color-success-border: #1e5631;
+
+    --bgp-color-warning: #f5c518;
+    --bgp-color-warning-bg: #2d2006;
+    --bgp-color-warning-border: #61440b;
+
+    --bgp-color-danger: #e50914;
+    --bgp-color-danger-bg: #2c0b0e;
+    --bgp-color-danger-border: #63171b;
+
+    --bgp-color-info: #38bdf8;
+    --bgp-color-info-bg: #0c2333;
+    --bgp-color-info-border: #154c6e;
+
+    /* --- Bright Badge Surface Backgrounds --- */
+    --bgp-badge-warning-bg: #ffc107;
+    --bgp-badge-info-bg: #0dcaf0;
+    --bgp-badge-light-bg: #e5e5e1;
+    --bgp-badge-light-border: #cccccc;
+
+    /* --- Seat Map Visual Statuses --- */
+    --bgp-seat-standard-bg: #172554;
+    --bgp-seat-standard-border: #3b82f6;
+    --bgp-seat-standard-text: #93c5fd;
+
+    --bgp-seat-vip-bg: #4a044e;
+    --bgp-seat-vip-border: #d946ef;
+    --bgp-seat-vip-text: #f0abfc;
+
+    --bgp-seat-held-bg: #451a03;
+    --bgp-seat-held-border: #f59e0b;
+    --bgp-seat-held-text: #fcd34d;
+
+    --bgp-seat-sold-bg: #262626;
+    --bgp-seat-sold-border: #383838;
+    --bgp-seat-sold-text: #666666;
+
+    --bgp-seat-blocked-bg: #171717;
+    --bgp-seat-blocked-border: #262626;
+    --bgp-seat-blocked-text: #404040;
+
+    --bgp-seat-selected-bg: #10b981;
+    --bgp-seat-selected-border: #059669;
+    --bgp-seat-selected-text: #ffffff;
+
+    /* --- Typography --- */
+    --bgp-font-family-base: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --bgp-font-family-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --bgp-font-size-base: 1rem;      /* 16px */
+    --bgp-line-height-base: 1.5;
+
+    /* --- Spacing Scale --- */
+    --bgp-space-1: 4px;
+    --bgp-space-2: 8px;
+    --bgp-space-3: 12px;
+    --bgp-space-4: 16px;
+    --bgp-space-5: 24px;
+    --bgp-space-6: 32px;
+    --bgp-space-7: 48px;
+
+    /* --- Border Radii --- */
+    --bgp-radius-sm: 4px;
+    --bgp-radius-md: 6px;
+    --bgp-radius-lg: 8px;
+
+    /* --- Target Sizes & Shell Heights --- */
+    --bgp-target-size-min: 44px;
+    --bgp-header-height-desktop: 70px;
+    --bgp-header-height-mobile: 62px;
+
+    /* --- Motion --- */
+    --bgp-transition-duration: 150ms;
+    --bgp-transition-timing: ease-in-out;
+    --bgp-transition-fast: var(--bgp-transition-duration) var(--bgp-transition-timing);
+
+    /* --- Compatibility Aliases for Existing Code --- */
+    --bgp-primary: var(--bgp-color-primary);
+    --bgp-dark: var(--bgp-color-page-bg);
+    --bgp-gold: var(--bgp-color-warning);
+    --bgp-standard-seat: var(--bgp-seat-standard-border);
+    --bgp-vip-seat: var(--bgp-seat-vip-border);
+    --bgp-held-seat: var(--bgp-seat-held-border);
+    --bgp-sold-seat: var(--bgp-seat-sold-border);
+}
