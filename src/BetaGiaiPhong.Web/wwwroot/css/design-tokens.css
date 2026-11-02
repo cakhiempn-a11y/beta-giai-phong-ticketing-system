@@ -1,6 +1,6 @@
 /* ==========================================================================
    Beta Giai Phong Cinema Ticketing System
-   UI-01: Netflix-Inspired Dark Foundation - Design Tokens
+   UI-01 / UI-01A: Netflix-Inspired Dark Foundation - Design Tokens
    ========================================================================== */
 
 :root {
@@ -25,10 +25,12 @@
 
     /* --- Borders & Outlines --- */
     --bgp-color-border-divider: #333333;
-    --bgp-color-border-control: #444444;
-    --bgp-color-border-control-hover: #666666;
-    --bgp-color-border-focus: #E50914;
-    --bgp-color-focus-ring: rgba(229, 9, 20, 0.35);
+    /* #767676 provides 3.58:1 contrast against #212121 and 3.64:1 against #1F1F1F, exceeding WCAG 1.4.11 >= 3:1 */
+    --bgp-color-border-control: #767676;
+    --bgp-color-border-control-hover: #B3B3B3;
+    --bgp-color-border-focus: #FFFFFF;
+    --bgp-color-focus-ring: #E50914;
+    --bgp-color-focus-ring-outer: rgba(229, 9, 20, 0.45);
 
     /* --- Semantic Status Colors (Preserved Intent) --- */
     --bgp-color-success: #46d369;
@@ -46,6 +48,12 @@
     --bgp-color-info: #38bdf8;
     --bgp-color-info-bg: #0c2333;
     --bgp-color-info-border: #154c6e;
+
+    /* --- Bright Badge Surface Backgrounds --- */
+    --bgp-badge-warning-bg: #ffc107;
+    --bgp-badge-info-bg: #0dcaf0;
+    --bgp-badge-light-bg: #e5e5e1;
+    --bgp-badge-light-border: #cccccc;
 
     /* --- Seat Map Visual Statuses --- */
     --bgp-seat-standard-bg: #172554;
@@ -92,7 +100,8 @@
     --bgp-radius-md: 6px;
     --bgp-radius-lg: 8px;
 
-    /* --- Header Shell Heights --- */
+    /* --- Target Sizes & Shell Heights --- */
+    --bgp-target-size-min: 44px;
     --bgp-header-height-desktop: 70px;
     --bgp-header-height-mobile: 62px;
 

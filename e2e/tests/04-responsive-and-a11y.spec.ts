@@ -131,4 +131,171 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
       await managerSession.context.close();
     }
   });
+
+  test('8.3: UI-01A Dark theme contrast invariants: bright badges, outline buttons, and input boundaries', async ({
+    browser,
+  }) => {
+    const state = loadE2eState();
+    const context = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 1440, height: 900 },
+    });
+    const page = await context.newPage();
+
+    try {
+      // 1. Bright badge contrast on /movies
+      await page.goto('/movies');
+      await page.waitForLoadState('networkidle');
+
+      const badgeColors = await page.evaluate(() => {
+        const warning = document.querySelector('.badge.bg-warning');
+        const info = document.querySelector('.badge.bg-info');
+        const light = document.querySelector('.badge.bg-light');
+        return {
+          warningColor: warning ? window.getComputedStyle(warning).color : null,
+          infoColor: info ? window.getComputedStyle(info).color : null,
+          lightColor: light ? window.getComputedStyle(light).color : null,
+        };
+      });
+
+      // Badges must use dark text rgb(20, 20, 20) (#141414) on bright backgrounds for >= 10:1 AAA contrast
+      if (badgeColors.warningColor) {
+        expect(badgeColors.warningColor).toBe('rgb(20, 20, 20)');
+      }
+      if (badgeColors.infoColor) {
+        expect(badgeColors.infoColor).toBe('rgb(20, 20, 20)');
+      }
+      if (badgeColors.lightColor) {
+        expect(badgeColors.lightColor).toBe('rgb(20, 20, 20)');
+      }
+
+      // 2. Form input boundaries and focus on /account/login
+      await page.goto('/account/login');
+      await page.waitForLoadState('networkidle');
+
+      const inputStyles = await page.evaluate(() => {
+        const input = document.querySelector('input[name="Request.Email"]');
+        if (!input) return null;
+        const style = window.getComputedStyle(input);
+        return {
+          borderColor: style.borderColor,
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+        };
+      });
+
+      expect(inputStyles).not.toBeNull();
+      // Form control border must use #767676 (rgb(118, 118, 118)) for >= 3:1 non-text contrast against dark background
+      expect(inputStyles!.borderColor).toBe('rgb(118, 118, 118)');
+      // Form control text must be readable light text
+      expect(inputStyles!.color).toBe('rgb(245, 245, 241)');
+
+      // 3. Validation typography vs general text-danger
+      await page.click('button[type="submit"]');
+      await page.waitForTimeout(300);
+
+      const valStyles = await page.evaluate(() => {
+        const valMsg = document.querySelector('.field-validation-error, .invalid-feedback');
+        return valMsg ? { fontSize: window.getComputedStyle(valMsg).fontSize, color: window.getComputedStyle(valMsg).color } : null;
+      });
+
+      if (valStyles) {
+        // Validation messages use distinct validation typography (#f87171)
+        expect(valStyles.color).toBe('rgb(248, 113, 113)');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('8.4: UI-01A Strict 320px viewport shell overflow assertion (scrollWidth <= clientWidth)', async ({
+    browser,
+  }) => {
+    const state = loadE2eState();
+    const context = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 320, height: 600 },
+    });
+    const page = await context.newPage();
+
+    try {
+      const routesToCheck = ['/', '/movies', '/account/login', '/home/privacy'];
+      for (const route of routesToCheck) {
+        await page.goto(route);
+        await page.waitForLoadState('networkidle');
+
+        const overflow = await page.evaluate(() => {
+          const docScroll = document.documentElement.scrollWidth;
+          const docClient = document.documentElement.clientWidth;
+          const bodyScroll = document.body.scrollWidth;
+          const bodyClient = document.body.clientWidth;
+          return {
+            docScroll,
+            docClient,
+            bodyScroll,
+            bodyClient,
+            hasDocHorizontalScroll: docScroll > docClient,
+            hasBodyHorizontalScroll: bodyScroll > bodyClient,
+          };
+        });
+
+        expect(
+          overflow.hasDocHorizontalScroll,
+          `Route ${route} at 320px width has document horizontal scroll (scrollWidth=${overflow.docScroll}, clientWidth=${overflow.docClient})`
+        ).toBe(false);
+        expect(
+          overflow.hasBodyHorizontalScroll,
+          `Route ${route} at 320px width has body horizontal scroll (scrollWidth=${overflow.bodyScroll}, clientWidth=${overflow.bodyClient})`
+        ).toBe(false);
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('8.5: UI-01A Operational role navigation in mobile viewports', async ({ browser }) => {
+    const state = loadE2eState();
+    const staffContext = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 390, height: 844 },
+    });
+    const staffPage = await staffContext.newPage();
+
+    const mgrContext = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 390, height: 844 },
+    });
+    const mgrPage = await mgrContext.newPage();
+
+    try {
+      // Staff on mobile
+      await loginInBrowser(staffPage, 'staff@demo.invalid', state.demoPassword);
+      await staffPage.goto('/');
+      await staffPage.waitForLoadState('networkidle');
+
+      const staffToggler = staffPage.locator('.navbar-toggler');
+      await expect(staffToggler).toBeVisible();
+      await staffToggler.click();
+      await staffPage.waitForTimeout(400);
+
+      // Staff must see CheckIn links in mobile menu
+      await expect(staffPage.locator('nav a[href*="/staff/check-in"]').first()).toBeVisible();
+
+      // Manager on mobile
+      await loginInBrowser(mgrPage, 'manager@demo.invalid', state.demoPassword);
+      await mgrPage.goto('/');
+      await mgrPage.waitForLoadState('networkidle');
+
+      const mgrToggler = mgrPage.locator('.navbar-toggler');
+      await expect(mgrToggler).toBeVisible();
+      await mgrToggler.click();
+      await mgrPage.waitForTimeout(400);
+
+      // Manager must see Vận hành dropdown in mobile menu
+      await expect(mgrPage.locator('nav #managementDropdown')).toBeVisible();
+    } finally {
+      await staffContext.close();
+      await mgrContext.close();
+    }
+  });
 });

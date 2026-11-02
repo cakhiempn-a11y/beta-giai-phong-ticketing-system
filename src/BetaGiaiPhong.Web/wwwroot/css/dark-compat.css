@@ -1,6 +1,6 @@
 /* ==========================================================================
    Beta Giai Phong Cinema Ticketing System
-   UI-01: Dark Theme Compatibility & Component Overrides
+   UI-01 / UI-01A: Dark Theme Compatibility & Component Overrides
    ========================================================================== */
 
 /* --- Typography & Headings --- */
@@ -25,13 +25,50 @@ hr {
 }
 
 /* --- Bootstrap Text Helpers Adaptation --- */
-body.bgp-app-shell .text-dark {
+/* Standalone .text-dark elements on dark backgrounds adapt to main light text */
+body.bgp-app-shell .text-dark:not(.badge):not(.btn):not(.alert):not([class*="bg-warning"]):not([class*="bg-info"]):not([class*="bg-light"]) {
     color: var(--bgp-color-text-main) !important;
 }
 
 body.bgp-app-shell .text-muted,
 body.bgp-app-shell .text-secondary {
     color: var(--bgp-color-text-secondary) !important;
+}
+
+/* --- Semantic Badges with Light Backgrounds (Fix A: Retain Dark Text for Contrast) --- */
+/* On bright yellow, cyan, and light badges, text MUST remain dark (#141414) for WCAG AAA (>= 7:1) contrast */
+.badge.bg-warning,
+.badge.bg-warning.text-dark,
+.badge.bg-info,
+.badge.bg-info.text-dark,
+.badge.bg-light,
+.badge.bg-light.text-dark,
+.bg-warning.text-dark,
+.bg-info.text-dark,
+.bg-light.text-dark,
+span.badge[class*="bg-warning"],
+span.badge[class*="bg-info"],
+span.badge[class*="bg-light"] {
+    color: var(--bgp-color-text-inverse, #141414) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--bgp-badge-warning-bg, #ffc107) !important;
+}
+
+.badge.bg-info {
+    background-color: var(--bgp-badge-info-bg, #0dcaf0) !important;
+}
+
+.badge.bg-light {
+    background-color: var(--bgp-badge-light-bg, #e5e5e1) !important;
+    border: 1px solid var(--bgp-badge-light-border, #cccccc) !important;
+}
+
+.badge.bg-dark {
+    background-color: #212121 !important;
+    color: var(--bgp-color-text-main) !important;
+    border: 1px solid var(--bgp-color-border-divider);
 }
 
 /* --- Cards & Panels --- */
@@ -117,22 +154,36 @@ body.bgp-app-shell .text-secondary {
     background-color: var(--bgp-color-surface);
 }
 
-/* --- Form Controls & Inputs --- */
+/* --- Form Controls & Inputs (Fix B: Boundary >= 3:1 & Two-Layer Visible Focus) --- */
 .form-control,
 .form-select {
     background-color: #212121 !important;
-    border: 1px solid var(--bgp-color-border-control) !important;
+    border: 1px solid var(--bgp-color-border-control, #767676) !important;
     color: var(--bgp-color-text-main) !important;
     border-radius: var(--bgp-radius-sm) !important;
     min-height: 38px;
     transition: border-color var(--bgp-transition-fast), box-shadow var(--bgp-transition-fast);
 }
 
+.form-select {
+    /* Custom light dropdown chevron arrow for dark theme */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f5f5f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+}
+
+.form-control:hover,
+.form-select:hover {
+    border-color: var(--bgp-color-border-control-hover, #B3B3B3) !important;
+}
+
 .form-control:focus,
 .form-select:focus {
     background-color: #262626 !important;
-    border-color: var(--bgp-color-border-focus) !important;
-    box-shadow: 0 0 0 3px var(--bgp-color-focus-ring) !important;
+    border-color: #ffffff !important;
+    /* Two-layer high contrast focus ring: white border + Netflix red outer ring */
+    box-shadow: 0 0 0 2px var(--bgp-color-primary, #E50914), 0 0 0 4px var(--bgp-color-focus-ring-outer, rgba(229, 9, 20, 0.45)) !important;
     color: #ffffff !important;
     outline: none;
 }
@@ -145,9 +196,10 @@ body.bgp-app-shell .text-secondary {
 .form-control:disabled,
 .form-select:disabled {
     background-color: #171717 !important;
-    border-color: #2b2b2b !important;
+    border-color: #383838 !important;
     color: #666666 !important;
-    opacity: 0.7;
+    opacity: 0.65;
+    cursor: not-allowed;
 }
 
 .form-label {
@@ -163,7 +215,7 @@ body.bgp-app-shell .text-secondary {
 
 .form-check-input {
     background-color: #212121;
-    border: 1px solid var(--bgp-color-border-control);
+    border: 1px solid var(--bgp-color-border-control, #767676);
     border-radius: 4px;
 }
 
@@ -173,25 +225,34 @@ body.bgp-app-shell .text-secondary {
 }
 
 .form-check-input:focus {
-    box-shadow: 0 0 0 2px var(--bgp-color-focus-ring);
-    border-color: var(--bgp-color-border-focus);
+    outline: none;
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px var(--bgp-color-primary, #E50914), 0 0 0 4px var(--bgp-color-focus-ring-outer, rgba(229, 9, 20, 0.45));
 }
 
 .form-check-label {
     color: var(--bgp-color-text-secondary);
 }
 
-/* Validation Feedback */
+/* --- Validation Feedback Typography (Fix C: Scoped strictly to validation messages) --- */
 .field-validation-error,
-.text-danger {
+.validation-summary-errors,
+.invalid-feedback {
     color: #f87171 !important;
     font-size: 0.825rem;
     font-weight: 500;
+    margin-top: 0.25rem;
+    display: block;
 }
 
 .input-validation-error {
     border-color: #ef4444 !important;
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Semantic utility color for danger text - only sets color, preserves existing typography */
+.text-danger {
+    color: #f87171 !important;
 }
 
 /* --- Buttons --- */
@@ -219,35 +280,58 @@ body.bgp-app-shell .text-secondary {
     border-color: var(--bgp-color-primary-active) !important;
 }
 
+/* Fix B: btn-outline-primary uses crisp light text at default, red border, and solid red on hover */
 .btn-outline-primary {
-    color: var(--bgp-color-primary) !important;
-    border-color: var(--bgp-color-primary) !important;
+    color: var(--bgp-color-text-main, #F5F5F1) !important;
+    border: 1px solid var(--bgp-color-primary, #E50914) !important;
     background-color: transparent !important;
 }
 
-.btn-outline-primary:hover,
-.btn-outline-primary:focus-visible {
-    background-color: var(--bgp-color-primary) !important;
-    border-color: var(--bgp-color-primary) !important;
+.btn-outline-primary:hover {
+    background-color: var(--bgp-color-primary, #E50914) !important;
+    border-color: var(--bgp-color-primary, #E50914) !important;
     color: #ffffff !important;
+}
+
+.btn-outline-primary:focus-visible {
+    background-color: var(--bgp-color-primary, #E50914) !important;
+    border-color: var(--bgp-color-primary, #E50914) !important;
+    color: #ffffff !important;
+    outline: 2px solid #ffffff !important;
+    outline-offset: 2px;
+}
+
+.btn-outline-primary:active {
+    background-color: var(--bgp-color-primary-active, #99060E) !important;
+    border-color: var(--bgp-color-primary-active, #99060E) !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-primary:disabled,
+.btn-outline-primary.disabled {
+    opacity: 0.5 !important;
+    color: var(--bgp-color-text-muted, #808080) !important;
+    border-color: var(--bgp-color-border-control, #767676) !important;
+    pointer-events: none;
+    background-color: transparent !important;
 }
 
 .btn-outline-secondary {
     color: var(--bgp-color-text-secondary) !important;
-    border-color: var(--bgp-color-border-control) !important;
+    border-color: var(--bgp-color-border-control, #767676) !important;
     background-color: transparent !important;
 }
 
 .btn-outline-secondary:hover,
 .btn-outline-secondary:focus-visible {
     background-color: var(--bgp-color-surface-elevated) !important;
-    border-color: var(--bgp-color-border-control-hover) !important;
+    border-color: var(--bgp-color-border-control-hover, #B3B3B3) !important;
     color: var(--bgp-color-text-main) !important;
 }
 
 .btn-outline-light {
     color: var(--bgp-color-text-main) !important;
-    border-color: var(--bgp-color-border-control) !important;
+    border-color: var(--bgp-color-border-control, #767676) !important;
     background-color: transparent !important;
 }
 
@@ -260,14 +344,14 @@ body.bgp-app-shell .text-secondary {
 
 .btn-secondary {
     background-color: var(--bgp-color-surface-elevated) !important;
-    border-color: var(--bgp-color-border-control) !important;
+    border-color: var(--bgp-color-border-control, #767676) !important;
     color: var(--bgp-color-text-main) !important;
 }
 
 .btn-secondary:hover,
 .btn-secondary:focus-visible {
     background-color: var(--bgp-color-surface-hover) !important;
-    border-color: var(--bgp-color-border-control-hover) !important;
+    border-color: var(--bgp-color-border-control-hover, #B3B3B3) !important;
     color: #ffffff !important;
 }
 
@@ -316,22 +400,10 @@ body.bgp-app-shell .text-secondary {
     filter: invert(1) grayscale(100%) brightness(200%);
 }
 
-/* --- Badges --- */
+/* --- Badges Base --- */
 .badge {
     border-radius: var(--bgp-radius-sm);
     font-weight: 600;
-}
-
-.badge.bg-light {
-    background-color: var(--bgp-color-surface-elevated) !important;
-    color: var(--bgp-color-text-main) !important;
-    border: 1px solid var(--bgp-color-border-divider);
-}
-
-.badge.bg-dark {
-    background-color: #212121 !important;
-    color: var(--bgp-color-text-main) !important;
-    border: 1px solid var(--bgp-color-border-divider);
 }
 
 /* --- Breadcrumbs --- */
@@ -370,7 +442,7 @@ body.bgp-app-shell .text-secondary {
 
 .pagination .page-link:hover {
     background-color: var(--bgp-color-surface-elevated);
-    border-color: var(--bgp-color-border-control);
+    border-color: var(--bgp-color-border-control, #767676);
     color: var(--bgp-color-text-main);
 }
 

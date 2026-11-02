@@ -289,11 +289,13 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       // -----------------------------------------------------------------------
       // Scan Ticket A while Staff selected Showtime B -> WRONG_SHOWTIME ("SAI SUẤT CHIẾU")
       await staffPage.goto(`/staff/check-in?showtimeId=${showtimeBId}`);
+      await staffPage.waitForLoadState('networkidle');
       await staffPage.locator('#qrFileInput').setInputFiles(qrPathA);
       await expect(staffPage.locator('#scanStatusBadge')).toHaveText('SAI SUẤT CHIẾU', { timeout: 15_000 });
 
       // Scan Ticket B while Staff selected Showtime B (starts in 240m -> outside window) -> OUTSIDE_WINDOW ("NGOÀI GIỜ SOÁT VÉ")
       await staffPage.goto(`/staff/check-in?showtimeId=${showtimeBId}`);
+      await staffPage.waitForLoadState('networkidle');
       await staffPage.locator('#qrFileInput').setInputFiles(qrPathB);
       await expect(staffPage.locator('#scanStatusBadge')).toHaveText('NGOÀI GIỜ SOÁT VÉ', { timeout: 15_000 });
 

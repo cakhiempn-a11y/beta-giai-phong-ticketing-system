@@ -149,7 +149,7 @@ body.bgp-app-shell {
     font-size: 0.9rem;
     font-weight: 500;
     padding: 0.6rem 1rem;
-    min-height: 40px;
+    min-height: var(--bgp-target-size-min, 44px);
     display: flex;
     align-items: center;
     transition: background-color var(--bgp-transition-fast), color var(--bgp-transition-fast);

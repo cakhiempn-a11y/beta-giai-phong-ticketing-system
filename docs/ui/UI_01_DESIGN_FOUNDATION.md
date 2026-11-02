@@ -108,13 +108,13 @@
 
 | STT | Tệp tin | Trạng thái | Mục đích & Nội dung thay đổi |
 |:---:|---|:---:|---|
-| 1 | [`src/BetaGiaiPhong.Web/wwwroot/css/design-tokens.css`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/wwwroot/css/design-tokens.css) | **Tạo mới** | Định nghĩa toàn bộ hệ thống token màu nền, bề mặt, chữ, đường viền, trạng thái, thang đo khoảng cách, typography và bán kính bo góc chuẩn Netflix. Ánh xạ tương thích ngược các biến `--bgp-*`. |
-| 2 | [`src/BetaGiaiPhong.Web/wwwroot/css/app-shell.css`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/wwwroot/css/app-shell.css) | **Tạo mới** | Thiết kế khung giao diện shell: skip link bàn phím, header/navbar, thương hiệu Beta Giải Phóng, active indicator, dropdown menu, mobile navigation collapse, footer và hỗ trợ `prefers-reduced-motion`. |
-| 3 | [`src/BetaGiaiPhong.Web/wwwroot/css/dark-compat.css`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/wwwroot/css/dark-compat.css) | **Tạo mới** | Cấu hình tương thích nền tối toàn diện cho các thành phần Bootstrap có sẵn: cards, card-headers, tables, form inputs, buttons, alerts, badges, breadcrumbs, modals, pagination, ma trận ghế rạp chiếu và bảo vệ nền trắng mã QR. |
-| 4 | [`src/BetaGiaiPhong.Web/wwwroot/css/site.css`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/wwwroot/css/site.css) | **Cập nhật** | Chuyển đổi các biến CSS sang design tokens, loại bỏ màu nền/chữ trắng cưỡng bức, tinh chỉnh màu sắc sơ đồ ghế tương phản trên nền tối. |
-| 5 | [`src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml) | **Cập nhật** | Thêm skip link trợ năng `#main-content`, liên kết bộ 3 file CSS mới, tích hợp logic active state theo controller/action và `aria-current="page"`, làm gọn menu tài khoản, loại bỏ badge chói mắt trên nav, cập nhật footer không còn tech stack. |
-| 6 | [`src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml.css`](file:///d:/Projects/BetaGiaiPhong/src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml.css) | **Cập nhật** | Dọn sạch các class Bootstrap mặc định màu xanh dương cũ để tránh xung đột scoping trong tương lai. |
-| 7 | [`e2e/tools/capture-ui.ts`](file:///d:/Projects/BetaGiaiPhong/e2e/tools/capture-ui.ts) | **Tạo mới** | Script tự động khởi động máy chủ Kestrel và cơ sở dữ liệu tạm thời để chụp ảnh bằng chứng nghiệm thu giao diện (Desktop, Mobile, Tablet, 320px). |
+| 1 | [`src/BetaGiaiPhong.Web/wwwroot/css/design-tokens.css`](../../src/BetaGiaiPhong.Web/wwwroot/css/design-tokens.css) | **Tạo mới** | Định nghĩa toàn bộ hệ thống token màu nền, bề mặt, chữ, đường viền, trạng thái, thang đo khoảng cách, typography và bán kính bo góc chuẩn Netflix. Ánh xạ tương thích ngược các biến `--bgp-*`. |
+| 2 | [`src/BetaGiaiPhong.Web/wwwroot/css/app-shell.css`](../../src/BetaGiaiPhong.Web/wwwroot/css/app-shell.css) | **Tạo mới** | Thiết kế khung giao diện shell: skip link bàn phím, header/navbar, thương hiệu Beta Giải Phóng, active indicator, dropdown menu, mobile navigation collapse, footer và hỗ trợ `prefers-reduced-motion`. |
+| 3 | [`src/BetaGiaiPhong.Web/wwwroot/css/dark-compat.css`](../../src/BetaGiaiPhong.Web/wwwroot/css/dark-compat.css) | **Tạo mới** | Cấu hình tương thích nền tối toàn diện cho các thành phần Bootstrap có sẵn: cards, card-headers, tables, form inputs, buttons, alerts, badges, breadcrumbs, modals, pagination, ma trận ghế rạp chiếu và bảo vệ nền trắng mã QR. |
+| 4 | [`src/BetaGiaiPhong.Web/wwwroot/css/site.css`](../../src/BetaGiaiPhong.Web/wwwroot/css/site.css) | **Cập nhật** | Chuyển đổi các biến CSS sang design tokens, loại bỏ màu nền/chữ trắng cưỡng bức, tinh chỉnh màu sắc sơ đồ ghế tương phản trên nền tối. |
+| 5 | [`src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml`](../../src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml) | **Cập nhật** | Thêm skip link trợ năng `#main-content`, liên kết bộ 3 file CSS mới, tích hợp logic active state theo controller/action và `aria-current="page"`, làm gọn menu tài khoản, loại bỏ badge chói mắt trên nav, cập nhật footer không còn tech stack. |
+| 6 | [`src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml.css`](../../src/BetaGiaiPhong.Web/Views/Shared/_Layout.cshtml.css) | **Cập nhật** | Dọn sạch các class Bootstrap mặc định màu xanh dương cũ để tránh xung đột scoping trong tương lai. |
+| 7 | [`e2e/tools/capture-ui.ts`](../../e2e/tools/capture-ui.ts) | **Tạo mới** | Script tự động khởi động máy chủ Kestrel và cơ sở dữ liệu tạm thời để chụp ảnh bằng chứng nghiệm thu giao diện (Desktop, Mobile, Tablet, 320px). |
 
 ---
 
@@ -130,50 +130,51 @@ Toàn bộ các cổng chất lượng đã được chạy thành công trên m
 | **4. Playwright Chromium E2E (5 Suites)** | `cd e2e; npx playwright test --retries=0` | **PASS** | **`5 / 5 Suites PASS`** (thời gian: 1.9m):<br/>- `01-full-journey.spec.ts`: PASS<br/>- `02-negative-and-security.spec.ts`: PASS<br/>- `03-restart-recovery.spec.ts`: PASS<br/>- `04-responsive-and-a11y.spec.ts`: PASS<br/>- `05-performance-load.spec.ts`: PASS |
 | **5. SQL Server Data Integrity Gate** | `BetaGiaiPhong.Runner verify` | **PASS** | **`9 / 9 nhóm bất biến đạt 0 vi phạm`**, CSDL kiểm thử tạm thời được giải phóng an toàn. |
 | **6. Kiểm tra Viewport 320px** | Chạy Playwright kiểm tra `scrollWidth` | **PASS** | `scrollWidth: 320` $\rightarrow$ **0 tràn ngang**, shell hoàn toàn co giãn tốt trên màn hình siêu hẹp. |
-| **7. Độ tương phản chữ (WCAG Contrast)** | Tính toán tỷ lệ tương phản phòng thí nghiệm | **PASS** | - `#F5F5F1` trên `#141414`: **`17.4:1`** (vượt xa chuẩn AAA 7:1)<br/>- `#B3B3B3` trên `#141414`: **`7.8:1`** (vượt chuẩn AA 4.5:1)<br/>- `#FFFFFF` trên `#E50914`: **`4.6:1`** (đạt chuẩn AA 4.5:1) |
+| **7. Độ tương phản chữ & điều khiển (WCAG Contrast)** | Tính toán tỷ lệ tương phản phòng thí nghiệm & computed styles | **PASS** | - `#F5F5F1` trên `#141414`: **`17.4:1`** (chuẩn AAA 7:1)<br/>- `#B3B3B3` trên `#141414`: **`7.8:1`** (chuẩn AA 4.5:1)<br/>- `#FFFFFF` trên `#E50914`: **`4.6:1`** (chuẩn AA 4.5:1)<br/>- *UI-01A Bright badges:* `#141414` trên `#FFC107` / `#0DCAF0`: **`10.3:1 – 10.9:1`** (chuẩn AAA)<br/>- *UI-01A Outline buttons:* Chữ `#F5F5F1` trên nền tối: **`14.8:1`** (chuẩn AAA)<br/>- *UI-01A Input borders:* `#767676` trên nền input `#212121`: **`3.58:1`** (vượt chuẩn non-text 1.4.11 $\ge 3:1$) |
 
 ---
 
 ## 7. Bằng Chứng Hình Ảnh Nghiệm Thu (Trước / Sau)
 
 Toàn bộ ảnh chụp bằng Playwright đã được lưu trữ trong thư mục:
-- Baseline (giao diện cũ nền sáng): [`docs/ui/screenshots/baseline/`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/baseline/)
-- UI-01 (giao diện mới nền tối Netflix): [`docs/ui/screenshots/ui-01/`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/)
+- Baseline (giao diện cũ nền sáng): [`docs/ui/screenshots/baseline/`](screenshots/baseline/)
+- UI-01 (giao diện mới nền tối Netflix): [`docs/ui/screenshots/ui-01/`](screenshots/ui-01/)
+- UI-01A (ảnh kiểm chứng bổ sung và các bản sửa tập trung): [`docs/ui/screenshots/ui-01a/`](screenshots/ui-01a/)
 
 ### 7.1. Trang chủ Khách vãng lai (Desktop 1440 × 900)
 - **Trước (Baseline):** Header đen thô, thân trang nền xám nhạt `bg-light`, thẻ phim viền xanh dương mặc định Bootstrap.
 - **Sau (UI-01):** Nền tối `#141414`, thương hiệu BETA đỏ nổi bật, thanh menu gọn với chỉ báo active đỏ tinh tế, nút CTA đỏ Netflix, thẻ hero nâng tông `#1F1F1F`.
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/01-guest-home-desktop.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/01-guest-home-desktop.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/01-guest-home-desktop.png`](screenshots/ui-01/01-guest-home-desktop.png)
 
 ### 7.2. Trang chủ Khách vãng lai (Mobile 390 × 844 & Narrow 320px)
 - **Trước (Baseline):** Khung cuộn chật chội, nút toggler mờ nhạt.
 - **Sau (UI-01):** Toggler viền rõ ràng có focus ring, bố cục responsive không tràn viền (`scrollWidth = 320px`).
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/02-guest-home-mobile.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/02-guest-home-mobile.png) & [`docs/ui/screenshots/ui-01/08-narrow-320px.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/08-narrow-320px.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/02-guest-home-mobile.png`](screenshots/ui-01/02-guest-home-mobile.png) & [`docs/ui/screenshots/ui-01/08-narrow-320px.png`](screenshots/ui-01/08-narrow-320px.png)
 
 ### 7.3. Menu Mobile Đang Mở (Mobile 390 × 844)
 - **Trước (Baseline):** Nền trắng hoặc xám không đồng nhất, không có chỉ báo mục đang chọn.
 - **Sau (UI-01):** Menu nền đen `#090909`, mục "Trang chủ" active có viền đỏ bên trái, vùng chạm mỗi mục $\ge 44$ px, nút Đăng nhập đỏ nổi bật.
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/03-mobile-menu-open.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/03-mobile-menu-open.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/03-mobile-menu-open.png`](screenshots/ui-01/03-mobile-menu-open.png)
 
 ### 7.4. Trang Khách hàng — Đơn hàng của tôi (`/orders`)
 - **Trước (Baseline):** Nền sáng, bảng trắng nhạt, menu góc phải bị lặp lại các liên kết quản trị.
 - **Sau (UI-01):** Nền tối sang trọng, Breadcrumb rõ nét, thẻ trống (empty state) nền `#1F1F1F`, pill tài khoản khách hàng hiển thị gọn gàng chống tràn tên dài.
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/04-customer-orders.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/04-customer-orders.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/04-customer-orders.png`](screenshots/ui-01/04-customer-orders.png)
 
 ### 7.5. Trang Nhân viên — Soát vé QR (`/staff/check-in`)
 - **Trước (Baseline):** Thẻ trắng chói mắt, khung camera và bảng kết quả tương phản kém.
 - **Sau (UI-01):** Giao diện tập trung tối đa cho quầy soát vé; thẻ lệnh nền `#1F1F1F`, cảnh báo suất chiếu nền `#2d2006` chữ vàng rõ nét; khung quét camera và vùng tải ảnh giữ nguyên vẹn 100% ID và chức năng.
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/05-staff-checkin.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/05-staff-checkin.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/05-staff-checkin.png`](screenshots/ui-01/05-staff-checkin.png)
 
 ### 7.6. Trang Quản lý — Danh mục Phim (`/management/movies`)
 - **Trước (Baseline):** Bảng quản trị Bootstrap trắng sáng truyền thống.
 - **Sau (UI-01):** Trình bày dạng bảng tối chuyên nghiệp; form tìm kiếm input nền `#212121`, nút lọc đỏ, hàng bảng hover sáng dịu, trạng thái `PUBLISHED` xanh lá rõ nét.
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/06-manager-movies.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/06-manager-movies.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/06-manager-movies.png`](screenshots/ui-01/06-manager-movies.png)
 
 ### 7.7. Trang Quản lý — Báo cáo & Doanh thu (`/management/reports`)
 - **Trước (Baseline):** Dashboard trắng, các chỉ số KPI doanh thu thiếu điểm nhấn.
 - **Sau (UI-01):** Khối thẻ KPI nổi bật trên nền `#1F1F1F`; các bảng doanh thu theo phim, phòng chiếu và ngày chiếu dễ đọc, không còn chữ đen trên nền đen hay chữ trắng trên nền trắng.
-- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/07-manager-reports.png`](file:///d:/Projects/BetaGiaiPhong/docs/ui/screenshots/ui-01/07-manager-reports.png)
+- *Tệp ảnh:* [`docs/ui/screenshots/ui-01/07-manager-reports.png`](screenshots/ui-01/07-manager-reports.png)
 
 ---
 
