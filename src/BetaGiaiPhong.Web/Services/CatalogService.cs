@@ -45,7 +45,10 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
                 m.DurationMin,
                 m.GenreText,
                 m.Status,
-                m.Showtimes.Count(s => s.Status == "ON_SALE" && s.StartUtc > now)
+                m.Showtimes.Count(s => s.Status == "ON_SALE" && s.StartUtc > now),
+                m.AgeLabel,
+                m.Synopsis,
+                m.PosterUrl
             ))
             .ToListAsync(ct);
 
@@ -65,6 +68,9 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
                 m.DurationMin,
                 m.GenreText,
                 m.Status,
+                m.AgeLabel,
+                m.Synopsis,
+                m.PosterUrl,
                 Showtimes = m.Showtimes
                     .Where(s => s.Status == "ON_SALE" && s.StartUtc > now)
                     .OrderBy(s => s.StartUtc)
@@ -112,7 +118,10 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             movie.DurationMin,
             movie.GenreText,
             movie.Status,
-            showtimeDtos
+            showtimeDtos,
+            movie.AgeLabel,
+            movie.Synopsis,
+            movie.PosterUrl
         );
     }
 

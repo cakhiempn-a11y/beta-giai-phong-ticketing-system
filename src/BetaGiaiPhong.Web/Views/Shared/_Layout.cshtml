@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="~/css/app-shell.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dark-compat.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bgp-app-shell">
     <a href="#main-content" class="bgp-skip-link">Chuyển đến nội dung chính</a>

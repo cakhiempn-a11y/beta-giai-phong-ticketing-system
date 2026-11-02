@@ -1,0 +1,425 @@
+/* ==========================================================================
+   Beta Giai Phong Cinema Ticketing System
+   UI-02A: Cinematic Homepage & Movie Artwork (Netflix-Inspired Discovery)
+   ========================================================================== */
+
+/* --- Page Root & Structure --- */
+.bgp-home {
+    background-color: var(--bgp-color-page-bg, #141414);
+    color: var(--bgp-color-text-main, #F5F5F1);
+}
+
+/* --- Hero Section --- */
+.bgp-home-hero {
+    position: relative;
+    width: 100%;
+    min-height: 520px;
+    background-color: var(--bgp-color-header-bg, #090909);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+@media (min-width: 992px) {
+    .bgp-home-hero {
+        min-height: 560px;
+        max-height: 640px;
+    }
+}
+
+.bgp-hero-backdrop {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center right;
+    background-repeat: no-repeat;
+    z-index: 1;
+}
+
+.bgp-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #141414 0%, rgba(20, 20, 20, 0.92) 42%, rgba(20, 20, 20, 0.4) 75%, rgba(20, 20, 20, 0.15) 100%),
+                linear-gradient(180deg, rgba(9, 9, 9, 0.4) 0%, transparent 40%, #141414 100%);
+    pointer-events: none;
+}
+
+@media (max-width: 767.98px) {
+    .bgp-hero-overlay {
+        background: linear-gradient(180deg, rgba(20, 20, 20, 0.75) 0%, rgba(20, 20, 20, 0.92) 50%, #141414 100%);
+    }
+}
+
+.bgp-hero-container {
+    position: relative;
+    z-index: 2;
+    padding-top: var(--bgp-space-5, 24px);
+    padding-bottom: var(--bgp-space-5, 24px);
+}
+
+.bgp-hero-content {
+    max-width: 560px;
+}
+
+.bgp-hero-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+}
+
+.bgp-hero-badge-live {
+    background-color: var(--bgp-color-primary, #E50914);
+    color: #ffffff;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--bgp-radius-sm, 4px);
+    letter-spacing: 1px;
+}
+
+.bgp-hero-title {
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    word-break: break-word;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+.bgp-hero-meta {
+    font-size: 0.9rem;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+}
+
+.bgp-hero-synopsis {
+    font-size: 1rem;
+    line-height: 1.55;
+    color: rgba(245, 245, 241, 0.9);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 520px;
+}
+
+.bgp-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bgp-space-3, 12px);
+}
+
+.bgp-hero-poster-frame {
+    width: 240px;
+    height: 360px;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--bgp-radius-lg, 8px);
+    overflow: hidden;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    background-color: var(--bgp-color-surface, #1F1F1F);
+}
+
+@media (min-width: 1200px) {
+    .bgp-hero-poster-frame {
+        width: 270px;
+        height: 405px;
+    }
+}
+
+.bgp-hero-poster-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* --- Movie Rail Section --- */
+.bgp-movie-rail-section {
+    position: relative;
+    margin-top: var(--bgp-space-5, 24px);
+    margin-bottom: var(--bgp-space-6, 32px);
+}
+
+.bgp-rail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: var(--bgp-space-3, 12px);
+}
+
+.bgp-rail-title {
+    color: var(--bgp-color-text-main, #F5F5F1);
+    letter-spacing: -0.01em;
+}
+
+.bgp-rail-wrapper {
+    position: relative;
+}
+
+.bgp-movie-rail {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px 4px 18px 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #444444 transparent;
+}
+
+.bgp-movie-rail::-webkit-scrollbar {
+    height: 6px;
+}
+
+.bgp-movie-rail::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.bgp-movie-rail::-webkit-scrollbar-thumb {
+    background: #444444;
+    border-radius: 4px;
+}
+
+.bgp-movie-rail::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+}
+
+/* --- Movie Card in Rail --- */
+.bgp-movie-card {
+    flex: 0 0 210px;
+    width: 210px;
+    scroll-snap-align: start;
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--bgp-radius-md, 6px);
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    outline: none;
+    transition: transform var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+@media (max-width: 576px) {
+    .bgp-movie-card {
+        flex: 0 0 148px;
+        width: 148px;
+    }
+}
+
+.bgp-movie-card:hover {
+    transform: translateY(-4px);
+    text-decoration: none;
+    color: inherit;
+}
+
+.bgp-movie-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 5px var(--bgp-color-primary, #E50914);
+    border-radius: var(--bgp-radius-md, 6px);
+    transform: translateY(-2px);
+}
+
+.bgp-card-poster-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--bgp-radius-md, 6px);
+    overflow: hidden;
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--bgp-color-border-divider, #333333);
+}
+
+.bgp-card-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: filter var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+.bgp-movie-card:hover .bgp-card-poster {
+    filter: brightness(1.08);
+}
+
+.bgp-card-badge-age {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background-color: rgba(20, 20, 20, 0.88);
+    color: var(--bgp-color-text-main, #F5F5F1);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+}
+
+.bgp-card-badge-showtimes {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background-color: rgba(13, 40, 24, 0.92);
+    color: var(--bgp-color-success, #46d369);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid rgba(70, 211, 105, 0.35);
+    backdrop-filter: blur(4px);
+}
+
+.bgp-card-info {
+    padding: 10px 2px 4px 2px;
+}
+
+.bgp-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bgp-card-meta {
+    font-size: 0.825rem;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bgp-meta-sep {
+    opacity: 0.5;
+}
+
+/* --- Rail Navigation Arrow Buttons --- */
+.bgp-rail-btn {
+    position: absolute;
+    top: 42%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: rgba(20, 20, 20, 0.88);
+    color: var(--bgp-color-text-main, #F5F5F1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    transition: background-color var(--bgp-transition-fast), color var(--bgp-transition-fast), opacity var(--bgp-transition-fast);
+    backdrop-filter: blur(4px);
+}
+
+.bgp-rail-btn:hover:not(:disabled) {
+    background-color: var(--bgp-color-primary, #E50914);
+    color: #ffffff;
+    border-color: var(--bgp-color-primary, #E50914);
+}
+
+.bgp-rail-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 5px var(--bgp-color-primary, #E50914);
+}
+
+.bgp-rail-btn:disabled {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.bgp-rail-btn-prev {
+    left: -12px;
+}
+
+.bgp-rail-btn-next {
+    right: -12px;
+}
+
+@media (max-width: 768px) {
+    .bgp-rail-btn {
+        display: none !important;
+    }
+}
+
+/* --- Upcoming Showtimes Section --- */
+.bgp-upcoming-section {
+    margin-top: var(--bgp-space-6, 32px);
+    margin-bottom: var(--bgp-space-7, 48px);
+}
+
+.bgp-upcoming-card {
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px solid var(--bgp-color-border-divider, #333333);
+    border-radius: var(--bgp-radius-lg, 8px);
+    overflow: hidden;
+}
+
+.bgp-upcoming-table {
+    margin-bottom: 0;
+    color: var(--bgp-color-text-main, #F5F5F1);
+}
+
+.bgp-upcoming-table th {
+    background-color: var(--bgp-color-surface-elevated, #292929);
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--bgp-color-border-divider, #333333);
+    padding: 12px 16px;
+}
+
+.bgp-upcoming-table td {
+    border-bottom: 1px solid var(--bgp-color-border-divider, #333333);
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    padding: 14px 16px;
+    vertical-align: middle;
+}
+
+.bgp-upcoming-table tr:hover td {
+    background-color: var(--bgp-color-surface-hover, #2c2c2c);
+}
+
+.bgp-upcoming-time {
+    color: var(--bgp-color-text-main, #F5F5F1);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+/* --- Empty States --- */
+.bgp-empty-state {
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px dashed var(--bgp-color-border-divider, #333333);
+    border-radius: var(--bgp-radius-lg, 8px);
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.bgp-empty-state-icon {
+    color: var(--bgp-color-text-muted, #808080);
+    margin-bottom: 16px;
+}
+
+/* --- Reduced Motion Compliance --- */
+@media (prefers-reduced-motion: reduce) {
+    .bgp-movie-rail {
+        scroll-behavior: auto;
+    }
+    .bgp-movie-card,
+    .bgp-rail-btn,
+    .bgp-card-poster {
+        transition: none !important;
+    }
+}

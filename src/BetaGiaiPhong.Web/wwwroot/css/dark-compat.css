@@ -60,8 +60,11 @@ span.badge[class*="bg-light"] {
     background-color: var(--bgp-badge-info-bg, #0dcaf0) !important;
 }
 
-.badge.bg-light {
+.badge.bg-light,
+body.bgp-app-shell .badge.bg-light,
+body.bgp-app-shell .card .badge.bg-light {
     background-color: var(--bgp-badge-light-bg, #e5e5e1) !important;
+    color: var(--bgp-color-text-inverse, #141414) !important;
     border: 1px solid var(--bgp-badge-light-border, #cccccc) !important;
 }
 
@@ -94,8 +97,8 @@ span.badge[class*="bg-light"] {
 }
 
 /* Scoped surface overrides for bg-white and bg-light inside components */
-.card .bg-white:not(img):not([src*="qr"]),
-.card .bg-light:not(img):not([src*="qr"]),
+.card .bg-white:not(img):not([src*="qr"]):not(.badge),
+.card .bg-light:not(img):not([src*="qr"]):not(.badge),
 .card.bg-light,
 .card.bg-white,
 .card.bg-dark,

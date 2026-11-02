@@ -6,7 +6,10 @@ public sealed record MovieSummaryDto(
     short DurationMin,
     string? GenreText,
     string Status,
-    int UpcomingShowtimesCount);
+    int UpcomingShowtimesCount,
+    string? AgeLabel = null,
+    string? Synopsis = null,
+    string? PosterUrl = null);
 
 public sealed record MovieDetailDto(
     long MovieId,
@@ -14,4 +17,7 @@ public sealed record MovieDetailDto(
     short DurationMin,
     string? GenreText,
     string Status,
-    IReadOnlyList<ShowtimeDto> UpcomingShowtimes);
+    IReadOnlyList<ShowtimeDto> UpcomingShowtimes,
+    string? AgeLabel = null,
+    string? Synopsis = null,
+    string? PosterUrl = null);
