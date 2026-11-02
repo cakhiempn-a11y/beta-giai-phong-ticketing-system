@@ -1,0 +1,294 @@
+/* ==========================================================================
+   Beta Giai Phong Cinema Ticketing System
+   UI-01: App Shell (Header, Navigation, Mobile Nav, Footer, Accessibility)
+   ========================================================================== */
+
+/* --- Skip Link for Keyboard Accessibility --- */
+.bgp-skip-link {
+    position: absolute;
+    top: -120px;
+    left: 1rem;
+    z-index: 10000;
+    padding: 0.5rem 1rem;
+    background-color: var(--bgp-color-primary);
+    color: #ffffff !important;
+    font-weight: 600;
+    border-radius: var(--bgp-radius-sm);
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: top var(--bgp-transition-fast);
+}
+
+.bgp-skip-link:focus,
+.bgp-skip-link:focus-visible {
+    top: 0.75rem;
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+/* --- App Shell Body & Structure --- */
+body.bgp-app-shell {
+    background-color: var(--bgp-color-page-bg);
+    color: var(--bgp-color-text-main);
+    font-family: var(--bgp-font-family-base);
+    font-size: var(--bgp-font-size-base);
+    line-height: var(--bgp-line-height-base);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Focus Indicator Standard --- */
+:focus-visible {
+    outline: 2px solid var(--bgp-color-border-focus);
+    outline-offset: 2px;
+}
+
+/* --- Header / Navbar Shell --- */
+.bgp-navbar {
+    background-color: var(--bgp-color-header-bg) !important;
+    border-bottom: 1px solid var(--bgp-color-border-divider);
+    min-height: var(--bgp-header-height-desktop);
+    padding-top: 0;
+    padding-bottom: 0;
+    transition: background-color var(--bgp-transition-fast);
+}
+
+@media (max-width: 991.98px) {
+    .bgp-navbar {
+        min-height: var(--bgp-header-height-mobile);
+    }
+}
+
+/* Brand Identity */
+.bgp-brand {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--bgp-color-text-main) !important;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+}
+
+.bgp-brand-badge {
+    background-color: var(--bgp-color-primary);
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--bgp-radius-sm);
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.bgp-brand-name {
+    color: var(--bgp-color-text-main);
+    font-weight: 700;
+}
+
+/* Navigation Links */
+.bgp-navbar .nav-link {
+    color: var(--bgp-color-text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem 0.85rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--bgp-radius-sm);
+    transition: color var(--bgp-transition-fast), background-color var(--bgp-transition-fast);
+}
+
+.bgp-navbar .nav-link:hover,
+.bgp-navbar .nav-link:focus-visible {
+    color: var(--bgp-color-text-main);
+}
+
+.bgp-navbar .nav-link.active,
+.bgp-navbar .nav-item.active > .nav-link,
+.bgp-navbar .nav-link[aria-current="page"] {
+    color: #ffffff !important;
+    font-weight: 700;
+    position: relative;
+}
+
+/* Subtle active indicator for desktop */
+@media (min-width: 992px) {
+    .bgp-navbar .nav-link.active::after,
+    .bgp-navbar .nav-link[aria-current="page"]::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0.85rem;
+        right: 0.85rem;
+        height: 2px;
+        background-color: var(--bgp-color-primary);
+        border-radius: 2px 2px 0 0;
+    }
+}
+
+/* Dropdown Menus in Shell */
+.bgp-dropdown-menu {
+    background-color: var(--bgp-color-surface) !important;
+    border: 1px solid var(--bgp-color-border-divider) !important;
+    border-radius: var(--bgp-radius-lg) !important;
+    padding: 0.5rem 0;
+    min-width: 220px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+}
+
+.bgp-dropdown-item {
+    color: var(--bgp-color-text-secondary) !important;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.6rem 1rem;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    transition: background-color var(--bgp-transition-fast), color var(--bgp-transition-fast);
+}
+
+.bgp-dropdown-item:hover,
+.bgp-dropdown-item:focus-visible {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    color: var(--bgp-color-text-main) !important;
+}
+
+.bgp-dropdown-item.active,
+.bgp-dropdown-item[aria-current="page"] {
+    background-color: var(--bgp-color-primary-subtle) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    border-left: 3px solid var(--bgp-color-primary);
+}
+
+.bgp-dropdown-divider {
+    border-top: 1px solid var(--bgp-color-border-divider) !important;
+    margin: 0.35rem 0;
+}
+
+.bgp-dropdown-header {
+    color: var(--bgp-color-text-muted) !important;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.75px;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem 0.25rem 1rem;
+}
+
+/* User Account Profile Link & Name Truncation */
+.bgp-user-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 240px;
+}
+
+.bgp-user-name {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.bgp-role-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: var(--bgp-color-surface-elevated);
+    color: var(--bgp-color-text-secondary);
+    border: 1px solid var(--bgp-color-border-divider);
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--bgp-radius-sm);
+    text-transform: uppercase;
+}
+
+/* Mobile Toggler */
+.bgp-navbar-toggler {
+    border: 1px solid var(--bgp-color-border-divider);
+    background-color: transparent;
+    border-radius: var(--bgp-radius-sm);
+    padding: 0.5rem;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bgp-navbar-toggler:focus {
+    box-shadow: 0 0 0 2px var(--bgp-color-border-focus);
+}
+
+@media (max-width: 991.98px) {
+    .bgp-navbar-collapse {
+        background-color: var(--bgp-color-header-bg);
+        border-top: 1px solid var(--bgp-color-border-divider);
+        padding: 1rem 0;
+        max-height: calc(100vh - var(--bgp-header-height-mobile));
+        overflow-y: auto;
+    }
+
+    .bgp-navbar .nav-link {
+        padding: 0.75rem 1rem;
+        border-radius: var(--bgp-radius-sm);
+    }
+
+    .bgp-navbar .nav-link.active,
+    .bgp-navbar .nav-link[aria-current="page"] {
+        background-color: var(--bgp-color-surface);
+        border-left: 3px solid var(--bgp-color-primary);
+    }
+
+    .bgp-user-name {
+        max-width: 180px;
+    }
+}
+
+/* --- Footer Shell --- */
+.bgp-footer {
+    background-color: var(--bgp-color-header-bg);
+    border-top: 1px solid var(--bgp-color-border-divider);
+    color: var(--bgp-color-text-secondary);
+    font-size: 0.875rem;
+    padding: 1.5rem 0;
+    margin-top: auto;
+}
+
+.bgp-footer-link {
+    color: var(--bgp-color-text-secondary);
+    text-decoration: none;
+    transition: color var(--bgp-transition-fast);
+}
+
+.bgp-footer-link:hover,
+.bgp-footer-link:focus-visible {
+    color: var(--bgp-color-text-main);
+    text-decoration: underline;
+}
+
+.bgp-footer-disclaimer {
+    color: var(--bgp-color-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+}
+
+/* --- Reduced Motion Support --- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

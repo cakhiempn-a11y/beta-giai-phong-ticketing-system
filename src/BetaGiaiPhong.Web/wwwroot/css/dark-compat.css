@@ -1,0 +1,467 @@
+/* ==========================================================================
+   Beta Giai Phong Cinema Ticketing System
+   UI-01: Dark Theme Compatibility & Component Overrides
+   ========================================================================== */
+
+/* --- Typography & Headings --- */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--bgp-color-text-main);
+    font-weight: 700;
+}
+
+a {
+    color: var(--bgp-color-text-main);
+    text-decoration: none;
+}
+
+a:hover {
+    color: #ffffff;
+}
+
+hr {
+    border-color: var(--bgp-color-border-divider);
+    opacity: 1;
+}
+
+/* --- Bootstrap Text Helpers Adaptation --- */
+body.bgp-app-shell .text-dark {
+    color: var(--bgp-color-text-main) !important;
+}
+
+body.bgp-app-shell .text-muted,
+body.bgp-app-shell .text-secondary {
+    color: var(--bgp-color-text-secondary) !important;
+}
+
+/* --- Cards & Panels --- */
+.card {
+    background-color: var(--bgp-color-surface) !important;
+    border: 1px solid var(--bgp-color-border-divider) !important;
+    color: var(--bgp-color-text-main);
+    border-radius: var(--bgp-radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.card-header {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    border-bottom: 1px solid var(--bgp-color-border-divider) !important;
+    color: var(--bgp-color-text-main) !important;
+    font-weight: 600;
+}
+
+.card-footer {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    border-top: 1px solid var(--bgp-color-border-divider) !important;
+    color: var(--bgp-color-text-secondary) !important;
+}
+
+/* Scoped surface overrides for bg-white and bg-light inside components */
+.card .bg-white:not(img):not([src*="qr"]),
+.card .bg-light:not(img):not([src*="qr"]),
+.card.bg-light,
+.card.bg-white,
+.card.bg-dark,
+.table-responsive.bg-white,
+.table-responsive.bg-light {
+    background-color: var(--bgp-color-surface) !important;
+}
+
+.sticky-bottom {
+    background-color: var(--bgp-color-surface) !important;
+    border-top: 1px solid var(--bgp-color-border-divider) !important;
+}
+
+.border {
+    border-color: var(--bgp-color-border-divider) !important;
+}
+
+.border-top {
+    border-top-color: var(--bgp-color-border-divider) !important;
+}
+
+.border-bottom {
+    border-bottom-color: var(--bgp-color-border-divider) !important;
+}
+
+/* --- Tables --- */
+.table {
+    color: var(--bgp-color-text-main) !important;
+    border-color: var(--bgp-color-border-divider) !important;
+    margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+    background-color: transparent;
+    color: inherit;
+    border-bottom-color: var(--bgp-color-border-divider);
+}
+
+.table-light,
+.table thead,
+.table thead th {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    color: var(--bgp-color-text-main) !important;
+    border-bottom: 2px solid var(--bgp-color-border-divider) !important;
+    font-weight: 600;
+}
+
+.table-hover > tbody > tr:hover > * {
+    background-color: var(--bgp-color-surface-hover) !important;
+    color: #ffffff !important;
+}
+
+.table-responsive {
+    border: 1px solid var(--bgp-color-border-divider);
+    border-radius: var(--bgp-radius-lg);
+    background-color: var(--bgp-color-surface);
+}
+
+/* --- Form Controls & Inputs --- */
+.form-control,
+.form-select {
+    background-color: #212121 !important;
+    border: 1px solid var(--bgp-color-border-control) !important;
+    color: var(--bgp-color-text-main) !important;
+    border-radius: var(--bgp-radius-sm) !important;
+    min-height: 38px;
+    transition: border-color var(--bgp-transition-fast), box-shadow var(--bgp-transition-fast);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: #262626 !important;
+    border-color: var(--bgp-color-border-focus) !important;
+    box-shadow: 0 0 0 3px var(--bgp-color-focus-ring) !important;
+    color: #ffffff !important;
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: var(--bgp-color-text-muted) !important;
+    opacity: 1;
+}
+
+.form-control:disabled,
+.form-select:disabled {
+    background-color: #171717 !important;
+    border-color: #2b2b2b !important;
+    color: #666666 !important;
+    opacity: 0.7;
+}
+
+.form-label {
+    color: var(--bgp-color-text-main);
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+}
+
+.form-text {
+    color: var(--bgp-color-text-secondary) !important;
+    font-size: 0.8125rem;
+}
+
+.form-check-input {
+    background-color: #212121;
+    border: 1px solid var(--bgp-color-border-control);
+    border-radius: 4px;
+}
+
+.form-check-input:checked {
+    background-color: var(--bgp-color-primary);
+    border-color: var(--bgp-color-primary);
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 2px var(--bgp-color-focus-ring);
+    border-color: var(--bgp-color-border-focus);
+}
+
+.form-check-label {
+    color: var(--bgp-color-text-secondary);
+}
+
+/* Validation Feedback */
+.field-validation-error,
+.text-danger {
+    color: #f87171 !important;
+    font-size: 0.825rem;
+    font-weight: 500;
+}
+
+.input-validation-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+}
+
+/* --- Buttons --- */
+.btn {
+    border-radius: var(--bgp-radius-sm);
+    font-weight: 600;
+    transition: all var(--bgp-transition-fast);
+}
+
+.btn-primary {
+    background-color: var(--bgp-color-primary) !important;
+    border-color: var(--bgp-color-primary) !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+    background-color: var(--bgp-color-primary-hover) !important;
+    border-color: var(--bgp-color-primary-hover) !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:active {
+    background-color: var(--bgp-color-primary-active) !important;
+    border-color: var(--bgp-color-primary-active) !important;
+}
+
+.btn-outline-primary {
+    color: var(--bgp-color-primary) !important;
+    border-color: var(--bgp-color-primary) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus-visible {
+    background-color: var(--bgp-color-primary) !important;
+    border-color: var(--bgp-color-primary) !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary {
+    color: var(--bgp-color-text-secondary) !important;
+    border-color: var(--bgp-color-border-control) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus-visible {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    border-color: var(--bgp-color-border-control-hover) !important;
+    color: var(--bgp-color-text-main) !important;
+}
+
+.btn-outline-light {
+    color: var(--bgp-color-text-main) !important;
+    border-color: var(--bgp-color-border-control) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-light:hover,
+.btn-outline-light:focus-visible {
+    background-color: #ffffff !important;
+    border-color: #ffffff !important;
+    color: #141414 !important;
+}
+
+.btn-secondary {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    border-color: var(--bgp-color-border-control) !important;
+    color: var(--bgp-color-text-main) !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+    background-color: var(--bgp-color-surface-hover) !important;
+    border-color: var(--bgp-color-border-control-hover) !important;
+    color: #ffffff !important;
+}
+
+.btn-light {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    border-color: var(--bgp-color-border-divider) !important;
+    color: var(--bgp-color-text-main) !important;
+}
+
+.btn-light:hover {
+    background-color: var(--bgp-color-surface-hover) !important;
+    color: #ffffff !important;
+}
+
+/* --- Alerts & Feedback --- */
+.alert {
+    border-radius: var(--bgp-radius-md);
+    border: 1px solid transparent;
+}
+
+.alert-success {
+    background-color: var(--bgp-color-success-bg) !important;
+    border-color: var(--bgp-color-success-border) !important;
+    color: var(--bgp-color-success) !important;
+}
+
+.alert-danger {
+    background-color: var(--bgp-color-danger-bg) !important;
+    border-color: var(--bgp-color-danger-border) !important;
+    color: #fca5a5 !important;
+}
+
+.alert-warning {
+    background-color: var(--bgp-color-warning-bg) !important;
+    border-color: var(--bgp-color-warning-border) !important;
+    color: var(--bgp-color-warning) !important;
+}
+
+.alert-info {
+    background-color: var(--bgp-color-info-bg) !important;
+    border-color: var(--bgp-color-info-border) !important;
+    color: var(--bgp-color-info) !important;
+}
+
+.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* --- Badges --- */
+.badge {
+    border-radius: var(--bgp-radius-sm);
+    font-weight: 600;
+}
+
+.badge.bg-light {
+    background-color: var(--bgp-color-surface-elevated) !important;
+    color: var(--bgp-color-text-main) !important;
+    border: 1px solid var(--bgp-color-border-divider);
+}
+
+.badge.bg-dark {
+    background-color: #212121 !important;
+    color: var(--bgp-color-text-main) !important;
+    border: 1px solid var(--bgp-color-border-divider);
+}
+
+/* --- Breadcrumbs --- */
+.breadcrumb {
+    padding: 0.25rem 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item a {
+    color: var(--bgp-color-text-secondary);
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--bgp-color-text-main);
+    text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+    color: var(--bgp-color-text-main);
+    font-weight: 600;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: var(--bgp-color-text-muted);
+}
+
+/* --- Pagination --- */
+.pagination .page-link {
+    background-color: var(--bgp-color-surface);
+    border-color: var(--bgp-color-border-divider);
+    color: var(--bgp-color-text-secondary);
+    border-radius: var(--bgp-radius-sm);
+    margin: 0 2px;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--bgp-color-surface-elevated);
+    border-color: var(--bgp-color-border-control);
+    color: var(--bgp-color-text-main);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--bgp-color-primary) !important;
+    border-color: var(--bgp-color-primary) !important;
+    color: #ffffff !important;
+}
+
+.pagination .page-item.disabled .page-link {
+    background-color: var(--bgp-color-surface);
+    border-color: var(--bgp-color-border-divider);
+    color: var(--bgp-color-text-muted);
+    opacity: 0.45;
+}
+
+/* --- Modals --- */
+.modal-content {
+    background-color: var(--bgp-color-surface) !important;
+    border: 1px solid var(--bgp-color-border-divider) !important;
+    color: var(--bgp-color-text-main) !important;
+    border-radius: var(--bgp-radius-lg);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--bgp-color-border-divider) !important;
+}
+
+/* --- Seat Map Compatibility on Dark Background --- */
+.seat-grid-container {
+    background-color: var(--bgp-color-surface) !important;
+    border: 1px solid var(--bgp-color-border-divider) !important;
+}
+
+.seat-row-label {
+    color: var(--bgp-color-text-secondary) !important;
+}
+
+.seat-available-standard {
+    background-color: var(--bgp-seat-standard-bg) !important;
+    color: var(--bgp-seat-standard-text) !important;
+    border-color: var(--bgp-seat-standard-border) !important;
+}
+
+.seat-available-vip {
+    background-color: var(--bgp-seat-vip-bg) !important;
+    color: var(--bgp-seat-vip-text) !important;
+    border-color: var(--bgp-seat-vip-border) !important;
+}
+
+.seat-held {
+    background-color: var(--bgp-seat-held-bg) !important;
+    color: var(--bgp-seat-held-text) !important;
+    border-color: var(--bgp-seat-held-border) !important;
+}
+
+.seat-sold {
+    background-color: var(--bgp-seat-sold-bg) !important;
+    color: var(--bgp-seat-sold-text) !important;
+    border-color: var(--bgp-seat-sold-border) !important;
+}
+
+.seat-blocked {
+    background-color: var(--bgp-seat-blocked-bg) !important;
+    color: var(--bgp-seat-blocked-text) !important;
+    border-color: var(--bgp-seat-blocked-border) !important;
+}
+
+.seat-selected {
+    background-color: var(--bgp-seat-selected-bg) !important;
+    color: var(--bgp-seat-selected-text) !important;
+    border-color: var(--bgp-seat-selected-border) !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.7) !important;
+}
+
+.cinema-screen {
+    background: linear-gradient(to bottom, var(--bgp-color-primary), #600) !important;
+    box-shadow: 0 4px 18px rgba(229, 9, 20, 0.45) !important;
+}
+
+.cinema-screen-label {
+    color: var(--bgp-color-text-secondary) !important;
+}
+
+/* --- QR Code Display Protection (CRITICAL) --- */
+/* QR images must NEVER be inverted, dimmed, or covered with dark background */
+img[src*="/qr"],
+img[src*="/tickets/"][src*="/qr"],
+.ticket-card img {
+    background-color: #ffffff !important;
+    filter: none !important;
+    opacity: 1 !important;
+}
