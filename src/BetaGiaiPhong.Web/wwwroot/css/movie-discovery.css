@@ -1,0 +1,732 @@
+/* ==========================================================================
+   Beta Giai Phong Cinema Ticketing System
+   UI-02B: Cinematic Movie Catalogue & Movie Details (Netflix-Inspired)
+   Scoped strictly to .bgp-movies-catalog and .bgp-movie-detail
+   ========================================================================== */
+
+/* ==========================================================================
+   1. MOVIE CATALOGUE (/movies)
+   ========================================================================== */
+
+.bgp-movies-catalog {
+    background-color: var(--bgp-color-page-bg, #141414);
+    color: var(--bgp-color-text-main, #F5F5F1);
+    padding-top: var(--bgp-space-5, 24px);
+    padding-bottom: var(--bgp-space-7, 48px);
+}
+
+.bgp-catalog-header {
+    margin-bottom: var(--bgp-space-4, 16px);
+}
+
+.bgp-catalog-eyebrow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--bgp-color-primary, #E50914);
+    margin-bottom: 4px;
+}
+
+.bgp-catalog-title {
+    font-size: clamp(1.65rem, 3vw, 2.35rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    margin-bottom: 6px;
+}
+
+.bgp-catalog-subtitle {
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    font-size: 0.95rem;
+    margin-bottom: 0;
+}
+
+/* --- Search & Filter Toolbar --- */
+.bgp-catalog-toolbar {
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px solid var(--bgp-color-border-divider, #333333);
+    border-radius: var(--bgp-radius-lg, 8px);
+    padding: 16px;
+    margin-bottom: var(--bgp-space-4, 16px);
+}
+
+.bgp-catalog-search-form {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.bgp-catalog-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background-color: #141414 !important;
+    border: 1px solid var(--bgp-color-border-control, #767676) !important;
+    color: var(--bgp-color-text-main, #F5F5F1) !important;
+    padding: 0.5rem 0.85rem;
+}
+
+.bgp-catalog-search-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.5rem 1.1rem;
+}
+
+@media (max-width: 400px) {
+    .bgp-catalog-toolbar {
+        padding: 12px;
+    }
+    .bgp-catalog-search-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+.bgp-catalog-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.bgp-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    background-color: #141414;
+    border: 1px solid var(--bgp-color-border-control, #767676);
+    text-decoration: none;
+    transition: background-color var(--bgp-transition-fast, 150ms ease-in-out),
+                color var(--bgp-transition-fast, 150ms ease-in-out),
+                border-color var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+.bgp-filter-pill:hover {
+    color: #ffffff;
+    border-color: #ffffff;
+    background-color: var(--bgp-color-surface-elevated, #292929);
+    text-decoration: none;
+}
+
+.bgp-filter-pill:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--bgp-color-primary, #E50914);
+}
+
+.bgp-filter-pill.is-active {
+    background-color: var(--bgp-color-primary, #E50914);
+    border-color: var(--bgp-color-primary, #E50914);
+    color: #ffffff;
+}
+
+.bgp-filter-pill-count {
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.14);
+    color: inherit;
+}
+
+.bgp-catalog-summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: var(--bgp-space-4, 16px);
+    font-size: 0.9rem;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+}
+
+/* --- Responsive Poster Grid --- */
+.bgp-catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+@media (max-width: 360px) {
+    .bgp-catalog-grid {
+        gap: 10px;
+    }
+}
+
+@media (min-width: 576px) {
+    .bgp-catalog-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+    }
+}
+
+@media (min-width: 992px) {
+    .bgp-catalog-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 20px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .bgp-catalog-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 22px;
+    }
+}
+
+/* --- Catalogue Movie Card --- */
+.bgp-catalog-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px solid var(--bgp-color-border-divider, #333333);
+    border-radius: var(--bgp-radius-md, 6px);
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    transition: transform var(--bgp-transition-fast, 150ms ease-in-out),
+                border-color var(--bgp-transition-fast, 150ms ease-in-out),
+                box-shadow var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+.bgp-catalog-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.bgp-catalog-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 5px var(--bgp-color-primary, #E50914);
+    transform: translateY(-2px);
+}
+
+.bgp-catalog-poster-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background-color: #141414;
+    overflow: hidden;
+    border-bottom: 1px solid var(--bgp-color-border-divider, #333333);
+}
+
+.bgp-catalog-poster-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--bgp-transition-normal, 250ms ease-out),
+                filter var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+.bgp-catalog-card:hover .bgp-catalog-poster-img {
+    transform: scale(1.03);
+    filter: brightness(1.06);
+}
+
+.bgp-catalog-badge-age {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 7px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.bgp-catalog-badge-status {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    left: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+}
+
+.bgp-catalog-badge-status--active {
+    background-color: rgba(13, 40, 24, 0.94);
+    color: var(--bgp-color-success, #46d369);
+    border: 1px solid rgba(70, 211, 105, 0.45);
+}
+
+.bgp-catalog-badge-status--empty {
+    background-color: rgba(20, 20, 20, 0.92);
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bgp-catalog-card-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+@media (max-width: 400px) {
+    .bgp-catalog-card-info {
+        padding: 8px 10px 10px 10px;
+    }
+}
+
+.bgp-catalog-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+    min-height: 2.55em;
+}
+
+@media (max-width: 400px) {
+    .bgp-catalog-card-title {
+        font-size: 0.85rem;
+    }
+}
+
+.bgp-catalog-card-meta {
+    font-size: 0.8rem;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.bgp-catalog-card-genre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.bgp-catalog-card-cta {
+    margin-top: auto;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bgp-catalog-card:hover .bgp-catalog-card-cta {
+    color: var(--bgp-color-primary, #E50914);
+}
+
+.bgp-catalog-card-cta--muted {
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+}
+
+
+/* ==========================================================================
+   2. MOVIE DETAILS & SHOWTIME SELECTOR (/movies/{id})
+   ========================================================================== */
+
+.bgp-movie-detail {
+    background-color: var(--bgp-color-page-bg, #141414);
+    color: var(--bgp-color-text-main, #F5F5F1);
+    padding-bottom: var(--bgp-space-7, 48px);
+}
+
+.bgp-detail-hero {
+    position: relative;
+    width: 100%;
+    background-color: var(--bgp-color-header-bg, #090909);
+    border-bottom: 1px solid var(--bgp-color-border-divider, #333333);
+    overflow: hidden;
+    padding-top: var(--bgp-space-4, 16px);
+    padding-bottom: var(--bgp-space-6, 32px);
+}
+
+.bgp-detail-backdrop {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center right;
+    background-repeat: no-repeat;
+    z-index: 1;
+}
+
+.bgp-detail-backdrop-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #141414 0%, rgba(20, 20, 20, 0.94) 50%, rgba(20, 20, 20, 0.65) 100%),
+                linear-gradient(180deg, rgba(9, 9, 9, 0.5) 0%, #141414 100%);
+    pointer-events: none;
+}
+
+.bgp-detail-hero-container {
+    position: relative;
+    z-index: 2;
+}
+
+.bgp-detail-poster-col {
+    display: flex;
+    justify-content: center;
+}
+
+.bgp-detail-poster-frame {
+    width: 220px;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--bgp-radius-lg, 8px);
+    overflow: hidden;
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+}
+
+@media (max-width: 767.98px) {
+    .bgp-detail-poster-frame {
+        width: 160px;
+        margin-bottom: 16px;
+    }
+}
+
+@media (min-width: 992px) {
+    .bgp-detail-poster-frame {
+        width: 250px;
+    }
+}
+
+.bgp-detail-poster-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.bgp-detail-eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.bgp-detail-badge-live {
+    background-color: var(--bgp-color-primary, #E50914);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    padding: 4px 10px;
+    border-radius: var(--bgp-radius-sm, 4px);
+    text-transform: uppercase;
+}
+
+.bgp-detail-title {
+    font-size: clamp(1.65rem, 3.4vw, 2.65rem);
+    font-weight: 800;
+    line-height: 1.18;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    word-break: break-word;
+    margin-bottom: 14px;
+}
+
+.bgp-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.925rem;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    margin-bottom: 18px;
+}
+
+.bgp-detail-synopsis-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    margin-bottom: 6px;
+}
+
+.bgp-detail-synopsis {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: rgba(245, 245, 241, 0.92);
+    max-width: 720px;
+    margin-bottom: 24px;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.bgp-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* --- Showtimes Section & Date Selector --- */
+.bgp-showtimes-section {
+    scroll-margin-top: 88px;
+    padding-top: var(--bgp-space-6, 32px);
+}
+
+.bgp-showtimes-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.bgp-date-tabs {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 4px 12px 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--bgp-color-border-divider, #333333);
+    scrollbar-width: thin;
+    scrollbar-color: #444444 transparent;
+}
+
+.bgp-date-tab {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 132px;
+    padding: 10px 16px;
+    border-radius: var(--bgp-radius-md, 6px);
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px solid var(--bgp-color-border-control, #767676);
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--bgp-transition-fast, 150ms ease-in-out),
+                border-color var(--bgp-transition-fast, 150ms ease-in-out),
+                color var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+.bgp-date-tab:hover {
+    background-color: var(--bgp-color-surface-elevated, #292929);
+    border-color: #ffffff;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.bgp-date-tab:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--bgp-color-primary, #E50914);
+}
+
+.bgp-date-tab.is-active {
+    background-color: var(--bgp-color-primary, #E50914);
+    border-color: var(--bgp-color-primary, #E50914);
+    color: #ffffff;
+}
+
+.bgp-date-tab-dow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.bgp-date-tab-date {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: inherit;
+    margin: 2px 0;
+}
+
+.bgp-date-tab-count {
+    font-size: 0.76rem;
+    opacity: 0.9;
+}
+
+/* Progressive enhancement:
+   Without JS (.bgp-js-tabs-ready not present), all date groups are shown.
+   With JS (.bgp-js-tabs-ready present), only the active date group is shown. */
+.bgp-showtimes-section.bgp-js-tabs-ready .bgp-showtime-date-group:not(.is-active) {
+    display: none;
+}
+
+.bgp-showtime-date-group {
+    margin-bottom: 28px;
+}
+
+.bgp-showtime-date-heading {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bgp-showtime-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 14px;
+}
+
+@media (min-width: 576px) {
+    .bgp-showtime-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .bgp-showtime-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+}
+
+.bgp-showtime-card {
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px solid var(--bgp-color-border-divider, #333333);
+    border-radius: var(--bgp-radius-lg, 8px);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color var(--bgp-transition-fast, 150ms ease-in-out),
+                background-color var(--bgp-transition-fast, 150ms ease-in-out);
+}
+
+.bgp-showtime-card:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background-color: var(--bgp-color-surface-elevated, #292929);
+}
+
+.bgp-showtime-card--soldout {
+    opacity: 0.88;
+}
+
+.bgp-showtime-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bgp-showtime-time-block {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.bgp-showtime-start {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    letter-spacing: -0.02em;
+}
+
+.bgp-showtime-end {
+    font-size: 0.875rem;
+    color: var(--bgp-color-text-secondary, #B3B3B3);
+    font-family: var(--bgp-font-mono, monospace);
+}
+
+.bgp-showtime-nextday {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: var(--bgp-color-warning-bg, #332701);
+    color: var(--bgp-color-warning, #f5c518);
+    border: 1px solid var(--bgp-color-warning-border, #664d03);
+}
+
+.bgp-showtime-room {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background-color: #141414;
+    color: var(--bgp-color-text-main, #F5F5F1);
+    border: 1px solid var(--bgp-color-border-control, #767676);
+}
+
+.bgp-showtime-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bgp-showtime-seats {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 4px;
+}
+
+.bgp-showtime-seats--available {
+    background-color: var(--bgp-color-success-bg, #0d2818);
+    color: var(--bgp-color-success, #46d369);
+    border: 1px solid var(--bgp-color-success-border, #194d2e);
+}
+
+.bgp-showtime-seats--soldout {
+    background-color: var(--bgp-color-danger-bg, #2c0b0e);
+    color: #fca5a5;
+    border: 1px solid var(--bgp-color-danger-border, #58151c);
+}
+
+.bgp-showtime-cta {
+    width: 100%;
+    margin-top: auto;
+    padding: 8px 14px;
+    font-weight: 700;
+}
+
+/* --- Shared Empty State in Discovery --- */
+.bgp-discovery-empty {
+    background-color: var(--bgp-color-surface, #1F1F1F);
+    border: 1px dashed var(--bgp-color-border-divider, #333333);
+    border-radius: var(--bgp-radius-lg, 8px);
+    padding: 48px 20px;
+    text-align: center;
+}
+
+.bgp-discovery-empty-icon {
+    color: var(--bgp-color-text-muted, #808080);
+    margin-bottom: 14px;
+}
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+    .bgp-catalog-card,
+    .bgp-catalog-poster-img,
+    .bgp-filter-pill,
+    .bgp-date-tab,
+    .bgp-showtime-card {
+        transition: none !important;
+        transform: none !important;
+    }
+}

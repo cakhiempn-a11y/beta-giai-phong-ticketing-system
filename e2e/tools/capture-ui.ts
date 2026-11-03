@@ -6,9 +6,8 @@ import {
   createInitialE2eState,
   runGlobalSetupLifecycle,
   runGlobalTeardownLifecycle,
-  getStateFilePath,
   E2eState,
-  runRunnerCommand,
+  runRunnerCommandOrThrow,
   sanitizeTextForLog,
 } from '../e2e-env';
 import { loginInBrowser } from '../tests/helpers';
@@ -95,7 +94,6 @@ function executeSqlInDb(state: E2eState, sql: string, maxAttempts = 5): void {
 
     const sanitizedErr = sanitizeTextForLog(res.stderr || res.stdout || '', state);
     if (attempt < maxAttempts) {
-      // Short delay before retry for transient errors
       const waitBuffer = new Int32Array(new SharedArrayBuffer(4));
       Atomics.wait(waitBuffer, 0, 0, 600);
     } else {
@@ -111,12 +109,7 @@ function executeSqlInDb(state: E2eState, sql: string, maxAttempts = 5): void {
  * Avoids host-level sqlcmd dependencies and verifies exit status.
  */
 function seedAdminUser(state: E2eState): void {
-  const res = runRunnerCommand(['e2e-sql', 'seed-admin'], state);
-  if (res.status !== 0) {
-    throw new Error(
-      `[Capture] CRITICAL: Failed to seed admin user via runner (exit ${res.status}):\n${res.stderr || res.stdout}`
-    );
-  }
+  runRunnerCommandOrThrow(['e2e-sql', 'seed-admin'], state);
   console.log(`[Capture] Seeded admin@demo.invalid with role ADMIN in ${state.dbName}`);
 }
 
@@ -155,14 +148,130 @@ export async function runUiCapture(options?: {
 
     browser = await chromium.launch();
 
-    if (targetFolder === 'ui-02a') {
+    if (targetFolder === 'ui-02b') {
+      // =========================================================================
+      // UI-02B Cinematic Movie Catalogue & Movie Details Captures
+      // =========================================================================
+      console.log(`[Capture] Starting UI-02B Movie Discovery capture suite...`);
+
+      runRunnerCommandOrThrow(['e2e-sql', 'seed-ui-fixtures'], state);
+
+      // 1. Desktop Catalogue (1440x900)
+      const desktopCtx = await browser.newContext({
+        baseURL: state.baseUrl,
+        viewport: { width: 1440, height: 900 },
+      });
+      const desktopPage = await desktopCtx.newPage();
+      await desktopPage.goto('/movies', { waitUntil: 'networkidle' });
+      await desktopPage.screenshot({
+        path: path.join(outDir, '01-catalog-desktop.png'),
+        fullPage: true,
+      });
+      console.log(`Saved 01-catalog-desktop.png`);
+
+      // 2. Mobile Catalogue (390x844)
+      const mobileCtx = await browser.newContext({
+        baseURL: state.baseUrl,
+        viewport: { width: 390, height: 844 },
+      });
+      const mobilePage = await mobileCtx.newPage();
+      await mobilePage.goto('/movies', { waitUntil: 'networkidle' });
+      await mobilePage.screenshot({
+        path: path.join(outDir, '02-catalog-mobile.png'),
+        fullPage: true,
+      });
+      console.log(`Saved 02-catalog-mobile.png`);
+
+      // 3. Catalogue with Search / Filter active (1440x900)
+      await desktopPage.goto('/movies?filter=has-showtimes&q=Chien+Binh', { waitUntil: 'networkidle' });
+      await desktopPage.screenshot({
+        path: path.join(outDir, '03-catalog-search-filter.png'),
+        fullPage: false,
+      });
+      console.log(`Saved 03-catalog-search-filter.png`);
+
+      // 4. Catalogue with No Matching Results (1440x900)
+      await desktopPage.goto('/movies?q=KhongCoPhimNay12345', { waitUntil: 'networkidle' });
+      await desktopPage.screenshot({
+        path: path.join(outDir, '04-catalog-no-results.png'),
+        fullPage: false,
+      });
+      console.log(`Saved 04-catalog-no-results.png`);
+
+      // Find movie ID with multi-date showtimes ("Chien Binh Khong Gian") and zero showtimes ("Phim Khong Co Suat")
+      await desktopPage.goto('/movies', { waitUntil: 'networkidle' });
+      const multiShowtimeHref = await desktopPage
+        .locator('[data-testid="catalog-movie-card"]', { hasText: 'Chien Binh Khong Gian' })
+        .first()
+        .getAttribute('href');
+      const zeroShowtimeHref = await desktopPage
+        .locator('[data-testid="catalog-movie-card"]', { hasText: 'Phim Khong Co Suat' })
+        .first()
+        .getAttribute('href');
+
+      if (!multiShowtimeHref || !zeroShowtimeHref) {
+        throw new Error(`[Capture] Expected fixture movie cards not found on /movies.`);
+      }
+
+      // 5. Movie Details Desktop with Showtimes (1440x900)
+      await desktopPage.goto(multiShowtimeHref, { waitUntil: 'networkidle' });
+      await desktopPage.screenshot({
+        path: path.join(outDir, '05-detail-desktop.png'),
+        fullPage: true,
+      });
+      console.log(`Saved 05-detail-desktop.png`);
+
+      // 6. Movie Details Mobile (390x844)
+      await mobilePage.goto(multiShowtimeHref, { waitUntil: 'networkidle' });
+      await mobilePage.screenshot({
+        path: path.join(outDir, '06-detail-mobile.png'),
+        fullPage: true,
+      });
+      console.log(`Saved 06-detail-mobile.png`);
+      await mobileCtx.close();
+
+      // 7. Movie Details with Zero Showtimes (1440x900)
+      await desktopPage.goto(zeroShowtimeHref, { waitUntil: 'networkidle' });
+      await desktopPage.screenshot({
+        path: path.join(outDir, '07-detail-no-showtimes.png'),
+        fullPage: true,
+      });
+      console.log(`Saved 07-detail-no-showtimes.png`);
+
+      // 8. Poster Fallback & Long Title State on Catalogue / Details (1440x900)
+      runRunnerCommandOrThrow(['e2e-sql', 'set-long-title'], state);
+      await desktopPage.goto('/movies', { waitUntil: 'networkidle' });
+      await desktopPage.screenshot({
+        path: path.join(outDir, '08-poster-fallback-long-title.png'),
+        fullPage: false,
+      });
+      console.log(`Saved 08-poster-fallback-long-title.png`);
+      runRunnerCommandOrThrow(['e2e-sql', 'restore-title'], state);
+
+      // 9. Showtime Date Selector & Grouped Showtime Cards (select 2nd date tab & focus)
+      await desktopPage.goto(multiShowtimeHref, { waitUntil: 'networkidle' });
+      const dateTabs = desktopPage.locator('[data-testid="showtime-date-tab"]');
+      if ((await dateTabs.count()) > 1) {
+        await dateTabs.nth(1).click();
+        await dateTabs.nth(1).focus();
+        await desktopPage.waitForTimeout(250);
+      }
+      const showtimesSection = desktopPage.locator('#showtimes-section');
+      await showtimesSection.screenshot({
+        path: path.join(outDir, '09-showtime-date-selector.png'),
+      });
+      console.log(`Saved 09-showtime-date-selector.png`);
+
+      runRunnerCommandOrThrow(['e2e-sql', 'reset-ui-fixtures'], state);
+      await desktopCtx.close();
+    } else if (targetFolder === 'ui-02a') {
       // =========================================================================
       // UI-02A Cinematic Homepage & Movie Artwork Discovery Captures
       // =========================================================================
       console.log(`[Capture] Starting UI-02A Cinematic Homepage capture suite...`);
 
       // Seed extra movies into ephemeral DB so the rail has multiple rich items
-      runRunnerCommand(['e2e-sql', 'seed-ui-fixtures'], state);
+      runRunnerCommandOrThrow(['e2e-sql', 'seed-ui-fixtures'], state);
 
       // 1. Desktop full homepage (1440x900)
       const desktopCtx = await browser.newContext({
@@ -218,14 +327,8 @@ export async function runUiCapture(options?: {
       }
 
       // 4b. Hero with long title: update title in DB temporarily
-      runRunnerCommand(['e2e-sql', 'set-long-title'], state);
+      runRunnerCommandOrThrow(['e2e-sql', 'set-long-title'], state);
       await desktopPage.goto(state.baseUrl + '/?v=' + Date.now(), { waitUntil: 'networkidle' });
-      const currentUrl = desktopPage.url();
-      const heroTitleHtml = await desktopPage.locator('.bgp-hero-title').evaluate((el) => el.outerHTML);
-      const railTitles = await desktopPage.locator('.bgp-card-title').allInnerTexts();
-      console.log(`[Capture] Page URL: ${currentUrl}`);
-      console.log(`[Capture] Hero title HTML: ${heroTitleHtml}`);
-      console.log(`[Capture] Rail titles:`, railTitles);
       if (await heroEl.isVisible()) {
         await heroEl.screenshot({
           path: path.join(outDir, '04b-hero-long-title.png'),
@@ -233,7 +336,7 @@ export async function runUiCapture(options?: {
         console.log(`Saved 04b-hero-long-title.png`);
       }
       // Restore original title
-      runRunnerCommand(['e2e-sql', 'restore-title'], state);
+      runRunnerCommandOrThrow(['e2e-sql', 'restore-title'], state);
       await desktopPage.goto(state.baseUrl + '/?v=' + Date.now());
       await desktopPage.waitForLoadState('networkidle');
 
@@ -250,7 +353,7 @@ export async function runUiCapture(options?: {
       }
 
       // 6. Empty state: set movies to DRAFT
-      runRunnerCommand(['e2e-sql', 'hide-all-movies'], state);
+      runRunnerCommandOrThrow(['e2e-sql', 'hide-all-movies'], state);
       await desktopPage.reload();
       await desktopPage.waitForLoadState('networkidle');
       await desktopPage.screenshot({
@@ -258,8 +361,8 @@ export async function runUiCapture(options?: {
         fullPage: false,
       });
       console.log(`Saved 06-empty-state.png`);
-      // Restore movies to PUBLISHED
-      runRunnerCommand(['e2e-sql', 'restore-all-movies'], state);
+      // Restore movies to previous statuses
+      runRunnerCommandOrThrow(['e2e-sql', 'restore-all-movies'], state);
       await desktopPage.reload();
       await desktopPage.waitForLoadState('networkidle');
 
@@ -288,6 +391,7 @@ export async function runUiCapture(options?: {
         console.log(`Saved 08-upcoming-showtimes.png`);
       }
 
+      runRunnerCommandOrThrow(['e2e-sql', 'reset-ui-fixtures'], state);
       await desktopCtx.close();
     } else {
       // =========================================================================
@@ -303,7 +407,6 @@ export async function runUiCapture(options?: {
       await moviesPage.goto('/movies');
       await moviesPage.waitForLoadState('networkidle');
 
-      // Verify computed colors on badges
       const badgeEvidence = await moviesPage.evaluate(() => {
         const warningBadge = document.querySelector('.badge.bg-warning');
         const infoBadge = document.querySelector('.badge.bg-info');
@@ -332,7 +435,6 @@ export async function runUiCapture(options?: {
       await buttonsPage.goto('/account/login');
       await buttonsPage.waitForLoadState('networkidle');
 
-      // Focus on the secondary or outline button / submit button
       const submitBtn = buttonsPage.locator('button[type="submit"]');
       if (await submitBtn.isVisible()) {
         await submitBtn.focus();
@@ -353,11 +455,9 @@ export async function runUiCapture(options?: {
       await validationPage.goto('/account/login');
       await validationPage.waitForLoadState('networkidle');
 
-      // Trigger validation error by submitting empty form
       await validationPage.click('button[type="submit"]');
       await validationPage.waitForTimeout(400);
 
-      // Focus on email input to reveal two-layer focus ring
       await validationPage.locator('input[name="Request.Email"]').focus();
 
       const inputEvidence = await validationPage.evaluate(() => {
