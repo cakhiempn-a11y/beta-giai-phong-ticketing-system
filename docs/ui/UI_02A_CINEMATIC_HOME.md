@@ -227,9 +227,11 @@ Bộ kiểm thử chạy tuần tự trên cơ sở dữ liệu tạm thời cô
 | `03-restart-recovery.spec.ts` | Khởi động lại máy chủ Web, tính lũy kế idempotent của Webhook, phục hồi kết nối | **PASS** | 52.5s |
 | `04-responsive-and-a11y.spec.ts` | Layout đa màn hình (Desktop/Tablet/Mobile), đo độ tương phản toán học WCAG 8.3, tràn khung 320px 8.4, menu mobile 8.5 | **PASS** | 19.4s |
 | `05-performance-load.spec.ts` | Tải đồng thời 30 yêu cầu đặt vé, kiểm tra P95 latency và thông lượng | **PASS** | 9.7s |
-| `06-capture-lifecycle.spec.ts` | Vòng đời công cụ capture, đảm bảo drop database tạm thời sạch sẽ và ngắt tiến trình | **PASS** | 15.3s |
-| `07-cinematic-home.spec.ts` | 6 kịch bản chuyên sâu trang chủ điện ảnh (Hero, Movie Rail, Fallback Artwork, Showtimes Table, Responsive 320-1440px, Navigation Integrity) | **PASS** | 29.0s |
-| **TỔNG CỘNG** | **15 / 15 Kịch bản Kiểm thử End-to-End** | **100% PASS** | **~3.0 phút** |
+| `06-capture-lifecycle.spec.ts` | Vòng đời công cụ capture, đảm bảo drop database tạm thời sạch sẽ, ngắt kết nối Kestrel và kiểm tra tiến trình đã thoát | **PASS** | 12.9s |
+| `07-cinematic-home.spec.ts` | 7 kịch bản chuyên sâu trang chủ điện ảnh (Hero, Movie Rail với overflow controls, Fallback Artwork tự nhiên, Empty State, Showtimes Table, Responsive 320-1440px, Navigation Integrity) | **PASS** | 15.2s |
+| **TỔNG CỘNG** | **16 / 16 Kịch bản Kiểm thử End-to-End (retries=0)** | **100% PASS** | **~2.6 phút** |
+
+Chi tiết toàn bộ quá trình chẩn đoán nguyên nhân CI thất bại và biện pháp phục hồi được lưu trữ đầy đủ tại: [UI_02A_FIX_REPORT.md](file:///D:/Projects/BetaGiaiPhong/docs/ui/UI_02A_FIX_REPORT.md).
 
 ---
 

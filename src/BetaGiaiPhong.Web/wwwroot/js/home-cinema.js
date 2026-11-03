@@ -10,9 +10,9 @@
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         wrappers.forEach((wrapper) => {
-            const rail = wrapper.querySelector('.bgp-movie-rail');
-            const btnPrev = wrapper.querySelector('.bgp-rail-btn-prev');
-            const btnNext = wrapper.querySelector('.bgp-rail-btn-next');
+            const rail = wrapper.querySelector('.bgp-movie-rail, [data-testid="movie-rail"]');
+            const btnPrev = wrapper.querySelector('.bgp-rail-btn-prev, .bgp-rail-btn--prev, [data-testid="rail-btn-prev"]');
+            const btnNext = wrapper.querySelector('.bgp-rail-btn-next, .bgp-rail-btn--next, [data-testid="rail-btn-next"]');
 
             if (!rail || !btnPrev || !btnNext) return;
 
@@ -23,8 +23,17 @@
                 if (!isScrollable) {
                     btnPrev.disabled = true;
                     btnNext.disabled = true;
+                    btnPrev.classList.add('is-hidden');
+                    btnNext.classList.add('is-hidden');
+                    btnPrev.setAttribute('aria-hidden', 'true');
+                    btnNext.setAttribute('aria-hidden', 'true');
                     return;
                 }
+
+                btnPrev.classList.remove('is-hidden');
+                btnNext.classList.remove('is-hidden');
+                btnPrev.removeAttribute('aria-hidden');
+                btnNext.removeAttribute('aria-hidden');
 
                 btnPrev.disabled = rail.scrollLeft <= 8;
                 btnNext.disabled = rail.scrollLeft >= maxScrollLeft - 8;
@@ -54,14 +63,42 @@
 
             window.addEventListener('resize', updateButtons, { passive: true });
 
+            if (typeof ResizeObserver !== 'undefined') {
+                const ro = new ResizeObserver(() => {
+                    updateButtons();
+                });
+                ro.observe(rail);
+                ro.observe(wrapper);
+            }
+
             // Initial button state calculation
             updateButtons();
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initMovieRails);
-    } else {
+    function initPosterFallbacks() {
+        const fallbackPath = '/images/poster-fallback.svg';
+        const posters = document.querySelectorAll('.bgp-card-poster, .bgp-hero-poster-img');
+
+        posters.forEach((img) => {
+            img.addEventListener('error', function onPosterError() {
+                // Ensure this handler never triggers more than once per image
+                img.removeEventListener('error', onPosterError);
+                if (!img.src.endsWith(fallbackPath)) {
+                    img.src = fallbackPath;
+                }
+            }, { once: true });
+        });
+    }
+
+    function init() {
         initMovieRails();
+        initPosterFallbacks();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();

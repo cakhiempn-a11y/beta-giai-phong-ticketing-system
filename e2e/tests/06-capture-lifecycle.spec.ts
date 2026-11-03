@@ -37,16 +37,31 @@ test.describe('UI-01A Fix D / UI-02A: Capture Tool Lifecycle and Hardened Cleanu
 
     // 3. Directly verify against SQL Server using runner that the database was dropped!
     const dbCheck = runRunnerCommand(['e2e-sql', 'check-db-exists'], testState);
+    expect(dbCheck.status).toBe(0);
     expect(dbCheck.stdout).toContain('DB_EXISTS:0');
 
     // 4. Verify that the Kestrel web server on testPort was terminated (connection actively refused)
     let isServerDown = false;
+    let transportError: any = null;
     try {
       await fetch(`http://127.0.0.1:${testPort}/health`);
-    } catch {
+    } catch (err: any) {
+      transportError = err;
       isServerDown = true;
     }
     expect(isServerDown).toBe(true);
+    expect(transportError).not.toBeNull();
+
+    // 5. Verify process death if PID was captured
+    if (testState.webPid) {
+      let isProcessDead = false;
+      try {
+        process.kill(testState.webPid, 0);
+      } catch {
+        isProcessDead = true;
+      }
+      expect(isProcessDead).toBe(true);
+    }
 
     // Clean up temporary screenshots test folder if created
     const tmpDir = path.resolve(__dirname, '..', '..', 'docs', 'ui', 'screenshots', 'test-tmp');

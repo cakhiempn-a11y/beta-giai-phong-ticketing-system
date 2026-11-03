@@ -8,6 +8,8 @@ import {
   runGlobalTeardownLifecycle,
   getStateFilePath,
   E2eState,
+  runRunnerCommand,
+  sanitizeTextForLog,
 } from '../e2e-env';
 import { loginInBrowser } from '../tests/helpers';
 
@@ -47,11 +49,11 @@ function parseSqlConnectionString(connStr: string): {
 
 /**
  * Executes an arbitrary SQL script against the ephemeral test database using sqlcmd.
- * Includes retry logic for transient connection spikes.
+ * Includes precise error diagnostics and safeguards against retrying fixed configuration issues.
  */
 function executeSqlInDb(state: E2eState, sql: string, maxAttempts = 5): void {
   const { server, user, password, trusted } = parseSqlConnectionString(state.connectionString);
-  const args = ['-S', server, '-d', state.dbName, '-C'];
+  const args = ['-S', server, '-d', state.dbName, '-C', '-b'];
   if (trusted) {
     args.push('-E');
   } else if (user && password) {
@@ -65,49 +67,56 @@ function executeSqlInDb(state: E2eState, sql: string, maxAttempts = 5): void {
       timeout: 15_000,
     });
 
+    if (res.error) {
+      const errCode = (res.error as any).code;
+      if (errCode === 'ENOENT') {
+        throw new Error(
+          `[Capture] CRITICAL: 'sqlcmd' executable was not found on PATH (ENOENT). Ensure sqlcmd is installed or use Runner e2e-sql commands.`
+        );
+      }
+      if (errCode === 'EACCES') {
+        throw new Error(
+          `[Capture] CRITICAL: Permission denied executing 'sqlcmd' (EACCES).`
+        );
+      }
+      if (errCode === 'ETIMEDOUT') {
+        if (attempt === maxAttempts) {
+          throw new Error(`[Capture] CRITICAL: 'sqlcmd' timed out after 15000ms.`);
+        }
+      }
+    }
+
     if (res.status === 0) {
       if (res.stdout && res.stdout.trim().length > 0) {
-        console.log(`[Capture SQL]\n${res.stdout.trim()}`);
+        console.log(`[Capture SQL]\n${sanitizeTextForLog(res.stdout.trim(), state)}`);
       }
       return;
     }
 
+    const sanitizedErr = sanitizeTextForLog(res.stderr || res.stdout || '', state);
     if (attempt < maxAttempts) {
-      // Short delay before retry
+      // Short delay before retry for transient errors
       const waitBuffer = new Int32Array(new SharedArrayBuffer(4));
       Atomics.wait(waitBuffer, 0, 0, 600);
     } else {
       throw new Error(
-        `[Capture] CRITICAL: SQL execution failed in ephemeral DB ${state.dbName} (exit ${res.status}):\n${res.stderr || res.stdout}`
+        `[Capture] CRITICAL: SQL execution failed in ephemeral DB ${state.dbName} (exit ${res.status}, signal ${res.signal}):\n${sanitizedErr}`
       );
     }
   }
 }
 
 /**
- * Seeds an ADMIN user into the ephemeral test database using sqlcmd
- * with the exact password hash cloned from manager@demo.invalid.
- * Throws an explicit error if seeding fails to avoid false-positive test passes.
+ * Seeds an ADMIN user into the ephemeral test database using the Runner.
+ * Avoids host-level sqlcmd dependencies and verifies exit status.
  */
 function seedAdminUser(state: E2eState): void {
-  const sql = `
-    DECLARE @adminRoleId int;
-    SELECT @adminRoleId = role_id FROM dbo.Roles WHERE role_code = 'ADMIN';
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE normalized_email = 'ADMIN@DEMO.INVALID')
-    BEGIN
-        INSERT INTO dbo.Users (email, normalized_email, display_name, status, created_utc, password_hash)
-        SELECT 'admin@demo.invalid', 'ADMIN@DEMO.INVALID', N'Demo Quan tri', 'ACTIVE', SYSUTCDATETIME(), password_hash
-        FROM dbo.Users WHERE normalized_email = 'MANAGER@DEMO.INVALID';
-
-        DECLARE @adminId bigint = SCOPE_IDENTITY();
-
-        INSERT INTO dbo.UserRoles (user_id, role_id)
-        VALUES (@adminId, @adminRoleId);
-    END
-  `;
-
-  executeSqlInDb(state, sql);
+  const res = runRunnerCommand(['e2e-sql', 'seed-admin'], state);
+  if (res.status !== 0) {
+    throw new Error(
+      `[Capture] CRITICAL: Failed to seed admin user via runner (exit ${res.status}):\n${res.stderr || res.stdout}`
+    );
+  }
   console.log(`[Capture] Seeded admin@demo.invalid with role ADMIN in ${state.dbName}`);
 }
 
@@ -137,12 +146,12 @@ export async function runUiCapture(options?: {
     await runGlobalSetupLifecycle(state, { stateFilePath });
     setupCompleted = true;
 
-    // Seed ADMIN user into ephemeral DB
-    seedAdminUser(state);
-
     if (options?.skipBrowserLaunchForTest) {
       throw new Error('Simulated browser launch failure for lifecycle cleanup test');
     }
+
+    // Seed ADMIN user into ephemeral DB using the runner
+    seedAdminUser(state);
 
     browser = await chromium.launch();
 
@@ -153,23 +162,7 @@ export async function runUiCapture(options?: {
       console.log(`[Capture] Starting UI-02A Cinematic Homepage capture suite...`);
 
       // Seed extra movies into ephemeral DB so the rail has multiple rich items
-      executeSqlInDb(
-        state,
-        `
-        UPDATE dbo.Movies 
-        SET age_label = 'T16', 
-            synopsis = N'Một kiệt tác điện ảnh kịch tính và cảm xúc, đưa khán giả vào hành trình khám phá những bí ẩn sâu thẳm tại Beta Cinema Giải Phóng.',
-            poster_url = '/images/poster-fallback.svg'
-        WHERE title = 'Phim mo phong - KHONG phai lich Beta';
-
-        INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-        VALUES 
-        (N'Huyền Thoại Mê Cung', 125, N'Hành Động, Viễn Tưởng', 'PUBLISHED', 'T16', N'Hành trình nghẹt thở xuyên không gian và thời gian.', '/images/poster-fallback.svg'),
-        (N'Thành Phố Hoàng Hôn', 102, N'Lãng Mạn, Tâm Lý', 'PUBLISHED', 'T13', N'Câu chuyện tình yêu đầy cảm xúc giữa lòng đô thị.', '/images/poster-fallback.svg'),
-        (N'Vũ Điệu Bóng Đêm', 118, N'Kinh Dị, Giật Gân', 'PUBLISHED', 'T18', N'Bí ẩn rùng rợn đằng sau bức màn nhung của nhà hát cổ.', '/images/poster-fallback.svg'),
-        (N'Siêu Điệp Viên Nhí', 95, N'Hoạt Hình, Gia Đình', 'PUBLISHED', 'P', N'Biệt đội điệp viên tí hon bảo vệ hòa bình thế giới.', '/images/poster-fallback.svg');
-        `
-      );
+      runRunnerCommand(['e2e-sql', 'seed-ui-fixtures'], state);
 
       // 1. Desktop full homepage (1440x900)
       const desktopCtx = await browser.newContext({
@@ -225,12 +218,7 @@ export async function runUiCapture(options?: {
       }
 
       // 4b. Hero with long title: update title in DB temporarily
-      executeSqlInDb(
-        state,
-        `UPDATE dbo.Movies 
-         SET title = 'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket (Ban Chieu Rap 3D Dac Biet IMAX)';
-         SELECT movie_id, title FROM dbo.Movies;`
-      );
+      runRunnerCommand(['e2e-sql', 'set-long-title'], state);
       await desktopPage.goto(state.baseUrl + '/?v=' + Date.now(), { waitUntil: 'networkidle' });
       const currentUrl = desktopPage.url();
       const heroTitleHtml = await desktopPage.locator('.bgp-hero-title').evaluate((el) => el.outerHTML);
@@ -245,12 +233,7 @@ export async function runUiCapture(options?: {
         console.log(`Saved 04b-hero-long-title.png`);
       }
       // Restore original title
-      executeSqlInDb(
-        state,
-        `UPDATE dbo.Movies 
-         SET title = 'Phim mo phong - KHONG phai lich Beta' 
-         WHERE movie_id = 1;`
-      );
+      runRunnerCommand(['e2e-sql', 'restore-title'], state);
       await desktopPage.goto(state.baseUrl + '/?v=' + Date.now());
       await desktopPage.waitForLoadState('networkidle');
 
@@ -267,7 +250,7 @@ export async function runUiCapture(options?: {
       }
 
       // 6. Empty state: set movies to DRAFT
-      executeSqlInDb(state, `UPDATE dbo.Movies SET status = 'DRAFT';`);
+      runRunnerCommand(['e2e-sql', 'hide-all-movies'], state);
       await desktopPage.reload();
       await desktopPage.waitForLoadState('networkidle');
       await desktopPage.screenshot({
@@ -276,7 +259,7 @@ export async function runUiCapture(options?: {
       });
       console.log(`Saved 06-empty-state.png`);
       // Restore movies to PUBLISHED
-      executeSqlInDb(state, `UPDATE dbo.Movies SET status = 'PUBLISHED';`);
+      runRunnerCommand(['e2e-sql', 'restore-all-movies'], state);
       await desktopPage.reload();
       await desktopPage.waitForLoadState('networkidle');
 

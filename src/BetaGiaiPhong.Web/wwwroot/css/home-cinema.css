@@ -338,11 +338,17 @@
     pointer-events: none;
 }
 
-.bgp-rail-btn-prev {
+.bgp-rail-btn.is-hidden {
+    display: none !important;
+}
+
+.bgp-rail-btn-prev,
+.bgp-rail-btn--prev {
     left: -12px;
 }
 
-.bgp-rail-btn-next {
+.bgp-rail-btn-next,
+.bgp-rail-btn--next {
     right: -12px;
 }
 

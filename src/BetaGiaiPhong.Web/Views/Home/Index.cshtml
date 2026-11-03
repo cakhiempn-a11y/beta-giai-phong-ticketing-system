@@ -19,7 +19,14 @@
                     <div class="bgp-hero-eyebrow mb-2">
                         @if (Model.HeroMovie != null)
                         {
-                            <span class="bgp-hero-badge-live">ĐANG CHIẾU</span>
+                            @if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                <span class="bgp-hero-badge-live">ĐANG CHIẾU</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary text-light">CHƯA CÓ SUẤT CHIẾU SẮP TỚI</span>
+                            }
                         }
                         <span class="text-secondary small ms-2">BETA GIẢI PHÓNG</span>
                     </div>
@@ -45,6 +52,10 @@
                             {
                                 <span class="badge bg-success">@Model.HeroMovie.UpcomingShowtimesCount suất chiếu</span>
                             }
+                            else
+                            {
+                                <span class="badge bg-secondary">Chưa có lịch chiếu</span>
+                            }
                         }
                         else
                         {
@@ -59,7 +70,14 @@
                         }
                         else if (Model.HeroMovie != null)
                         {
-                            @:Tác phẩm điện ảnh đặc sắc đang mở lịch chiếu tại Beta Giải Phóng. Theo dõi lịch chiếu thời gian thực và chọn vị trí ghế yêu thích ngay hôm nay.
+                            if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                @:Phim hiện đang có lịch chiếu tại Beta Giải Phóng. Mời bạn theo dõi lịch chiếu và chọn ghế trực tuyến.
+                            }
+                            else
+                            {
+                                @:Phim đã được phát hành trên hệ thống. Hiện chưa có suất chiếu sắp tới.
+                            }
                         }
                         else
                         {
@@ -70,9 +88,18 @@
                     <div class="bgp-hero-actions">
                         @if (Model.HeroMovie != null)
                         {
-                            <a class="btn btn-primary btn-lg px-4" asp-controller="Movies" asp-action="Details" asp-route-id="@Model.HeroMovie.MovieId">
-                                Xem lịch chiếu
-                            </a>
+                            if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                <a class="btn btn-primary btn-lg px-4" asp-controller="Movies" asp-action="Details" asp-route-id="@Model.HeroMovie.MovieId">
+                                    Xem lịch chiếu
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-primary btn-lg px-4" asp-controller="Movies" asp-action="Details" asp-route-id="@Model.HeroMovie.MovieId">
+                                    Chi tiết phim
+                                </a>
+                            }
                             <a class="btn btn-outline-light btn-lg px-4" href="#now-showing">
                                 Khám phá phim
                             </a>
@@ -97,7 +124,7 @@
                                  alt="Poster phim @Model.HeroMovie.Title"
                                  class="bgp-hero-poster-img"
                                  loading="eager"
-                                 onerror="this.onerror=null; this.src='/images/poster-fallback.svg';" />
+                                 onerror="this.onerror=null; if(this.src!='/images/poster-fallback.svg') this.src='/images/poster-fallback.svg';" />
                         </div>
                     </div>
                 }
@@ -143,22 +170,22 @@
             else
             {
                 <div class="bgp-rail-wrapper">
-                    <button type="button" class="bgp-rail-btn bgp-rail-btn-prev" aria-label="Cuộn sang trái" disabled>
+                    <button type="button" class="bgp-rail-btn bgp-rail-btn-prev bgp-rail-btn--prev" data-testid="rail-btn-prev" aria-label="Cuộn sang trái" disabled>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="m15 18-6-6 6-6"/>
                         </svg>
                     </button>
 
-                    <div class="bgp-movie-rail" tabindex="0" role="region" aria-label="Danh sách phim đang chiếu cuộn ngang">
+                    <div class="bgp-movie-rail" data-testid="movie-rail" tabindex="0" role="region" aria-label="Danh sách phim đang chiếu cuộn ngang">
                         @foreach (var movie in Model.FeaturedMovies)
                         {
-                            <a class="bgp-movie-card" asp-controller="Movies" asp-action="Details" asp-route-id="@movie.MovieId">
+                            <a class="bgp-movie-card" data-testid="movie-card" asp-controller="Movies" asp-action="Details" asp-route-id="@movie.MovieId">
                                 <div class="bgp-card-poster-wrap">
                                     <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "/images/poster-fallback.svg" : movie.PosterUrl)"
                                          alt="Poster phim @movie.Title"
                                          class="bgp-card-poster"
                                          loading="lazy"
-                                         onerror="this.onerror=null; this.src='/images/poster-fallback.svg';" />
+                                         onerror="this.onerror=null; if(this.src!='/images/poster-fallback.svg') this.src='/images/poster-fallback.svg';" />
                                     @if (!string.IsNullOrWhiteSpace(movie.AgeLabel))
                                     {
                                         <span class="bgp-card-badge-age">@movie.AgeLabel</span>
@@ -183,7 +210,7 @@
                         }
                     </div>
 
-                    <button type="button" class="bgp-rail-btn bgp-rail-btn-next" aria-label="Cuộn sang phải">
+                    <button type="button" class="bgp-rail-btn bgp-rail-btn-next bgp-rail-btn--next" data-testid="rail-btn-next" aria-label="Cuộn sang phải">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="m9 18 6-6-6-6"/>
                         </svg>
