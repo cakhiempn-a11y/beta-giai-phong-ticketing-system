@@ -3,132 +3,280 @@
     ViewData["Title"] = "Trang chủ";
 }
 
-<div class="container mt-4">
-    <!-- Hero Banner -->
-    <div class="hero-banner p-4 p-md-5 mb-5 shadow-sm text-center text-md-start">
-        <div class="row align-items-center">
-            <div class="col-lg-8">
-                <span class="badge bg-warning text-dark px-3 py-2 mb-2 text-uppercase fw-bold">Beta Giải Phóng Prototype</span>
-                <h1 class="display-5 fw-bold mb-3">Hệ Thống Quản Lý Bán Vé Trực Tuyến</h1>
-                <p class="lead text-light opacity-75 mb-4">
-                    Nền tảng tra cứu lịch chiếu, kiểm tra sơ đồ ghế thời gian thực và quản lý vé xem phim tại rạp Beta Giải Phóng.
-                </p>
-                <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
-                    <a class="btn btn-primary btn-lg px-4" href="#movies-section">Xem phim đang chiếu</a>
-                    <a class="btn btn-outline-light btn-lg px-4" asp-controller="Home" asp-action="Privacy">Quy chế học thuật</a>
-                </div>
-            </div>
-            <div class="col-lg-4 text-center mt-4 mt-lg-0">
-                <div class="p-3 bg-white bg-opacity-10 rounded-3 border border-white border-opacity-25">
-                    <h5 class="fw-bold text-warning mb-1">Rạp Beta Giải Phóng</h5>
-                    <p class="small text-light mb-2">Đường Giải Phóng, Hai Bà Trưng, Hà Nội</p>
-                    <div class="d-flex justify-content-around text-center mt-3">
-                        <div>
-                            <div class="h4 fw-bold mb-0">@Model.FeaturedMovies.Count</div>
-                            <small class="text-white-50">Phim đang chiếu</small>
-                        </div>
-                        <div>
-                            <div class="h4 fw-bold mb-0">@Model.UpcomingShowtimes.Count</div>
-                            <small class="text-white-50">Suất chiếu sắp tới</small>
-                        </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/home-cinema.css" asp-append-version="true" />
+}
+
+<div class="bgp-home">
+    <!-- 1. Hero Điện Ảnh Nổi Bật (Netflix-Inspired Cinematic Hero) -->
+    <section class="bgp-home-hero" aria-labelledby="hero-title">
+        <div class="bgp-hero-backdrop" style="background-image: url('/images/hero-cinema-backdrop.svg');">
+            <div class="bgp-hero-overlay"></div>
+        </div>
+        <div class="container bgp-hero-container">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-8 col-lg-7 bgp-hero-content">
+                    <div class="bgp-hero-eyebrow mb-2">
+                        @if (Model.HeroMovie != null)
+                        {
+                            @if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                <span class="bgp-hero-badge-live">ĐANG CHIẾU</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary text-light">CHƯA CÓ SUẤT CHIẾU SẮP TỚI</span>
+                            }
+                        }
+                        <span class="text-secondary small ms-2">BETA GIẢI PHÓNG</span>
+                    </div>
+
+                    <h1 id="hero-title" class="bgp-hero-title mb-3">
+                        @(Model.HeroMovie?.Title ?? "Điện Ảnh Đích Thực Tại Beta Giải Phóng")
+                    </h1>
+
+                    <div class="bgp-hero-meta d-flex flex-wrap align-items-center gap-2 mb-3">
+                        @if (Model.HeroMovie != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(Model.HeroMovie.AgeLabel))
+                            {
+                                <span class="badge bg-warning text-dark fw-bold">@Model.HeroMovie.AgeLabel</span>
+                            }
+                            <span>@Model.HeroMovie.DurationMin phút</span>
+                            @if (!string.IsNullOrWhiteSpace(Model.HeroMovie.GenreText))
+                            {
+                                <span>•</span>
+                                <span>@Model.HeroMovie.GenreText</span>
+                            }
+                            @if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                <span class="badge bg-success">@Model.HeroMovie.UpcomingShowtimesCount suất chiếu</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Chưa có lịch chiếu</span>
+                            }
+                        }
+                        else
+                        {
+                            <span>Rạp chiếu phim tiêu chuẩn với âm thanh sống động và sơ đồ ghế trực quan</span>
+                        }
+                    </div>
+
+                    <p class="bgp-hero-synopsis mb-4">
+                        @if (Model.HeroMovie != null && !string.IsNullOrWhiteSpace(Model.HeroMovie.Synopsis))
+                        {
+                            @Model.HeroMovie.Synopsis
+                        }
+                        else if (Model.HeroMovie != null)
+                        {
+                            if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                @:Phim hiện đang có lịch chiếu tại Beta Giải Phóng. Mời bạn theo dõi lịch chiếu và chọn ghế trực tuyến.
+                            }
+                            else
+                            {
+                                @:Phim đã được phát hành trên hệ thống. Hiện chưa có suất chiếu sắp tới.
+                            }
+                        }
+                        else
+                        {
+                            @:Chào mừng bạn đến với hệ thống rạp Beta Giải Phóng. Nền tảng tra cứu lịch chiếu, kiểm tra sơ đồ ghế thời gian thực và quản lý vé xem phim tiện lợi.
+                        }
+                    </p>
+
+                    <div class="bgp-hero-actions">
+                        @if (Model.HeroMovie != null)
+                        {
+                            if (Model.HeroMovie.UpcomingShowtimesCount > 0)
+                            {
+                                <a class="btn btn-primary btn-lg px-4" asp-controller="Movies" asp-action="Details" asp-route-id="@Model.HeroMovie.MovieId">
+                                    Xem lịch chiếu
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-primary btn-lg px-4" asp-controller="Movies" asp-action="Details" asp-route-id="@Model.HeroMovie.MovieId">
+                                    Chi tiết phim
+                                </a>
+                            }
+                            <a class="btn btn-outline-light btn-lg px-4" href="#now-showing">
+                                Khám phá phim
+                            </a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-primary btn-lg px-4" asp-controller="Movies" asp-action="Index">
+                                Khám phá phim
+                            </a>
+                            <a class="btn btn-outline-light btn-lg px-4" asp-controller="Home" asp-action="Privacy">
+                                Giới thiệu &amp; Quy chế
+                            </a>
+                        }
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Published Movies Section -->
-    <div id="movies-section" class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="h3 fw-bold mb-1">Phim Đang Chiếu</h2>
-                <p class="text-muted mb-0">Danh sách phim hiện đang mở lịch chiếu tại rạp</p>
-            </div>
-            <a class="btn btn-outline-primary btn-sm" asp-controller="Movies" asp-action="Index">Tất cả phim &rarr;</a>
-        </div>
-
-        @if (Model.FeaturedMovies.Count == 0)
-        {
-            <div class="alert alert-info text-center py-4">
-                Hiện tại chưa có phim nào được xuất bản. Vui lòng quay lại sau!
-            </div>
-        }
-        else
-        {
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                @foreach (var movie in Model.FeaturedMovies)
+                @if (Model.HeroMovie != null)
                 {
-                    <div class="col">
-                        <div class="card h-100 shadow-sm movie-card">
-                            <div class="movie-poster-placeholder">
-                                <span class="badge bg-light text-dark mb-2">@movie.GenreText</span>
-                                <h5 class="card-title fw-bold text-white px-2 mb-0">@movie.Title</h5>
-                            </div>
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between text-muted small mb-2">
-                                    <span>Thời lượng:</span>
-                                    <strong class="text-dark">@movie.DurationMin phút</strong>
-                                </div>
-                                <div class="d-flex justify-content-between text-muted small mb-3">
-                                    <span>Suất chiếu khả dụng:</span>
-                                    <span class="badge bg-success">@movie.UpcomingShowtimesCount suất</span>
-                                </div>
-                                <a class="btn btn-primary mt-auto w-100" asp-controller="Movies" asp-action="Details" asp-route-id="@movie.MovieId">
-                                    Xem lịch chiếu & sơ đồ
-                                </a>
-                            </div>
+                    <div class="col-12 col-md-4 col-lg-5 d-none d-md-flex justify-content-center justify-content-lg-end">
+                        <div class="bgp-hero-poster-frame">
+                            <img src="@(string.IsNullOrWhiteSpace(Model.HeroMovie.PosterUrl) ? "/images/poster-fallback.svg" : Model.HeroMovie.PosterUrl)"
+                                 alt="Poster phim @Model.HeroMovie.Title"
+                                 class="bgp-hero-poster-img"
+                                 loading="eager"
+                                 onerror="this.onerror=null; if(this.src!='/images/poster-fallback.svg') this.src='/images/poster-fallback.svg';" />
                         </div>
                     </div>
                 }
             </div>
+        </div>
+    </section>
+
+    <!-- 2. Hàng Phim Đang Chiếu (Netflix-Style Horizontal Scroll Rail) -->
+    <div class="container">
+        <section id="now-showing" class="bgp-movie-rail-section" aria-labelledby="rail-heading">
+            <div class="bgp-rail-header">
+                <div>
+                    <h2 id="rail-heading" class="bgp-rail-title h4 fw-bold mb-1">Phim Đang Chiếu</h2>
+                    <p class="text-secondary small mb-0">Các tác phẩm điện ảnh hiện đang mở lịch chiếu tại rạp</p>
+                </div>
+                <a class="btn btn-outline-primary btn-sm" asp-controller="Movies" asp-action="Index">
+                    Tất cả phim &rarr;
+                </a>
+            </div>
+
+            @if (Model.FeaturedMovies.Count == 0)
+            {
+                <div class="bgp-empty-state">
+                    <div class="bgp-empty-state-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                            <line x1="7" y1="2" x2="7" y2="22"/>
+                            <line x1="17" y1="2" x2="17" y2="22"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <line x1="2" y1="7" x2="7" y2="7"/>
+                            <line x1="2" y1="17" x2="7" y2="17"/>
+                            <line x1="17" y1="17" x2="22" y2="17"/>
+                            <line x1="17" y1="7" x2="22" y2="7"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 fw-bold text-light mb-2">Hiện chưa có phim nào đang chiếu</h3>
+                    <p class="text-secondary small mb-3">Lịch chiếu mới đang được cập nhật. Vui lòng quay lại sau!</p>
+                    <a class="btn btn-outline-primary btn-sm px-3" asp-controller="Home" asp-action="Privacy">
+                        Xem quy chế hoạt động
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="bgp-rail-wrapper">
+                    <button type="button" class="bgp-rail-btn bgp-rail-btn-prev bgp-rail-btn--prev" data-testid="rail-btn-prev" aria-label="Cuộn sang trái" disabled>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m15 18-6-6 6-6"/>
+                        </svg>
+                    </button>
+
+                    <div class="bgp-movie-rail" data-testid="movie-rail" tabindex="0" role="region" aria-label="Danh sách phim đang chiếu cuộn ngang">
+                        @foreach (var movie in Model.FeaturedMovies)
+                        {
+                            <a class="bgp-movie-card" data-testid="movie-card" asp-controller="Movies" asp-action="Details" asp-route-id="@movie.MovieId">
+                                <div class="bgp-card-poster-wrap">
+                                    <img src="@(string.IsNullOrWhiteSpace(movie.PosterUrl) ? "/images/poster-fallback.svg" : movie.PosterUrl)"
+                                         alt="Poster phim @movie.Title"
+                                         class="bgp-card-poster"
+                                         loading="lazy"
+                                         onerror="this.onerror=null; if(this.src!='/images/poster-fallback.svg') this.src='/images/poster-fallback.svg';" />
+                                    @if (!string.IsNullOrWhiteSpace(movie.AgeLabel))
+                                    {
+                                        <span class="bgp-card-badge-age">@movie.AgeLabel</span>
+                                    }
+                                    @if (movie.UpcomingShowtimesCount > 0)
+                                    {
+                                        <span class="bgp-card-badge-showtimes">@movie.UpcomingShowtimesCount suất</span>
+                                    }
+                                </div>
+                                <div class="bgp-card-info">
+                                    <h3 class="bgp-card-title">@movie.Title</h3>
+                                    <div class="bgp-card-meta">
+                                        <span>@movie.DurationMin phút</span>
+                                        @if (!string.IsNullOrWhiteSpace(movie.GenreText))
+                                        {
+                                            <span class="bgp-meta-sep">•</span>
+                                            <span>@movie.GenreText</span>
+                                        }
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+
+                    <button type="button" class="bgp-rail-btn bgp-rail-btn-next bgp-rail-btn--next" data-testid="rail-btn-next" aria-label="Cuộn sang phải">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m9 18 6-6-6-6"/>
+                        </svg>
+                    </button>
+                </div>
+            }
+        </section>
+
+        <!-- 3. Lịch Chiếu Sắp Diễn Ra (Upcoming Quick Schedule) -->
+        @if (Model.UpcomingShowtimes.Count > 0)
+        {
+            <section class="bgp-upcoming-section" aria-labelledby="upcoming-heading">
+                <div class="d-flex justify-content-between align-items-end mb-3">
+                    <div>
+                        <h2 id="upcoming-heading" class="h4 fw-bold mb-1">Lịch Chiếu Sắp Diễn Ra</h2>
+                        <p class="text-secondary small mb-0">Các suất chiếu gần nhất có thể chọn ghế ngay</p>
+                    </div>
+                </div>
+
+                <div class="bgp-upcoming-card shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table bgp-upcoming-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="ps-3">Giờ chiếu (VN)</th>
+                                    <th scope="col">Tên phim</th>
+                                    <th scope="col">Phòng chiếu</th>
+                                    <th scope="col">Ghế trống</th>
+                                    <th scope="col" class="text-end pe-3">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var st in Model.UpcomingShowtimes)
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div class="bgp-upcoming-time">@st.StartVietnamText</div>
+                                            <small class="text-secondary d-block">kết thúc: @st.EndVietnamText</small>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-light">@st.MovieTitle</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">@st.RoomName</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(st.AvailableSeatsCount > 0 ? "bg-success" : "bg-danger")">
+                                                @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <a class="btn btn-sm btn-outline-primary" asp-controller="Showtimes" asp-action="Seats" asp-route-id="@st.ShowtimeId">
+                                                Xem sơ đồ ghế
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         }
     </div>
-
-    <!-- Upcoming Showtimes Quick Schedule -->
-    @if (Model.UpcomingShowtimes.Count > 0)
-    {
-        <div class="mb-5">
-            <h2 class="h3 fw-bold mb-3">Lịch Chiếu Sắp Diễn Ra</h2>
-            <div class="table-responsive bg-white rounded-3 shadow-sm border">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col" class="py-3 ps-3">Giờ chiếu (VN)</th>
-                            <th scope="col">Tên phim</th>
-                            <th scope="col">Phòng chiếu</th>
-                            <th scope="col">Ghế trống</th>
-                            <th scope="col" class="text-end pe-3">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var st in Model.UpcomingShowtimes)
-                        {
-                            <tr>
-                                <td class="ps-3">
-                                    <span class="fw-bold text-primary">@st.StartVietnamText</span>
-                                    <small class="text-muted d-block">kết thúc: @st.EndVietnamText</small>
-                                </td>
-                                <td>
-                                    <span class="fw-semibold">@st.MovieTitle</span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark border">@st.RoomName</span>
-                                </td>
-                                <td>
-                                    <span class="badge @(st.AvailableSeatsCount > 0 ? "bg-success" : "bg-danger")">
-                                        @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
-                                    </span>
-                                </td>
-                                <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-outline-primary" asp-controller="Showtimes" asp-action="Seats" asp-route-id="@st.ShowtimeId">
-                                        Xem sơ đồ ghế
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
 </div>
+
+@section Scripts {
+    <script src="~/js/home-cinema.js" asp-append-version="true"></script>
+}

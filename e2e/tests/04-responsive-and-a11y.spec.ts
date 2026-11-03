@@ -142,39 +142,101 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
     });
     const page = await context.newPage();
 
+    // Helper: Calculate relative luminance and WCAG contrast ratio directly in test
+    function parseRgb(colorStr: string): [number, number, number] {
+      const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+      if (!match) return [0, 0, 0];
+      return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+    }
+
+    function getRelativeLuminance(rgb: [number, number, number]): number {
+      const [r, g, b] = rgb.map((c) => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function calculateContrast(fgStr: string, bgStr: string): number {
+      const l1 = getRelativeLuminance(parseRgb(fgStr));
+      const l2 = getRelativeLuminance(parseRgb(bgStr));
+      const lighter = Math.max(l1, l2);
+      const darker = Math.min(l1, l2);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
     try {
-      // 1. Bright badge contrast on /movies
+      // 1. Bright badge contrast on /movies (warning & info badges)
       await page.goto('/movies');
       await page.waitForLoadState('networkidle');
 
-      const badgeColors = await page.evaluate(() => {
-        const warning = document.querySelector('.badge.bg-warning');
-        const info = document.querySelector('.badge.bg-info');
-        const light = document.querySelector('.badge.bg-light');
+      const moviesBadges = await page.evaluate(() => {
+        const warning = document.querySelector('.badge.bg-warning') as HTMLElement;
+        const info = document.querySelector('.badge.bg-info') as HTMLElement;
         return {
-          warningColor: warning ? window.getComputedStyle(warning).color : null,
-          infoColor: info ? window.getComputedStyle(info).color : null,
-          lightColor: light ? window.getComputedStyle(light).color : null,
+          hasWarning: !!warning,
+          warningColor: warning ? window.getComputedStyle(warning).color : '',
+          warningBg: warning ? window.getComputedStyle(warning).backgroundColor : '',
+          hasInfo: !!info,
+          infoColor: info ? window.getComputedStyle(info).color : '',
+          infoBg: info ? window.getComputedStyle(info).backgroundColor : '',
         };
       });
 
-      // Badges must use dark text rgb(20, 20, 20) (#141414) on bright backgrounds for >= 10:1 AAA contrast
-      if (badgeColors.warningColor) {
-        expect(badgeColors.warningColor).toBe('rgb(20, 20, 20)');
-      }
-      if (badgeColors.infoColor) {
-        expect(badgeColors.infoColor).toBe('rgb(20, 20, 20)');
-      }
-      if (badgeColors.lightColor) {
-        expect(badgeColors.lightColor).toBe('rgb(20, 20, 20)');
-      }
+      // Assert mandatory elements exist (no silent skipping)
+      expect(moviesBadges.hasWarning, 'Expected .badge.bg-warning on /movies').toBe(true);
+      expect(moviesBadges.hasInfo, 'Expected .badge.bg-info on /movies').toBe(true);
 
-      // 2. Form input boundaries and focus on /account/login
+      const warningRatio = calculateContrast(moviesBadges.warningColor, moviesBadges.warningBg);
+      const infoRatio = calculateContrast(moviesBadges.infoColor, moviesBadges.infoBg);
+      expect(warningRatio, `Warning badge contrast ratio (${warningRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
+      expect(infoRatio, `Info badge contrast ratio (${infoRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
+
+      // 2. Light badge inside card & actual outline button on /
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+
+      const homeElements = await page.evaluate(() => {
+        function resolveEffectiveBg(el: HTMLElement): string {
+          let curr: HTMLElement | null = el;
+          while (curr) {
+            const bg = window.getComputedStyle(curr).backgroundColor;
+            if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+              return bg;
+            }
+            curr = curr.parentElement;
+          }
+          return 'rgb(20, 20, 20)';
+        }
+
+        const lightBadgeInCard = document.querySelector('.card .badge.bg-light, .badge.bg-light') as HTMLElement;
+        const outlineBtn = document.querySelector('.btn-outline-primary, .btn-outline-light') as HTMLElement;
+
+        return {
+          hasLightBadge: !!lightBadgeInCard,
+          lightBadgeColor: lightBadgeInCard ? window.getComputedStyle(lightBadgeInCard).color : '',
+          lightBadgeBg: lightBadgeInCard ? window.getComputedStyle(lightBadgeInCard).backgroundColor : '',
+          hasOutlineBtn: !!outlineBtn,
+          outlineBtnColor: outlineBtn ? window.getComputedStyle(outlineBtn).color : '',
+          outlineBtnEffectiveBg: outlineBtn ? resolveEffectiveBg(outlineBtn) : '',
+        };
+      });
+
+      expect(homeElements.hasLightBadge, 'Expected .badge.bg-light on /').toBe(true);
+      expect(homeElements.hasOutlineBtn, 'Expected outline button on /').toBe(true);
+
+      const lightBadgeRatio = calculateContrast(homeElements.lightBadgeColor, homeElements.lightBadgeBg);
+      expect(lightBadgeRatio, `Light badge contrast ratio (${lightBadgeRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
+
+      const outlineBtnRatio = calculateContrast(homeElements.outlineBtnColor, homeElements.outlineBtnEffectiveBg);
+      expect(outlineBtnRatio, `Outline button text contrast ratio (${outlineBtnRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(4.5);
+
+      // 3. Form input boundaries and focus on /account/login
       await page.goto('/account/login');
       await page.waitForLoadState('networkidle');
 
       const inputStyles = await page.evaluate(() => {
-        const input = document.querySelector('input[name="Request.Email"]');
+        const input = document.querySelector('input[name="Request.Email"]') as HTMLInputElement;
         if (!input) return null;
         const style = window.getComputedStyle(input);
         return {
@@ -185,12 +247,15 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
       });
 
       expect(inputStyles).not.toBeNull();
-      // Form control border must use #767676 (rgb(118, 118, 118)) for >= 3:1 non-text contrast against dark background
-      expect(inputStyles!.borderColor).toBe('rgb(118, 118, 118)');
-      // Form control text must be readable light text
-      expect(inputStyles!.color).toBe('rgb(245, 245, 241)');
+      // Form control border (#767676) must achieve >= 3:1 non-text contrast against input bg
+      const borderRatio = calculateContrast(inputStyles!.borderColor, inputStyles!.backgroundColor);
+      expect(borderRatio, `Input border contrast ratio (${borderRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(3.0);
 
-      // 3. Validation typography vs general text-danger
+      // Form control text must be readable light text
+      const inputTextRatio = calculateContrast(inputStyles!.color, inputStyles!.backgroundColor);
+      expect(inputTextRatio, `Input text contrast ratio (${inputTextRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
+
+      // 4. Validation typography vs general text-danger
       await page.click('button[type="submit"]');
       await page.waitForTimeout(300);
 
@@ -199,10 +264,8 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
         return valMsg ? { fontSize: window.getComputedStyle(valMsg).fontSize, color: window.getComputedStyle(valMsg).color } : null;
       });
 
-      if (valStyles) {
-        // Validation messages use distinct validation typography (#f87171)
-        expect(valStyles.color).toBe('rgb(248, 113, 113)');
-      }
+      expect(valStyles, 'Expected validation error after submitting empty form').not.toBeNull();
+      expect(valStyles!.color).toBe('rgb(248, 113, 113)');
     } finally {
       await context.close();
     }

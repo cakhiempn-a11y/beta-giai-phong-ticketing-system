@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
@@ -557,6 +557,104 @@ AND NOT EXISTS (SELECT 1 FROM dbo.UserRoles ur WHERE ur.user_id = u.user_id AND 
             case "corrupt-e2e-db":
                 cmd.CommandText = "UPDATE TOP (1) dbo.Movies SET status = 'ARCHIVED' WHERE movie_id IN (SELECT movie_id FROM dbo.Showtimes WHERE status = 'ON_SALE' AND start_utc > SYSUTCDATETIME());";
                 await cmd.ExecuteNonQueryAsync();
+                return 0;
+            case "seed-admin":
+                cmd.CommandText = @"
+DECLARE @adminRoleId int;
+SELECT @adminRoleId = role_id FROM dbo.Roles WHERE role_code = 'ADMIN';
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE normalized_email = 'ADMIN@DEMO.INVALID')
+BEGIN
+    INSERT INTO dbo.Users (email, normalized_email, display_name, status, created_utc, password_hash)
+    SELECT 'admin@demo.invalid', 'ADMIN@DEMO.INVALID', N'Demo Quan tri', 'ACTIVE', SYSUTCDATETIME(), password_hash
+    FROM dbo.Users WHERE normalized_email = 'MANAGER@DEMO.INVALID';
+
+    DECLARE @adminId bigint = SCOPE_IDENTITY();
+
+    INSERT INTO dbo.UserRoles (user_id, role_id)
+    VALUES (@adminId, @adminRoleId);
+END";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("ADMIN_SEEDED");
+                return 0;
+            case "seed-ui-fixtures":
+                cmd.CommandText = @"
+-- Update demo movie with valid values
+UPDATE dbo.Movies 
+SET age_label = 'T16', 
+    synopsis = N'Tác phẩm điện ảnh hồi hộp đặc sắc tại Beta Giải Phóng.',
+    poster_url = '/images/poster-fallback.svg'
+WHERE title = 'Phim mo phong - KHONG phai lich Beta';
+
+-- 1. Movie with 0 showtimes, null synopsis, and target broken poster URL for fallback test
+IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Phim Khong Co Suat')
+BEGIN
+    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+    VALUES (N'Phim Khong Co Suat', 90, N'Tâm Lý', 'PUBLISHED', 'P', NULL, 'https://example.invalid/posters/broken-poster-target.jpg');
+END
+
+-- 2. Movie with long title for hero/rail wrapping test
+IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title LIKE N'Chien Binh Khong Gian%')
+BEGIN
+    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+    VALUES (N'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket', 135, N'Hành Động, Viễn Tưởng', 'PUBLISHED', 'T16', N'Chiến trường đa vũ trụ rực lửa.', '/images/poster-fallback.svg');
+END
+
+-- 3, 4, 5: Additional movies to guarantee horizontal scroll rail overflow (>5 cards)
+IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Thanh Pho Hoang Hon')
+BEGIN
+    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+    VALUES (N'Thanh Pho Hoang Hon', 105, N'Lãng Mạn', 'PUBLISHED', 'T13', N'Chuyện tình đô thị nhẹ nhàng.', '/images/poster-fallback.svg');
+END
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Vu Dieu Bong Dem')
+BEGIN
+    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+    VALUES (N'Vu Dieu Bong Dem', 115, N'Kinh Dị', 'PUBLISHED', 'T18', N'Bóng ma ẩn sâu sau bức màn nhung.', '/images/poster-fallback.svg');
+END
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Sieu Diep Vien Nhi')
+BEGIN
+    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+    VALUES (N'Sieu Diep Vien Nhi', 88, N'Hoạt Hình', 'PUBLISHED', 'P', N'Biệt đội thám tử nhí phá án tài ba.', '/images/poster-fallback.svg');
+END";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("UI_FIXTURES_SEEDED");
+                return 0;
+            case "reset-ui-fixtures":
+                cmd.CommandText = @"
+DELETE FROM dbo.Movies WHERE title IN (
+    N'Phim Khong Co Suat',
+    N'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket',
+    N'Thanh Pho Hoang Hon',
+    N'Vu Dieu Bong Dem',
+    N'Sieu Diep Vien Nhi'
+);
+UPDATE dbo.Movies 
+SET age_label = NULL, synopsis = NULL, poster_url = NULL
+WHERE title = 'Phim mo phong - KHONG phai lich Beta';";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("UI_FIXTURES_RESET");
+                return 0;
+            case "hide-all-movies":
+                cmd.CommandText = "UPDATE dbo.Movies SET status = 'DRAFT' WHERE status = 'PUBLISHED';";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("ALL_MOVIES_HIDDEN");
+                return 0;
+            case "restore-all-movies":
+                cmd.CommandText = "UPDATE dbo.Movies SET status = 'PUBLISHED' WHERE status = 'DRAFT';";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("ALL_MOVIES_RESTORED");
+                return 0;
+            case "set-long-title":
+                cmd.CommandText = "UPDATE dbo.Movies SET title = 'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket (Ban Chieu Rap 3D Dac Biet IMAX)' WHERE movie_id = 1;";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("LONG_TITLE_SET");
+                return 0;
+            case "restore-title":
+                cmd.CommandText = "UPDATE dbo.Movies SET title = 'Phim mo phong - KHONG phai lich Beta' WHERE movie_id = 1;";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("TITLE_RESTORED");
                 return 0;
             default:
                 Console.Error.WriteLine($"Unknown e2e-sql action: {action}");

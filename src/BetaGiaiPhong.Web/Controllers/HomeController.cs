@@ -10,13 +10,22 @@ public sealed class HomeController(ICatalogService catalogService) : Controller
 {
     [HttpGet("")]
     [HttpGet("home")]
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
         var movies = await catalogService.GetPublishedMoviesAsync(ct);
         var upcomingShowtimes = await catalogService.GetUpcomingShowtimesAsync(8, ct);
 
+        // Deterministic Hero Movie Selection:
+        // 1. Pick the published movie that has bookable upcoming showtimes (UpcomingShowtimesCount > 0).
+        // 2. If none have upcoming showtimes, pick the first published movie.
+        // 3. If no published movies exist, HeroMovie is null (triggers cinema intro hero).
+        var heroMovie = movies.FirstOrDefault(m => m.UpcomingShowtimesCount > 0)
+            ?? movies.FirstOrDefault();
+
         var vm = new HomeViewModel
         {
+            HeroMovie = heroMovie,
             FeaturedMovies = movies,
             UpcomingShowtimes = upcomingShowtimes
         };
