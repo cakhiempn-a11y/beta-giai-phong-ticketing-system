@@ -7,7 +7,7 @@ import {
 
 function parseRgb(colorStr: string): [number, number, number] {
   const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  if (!match) return [20, 20, 20];
+  if (!match) return [10, 10, 12];
   return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
 }
 
@@ -27,7 +27,7 @@ function calculateContrast(fgStr: string, bgStr: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/movies/{id})', () => {
+test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movies/{id})', () => {
   test.beforeAll(() => {
     const state = loadE2eState();
     runRunnerCommandOrThrow(['e2e-sql', 'seed-ui-fixtures'], state, undefined);
@@ -35,7 +35,7 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
 
   test.afterAll(() => {
     const state = loadE2eState();
-    runRunnerCleanupSafe(['e2e-sql', 'reset-ui-fixtures'], state, 'UI-02B afterAll reset-ui-fixtures');
+    runRunnerCleanupSafe(['e2e-sql', 'reset-ui-fixtures'], state, 'UI-P3 afterAll reset-ui-fixtures');
   });
 
   test('1. Catalogue (/movies): displays only PUBLISHED movies, 2:3 posters, accurate showtime status, and single-link cards', async ({
@@ -58,10 +58,10 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
     try {
       await page.goto('/movies', { waitUntil: 'networkidle' });
 
-      // Heading & dark background
+      // Heading & Zero-Bootstrap obsidian dark canvas (#0A0A0C -> rgb(10, 10, 12))
       await expect(page.locator('h1.bgp-catalog-title')).toHaveText('Khám phá phim');
       const bg = await page.evaluate(() => window.getComputedStyle(document.body).backgroundColor);
-      expect(bg).toBe('rgb(20, 20, 20)');
+      expect(bg).toBe('rgb(10, 10, 12)');
 
       // Never displays DRAFT movie
       await expect(page.locator('body')).not.toContainText('Phim Ban Nhap Chua Cong Bo');
@@ -109,7 +109,7 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
         expect(p.loading).toBe('lazy');
         expect(p.objectFit).toBe('cover');
       }
-      // At least 2 cards should be using the fallback SVG (one NULL PosterUrl, one broken-poster-target.jpg)
+      // At least 2 cards should be using the fallback SVG (PENDING_TMDB_API_KEY NULL PosterUrl + broken-poster-target.jpg)
       const fallbackLoadedCount = posterStats.filter((p) => p.currentSrc.includes('/images/poster-fallback.svg')).length;
       expect(fallbackLoadedCount).toBeGreaterThanOrEqual(2);
 
@@ -231,11 +231,10 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
       );
       await expect(page.locator('[data-testid="catalog-movie-card"]')).toHaveCount(0);
     } finally {
-      runRunnerCleanupSafe(['e2e-sql', 'restore-all-movies'], state, 'UI-02B restore-all-movies');
+      runRunnerCleanupSafe(['e2e-sql', 'restore-all-movies'], state, 'UI-P3 restore-all-movies');
       await context.close();
     }
 
-    // Verify pre-existing DRAFT movie remained DRAFT after restore-all-movies
     const inspectAfterRestore = runRunnerCommandOrThrow(['e2e-sql', 'inspect-movies-state'], state);
     expect(inspectAfterRestore.stdout).toContain('|DRAFT|Phim Ban Nhap Chua Cong Bo|');
   });
@@ -270,13 +269,11 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
         'Chiến trường đa vũ trụ rực lửa mở ra cuộc đối đầu định mệnh'
       );
 
-      // Must NOT contain outdated BE-01 / BE-02 notice or Buffer dọn phòng
       const bodyText = await page.locator('body').innerText();
       expect(bodyText).not.toContain('BE-01');
       expect(bodyText).not.toContain('BE-02');
       expect(bodyText).not.toContain('Buffer dọn phòng');
 
-      // Poster is 2:3 and loaded
       const posterLoaded = await page
         .locator('[data-testid="detail-poster-img"]')
         .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0);
@@ -308,7 +305,6 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
         'Nội dung tóm tắt của bộ phim đang được cập nhật.'
       );
 
-      // Broken poster fell back to /images/poster-fallback.svg
       const fallbackSrc = await page
         .locator('[data-testid="detail-poster-img"]')
         .evaluate((img: HTMLImageElement) => ({
@@ -353,7 +349,6 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
 
       await page.goto(activeHref, { waitUntil: 'networkidle' });
 
-      // Should have 2 date tabs in UTC+7 chronological order
       const dateTabs = page.locator('[data-testid="showtime-date-tab"]');
       await expect(dateTabs).toHaveCount(2);
 
@@ -361,7 +356,6 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
       const dateKey1 = (await dateTabs.nth(1).getAttribute('data-date-key'))!;
       expect(dateKey0 < dateKey1).toBe(true);
 
-      // First date tab is active by default and has 2 showtimes: 18:30 (available) and 23:15 -> 01:30 (+1 ngày, sold-out)
       await expect(dateTabs.nth(0)).toHaveAttribute('aria-selected', 'true');
       const panel0 = page.locator(`[data-date-panel="${dateKey0}"]`);
       await expect(panel0).toBeVisible();
@@ -369,17 +363,14 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
       const panel0Cards = panel0.locator('[data-testid="showtime-card"]');
       await expect(panel0Cards).toHaveCount(2);
 
-      // Verify chronological order on Day 1: 18:30 then 23:15
       await expect(panel0Cards.nth(0).locator('[data-testid="showtime-start"]')).toHaveText('18:30');
       await expect(panel0Cards.nth(0).locator('[data-testid="showtime-cta"]')).toContainText('Chọn ghế');
 
-      // 23:15 showtime crosses midnight (+1 ngày) and is sold out (0 available seats)
       await expect(panel0Cards.nth(1).locator('[data-testid="showtime-start"]')).toHaveText('23:15');
       await expect(panel0Cards.nth(1).locator('[data-testid="showtime-crosses-midnight"]')).toContainText('+1 ngày');
       await expect(panel0Cards.nth(1).locator('[data-testid="showtime-seats"]')).toContainText('Hết ghế trống');
       await expect(panel0Cards.nth(1).locator('[data-testid="showtime-cta"]')).toHaveText('Xem sơ đồ ghế');
 
-      // Keyboard navigation: focus first date tab, press ArrowRight to switch to second date tab
       await dateTabs.nth(0).focus();
       await page.keyboard.press('ArrowRight');
 
@@ -390,23 +381,19 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
       await expect(panel1).toBeVisible();
       await expect(panel0).toBeHidden();
 
-      // Day 2 has 00:30 VN (which is 17:30 UTC previous day! Verifies UTC+7 date grouping) and 19:00 VN
       const panel1Cards = panel1.locator('[data-testid="showtime-card"]');
       await expect(panel1Cards).toHaveCount(2);
       await expect(panel1Cards.nth(0).locator('[data-testid="showtime-start"]')).toHaveText('00:30');
       await expect(panel1Cards.nth(1).locator('[data-testid="showtime-start"]')).toHaveText('19:00');
 
-      // Reloading keeps Day 2 selected via ?date= query param
       await page.reload({ waitUntil: 'networkidle' });
       await expect(dateTabs.nth(1)).toHaveAttribute('aria-selected', 'true');
       await expect(panel1).toBeVisible();
 
-      // Browser Back returns to Day 1
       await page.goBack({ waitUntil: 'networkidle' });
       await expect(dateTabs.nth(0)).toHaveAttribute('aria-selected', 'true');
       await expect(panel0).toBeVisible();
 
-      // Clicking a showtime CTA opens /showtimes/{id}/seats
       const firstShowtimeCta = panel0Cards.nth(0).locator('[data-testid="showtime-cta"]');
       const seatHref = (await firstShowtimeCta.getAttribute('href'))!;
       expect(seatHref).toMatch(/^\/showtimes\/\d+\/seats$/);
@@ -445,8 +432,7 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
     const page = await context.newPage();
 
     try {
-      // 6.1 Intercept /images/posters/poster-scifi.svg with HTTP 404 and verify fallback on /movies
-      await page.route('**/images/posters/poster-scifi.svg', (route) =>
+      await page.route('**/media/movies/verified/tears-of-steel-2012-poster-w342.jpg', (route) =>
         route.fulfill({ status: 404, body: 'Not Found' })
       );
 
@@ -466,9 +452,8 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
         )
         .toBe(true);
 
-      await page.unroute('**/images/posters/poster-scifi.svg');
+      await page.unroute('**/media/movies/verified/tears-of-steel-2012-poster-w342.jpg');
 
-      // 6.2 Long title wrapping & responsive viewports (320, 390, 768, 992, 1440)
       runRunnerCommandOrThrow(['e2e-sql', 'set-long-title'], state);
 
       const activeHref = (await page
@@ -506,7 +491,6 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
         }
       }
 
-      // 6.3 Contrast checks on filter pills
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto('/movies', { waitUntil: 'networkidle' });
       const pillColors = await page.evaluate(() => {
@@ -522,7 +506,114 @@ test.describe('UI-02B: Cinematic Movie Catalogue (/movies) & Movie Details (/mov
       expect(calculateContrast(pillColors.activeFg, pillColors.activeBg)).toBeGreaterThanOrEqual(4.5);
       expect(calculateContrast(pillColors.inactiveFg, pillColors.inactiveBg)).toBeGreaterThanOrEqual(4.5);
     } finally {
-      runRunnerCleanupSafe(['e2e-sql', 'restore-title'], state, 'UI-02B restore-title');
+      runRunnerCleanupSafe(['e2e-sql', 'restore-title'], state, 'UI-P3 restore-title');
+      await context.close();
+    }
+  });
+
+  test('7. UI-P3 Verified Movie Detail Stage, Cast Grid, Provenance Dossier, Official Trailer Modal & Suggested On-Sale Movies', async ({
+    browser,
+  }) => {
+    const state = loadE2eState();
+    const context = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 1440, height: 900 },
+    });
+    const page = await context.newPage();
+
+    try {
+      await page.route('https://www.youtube-nocookie.com/embed/**', (route) => {
+        route.fulfill({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: '<!doctype html><html><body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">Charade Official Trailer Stub</body></html>',
+        });
+      });
+
+      // Locate verified film "Mê trong mê" (Charade, 1963) on /movies
+      await page.goto('/movies?q=Charade', { waitUntil: 'networkidle' });
+
+      const zeroBootstrapCatalog = await page.evaluate(() => ({
+        hasBootstrapCss: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some((l) =>
+          (l.getAttribute('href') || '').includes('bootstrap')
+        ),
+        hasBootstrapJs: Array.from(document.querySelectorAll('script[src]')).some((s) =>
+          (s.getAttribute('src') || '').includes('bootstrap')
+        ),
+      }));
+      expect(zeroBootstrapCatalog.hasBootstrapCss).toBe(false);
+      expect(zeroBootstrapCatalog.hasBootstrapJs).toBe(false);
+
+      const charadeCard = page.locator('[data-testid="catalog-movie-card"]', { hasText: 'Mê trong mê' });
+      await expect(charadeCard).toBeVisible();
+      const charadeCardSrcset = await charadeCard.locator('img.bgp-catalog-poster-img').getAttribute('srcset');
+      expect(charadeCardSrcset).toContain('342w');
+      expect(charadeCardSrcset).toContain('780w');
+
+      const charadeHref = (await charadeCard.getAttribute('href'))!;
+      await page.goto(charadeHref, { waitUntil: 'networkidle' });
+
+      // Zero Bootstrap on /movies/{id}
+      const zeroBootstrapDetail = await page.evaluate(() => ({
+        hasBootstrapCss: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some((l) =>
+          (l.getAttribute('href') || '').includes('bootstrap')
+        ),
+        hasBootstrapJs: Array.from(document.querySelectorAll('script[src]')).some((s) =>
+          (s.getAttribute('src') || '').includes('bootstrap')
+        ),
+      }));
+      expect(zeroBootstrapDetail.hasBootstrapCss).toBe(false);
+      expect(zeroBootstrapDetail.hasBootstrapJs).toBe(false);
+
+      // Verified backdrop + responsive poster srcset + identity + rating + cast + provenance dossier
+      await expect(page.locator('[data-testid="detail-backdrop-img"]')).toHaveAttribute('fetchpriority', 'high');
+      const detailPosterSrcset = await page.locator('[data-testid="detail-poster-img"]').getAttribute('srcset');
+      expect(detailPosterSrcset).toContain('342w');
+      expect(detailPosterSrcset).toContain('780w');
+
+      await expect(page.locator('[data-testid="detail-identity"]')).toContainText('Charade');
+      await expect(page.locator('[data-testid="detail-identity"]')).toContainText('1963');
+      await expect(page.locator('[data-testid="detail-rating-badge"]')).toContainText('IMDb 7.8/10');
+      await expect(page.locator('[data-testid="detail-age-unclassified"]')).toContainText('Chưa có phân loại tại VN');
+      await expect(page.locator('[data-testid="detail-director"]')).toContainText('Stanley Donen');
+      await expect(page.locator('[data-testid="detail-cast-grid"]')).toContainText('Cary Grant');
+      await expect(page.locator('[data-testid="detail-cast-grid"]')).toContainText('Audrey Hepburn');
+
+      const provenanceCard = page.locator('[data-testid="detail-provenance-card"]');
+      await expect(provenanceCard).toBeVisible();
+      await expect(provenanceCard).toContainText('Q496266');
+      await expect(provenanceCard).toContainText('tt0056923');
+      await expect(provenanceCard).toContainText('WIKIMEDIA_COMMONS');
+
+      // Official YouTube Trailer modal on Details page
+      const trailerBtn = page.locator('[data-testid="detail-trailer-btn"]');
+      await expect(trailerBtn).toBeVisible();
+      await trailerBtn.click();
+
+      const dialog = page.locator('[data-testid="trailer-dialog"]');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator('[data-testid="trailer-iframe"]')).toHaveAttribute(
+        'src',
+        /youtube-nocookie\.com\/embed\/BJ_njww9SOQ/
+      );
+
+      await page.click('[data-testid="trailer-dialog-close"]');
+      await expect(dialog).toBeHidden();
+      await expect(dialog.locator('iframe')).toHaveCount(0);
+
+      // Zero-showtime real movie ("Mai") displays T18 (VN) age classification + suggested on-sale movies
+      await page.goto('/movies?q=Tr%E1%BA%A5n+Th%C3%A0nh', { waitUntil: 'networkidle' });
+      const maiHref = (await page
+        .locator('[data-testid="catalog-movie-card"]', { hasText: 'Mai' })
+        .getAttribute('href'))!;
+      await page.goto(maiHref, { waitUntil: 'networkidle' });
+
+      await expect(page.locator('[data-testid="detail-age-label"]')).toHaveText('T18');
+      await expect(page.locator('[data-testid="detail-provenance-card"]')).toContainText('T18 (VN)');
+      const suggestedBlock = page.locator('[data-testid="detail-suggested-movies"]');
+      await expect(suggestedBlock).toBeVisible();
+      expect(await suggestedBlock.locator('a.bgp-suggested-card').count()).toBeGreaterThanOrEqual(2);
+    } finally {
       await context.close();
     }
   });

@@ -3,71 +3,231 @@
     ViewData["Title"] = "Thêm Phim Mới";
 }
 
-<div class="container py-4" style="max-width: 800px;">
-    <div class="mb-4">
-        <a asp-action="Movies" class="text-decoration-none small text-muted">&larr; Quay lại danh sách phim</a>
-        <h1 class="h3 fw-bold mt-2">Thêm Phim Mới</h1>
-        <p class="text-secondary small">Phim mới tạo sẽ mặc định ở trạng thái <strong>DRAFT</strong>. Bạn có thể xuất bản (PUBLISHED) sau khi kiểm tra đầy đủ thông tin.</p>
-    </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-ops.css" asp-append-version="true" />
+}
+
+<div class="bgp-ops-page bgp-ops-page--narrow">
+    <ol class="bgp-ops-breadcrumb" aria-label="Breadcrumb">
+        <li><a asp-action="Movies">Danh mục Phim</a></li>
+        <li class="bgp-ops-breadcrumb__sep" aria-hidden="true">/</li>
+        <li aria-current="page">Thêm phim mới</li>
+    </ol>
+
+    <header class="bgp-ops-header">
+        <div class="bgp-ops-header__main">
+            <div class="bgp-ops-eyebrow">CREATE DRAFT ENTRY • VERIFIED METADATA</div>
+            <h1 class="bgp-ops-title">Thêm Phim Mới</h1>
+            <p class="bgp-ops-subtitle">
+                Phim khởi tạo mặc định ở trạng thái <code>DRAFT</code>. Bạn có thể tra cứu nguồn xác minh để điền nhanh dữ liệu trước khi biên tập và xuất bản (<code>PUBLISHED</code>).
+            </p>
+        </div>
+    </header>
 
     @if (!ViewData.ModelState.IsValid)
     {
-        <div class="alert alert-danger" role="alert">
-            <div asp-validation-summary="All" class="mb-0"></div>
+        <div class="bgp-ops-alert bgp-ops-alert--danger alert-danger" role="alert">
+            <div asp-validation-summary="All"></div>
         </div>
     }
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-            <form asp-action="MovieCreate" method="post">
+    <!-- Controlled External Lookup Autofill Panel (uses type="button" triggers only) -->
+    <section class="bgp-sync-panel"
+             data-external-lookup-root
+             data-lookup-mode="create"
+             data-autofill-form="#movieCreateForm"
+             data-testid="create-external-lookup-panel">
+        <div class="bgp-sync-panel__head">
+            <div>
+                <h2 class="bgp-sync-panel__title">Tra cứu &amp; Điền nhanh từ nguồn xác minh (Wikidata / IMDb / TMDB)</h2>
+                <p class="bgp-sync-panel__desc">
+                    Tìm theo tên phim, mã IMDb (<code>tt...</code>), mã Wikidata (<code>Q...</code>) hoặc TMDB ID để tự động điền thông tin gốc, không làm sai lệch nhãn phân loại độ tuổi Việt Nam.
+                </p>
+            </div>
+            @if (Model.IsTmdbConfigured)
+            {
+                <span class="bgp-ops-env-pill bgp-ops-env-pill--live">
+                    <span class="bgp-ops-env-pill__dot"></span>
+                    <span>TMDB API Sẵn sàng</span>
+                </span>
+            }
+            else
+            {
+                <span class="bgp-ops-env-pill bgp-ops-env-pill--keyless">
+                    <span class="bgp-ops-env-pill__dot"></span>
+                    <span>Danh mục xác minh nội bộ</span>
+                </span>
+            }
+        </div>
+
+        <div class="bgp-sync-search-bar">
+            <label for="createExternalLookupInput" class="bgp-sr-only">Tra cứu phim xác minh</label>
+            <input id="createExternalLookupInput"
+                   type="text"
+                   class="bgp-ops-input"
+                   data-sync-search-input
+                   placeholder="Nhập tt0807840, Q731114, Elephants Dream, Big Buck Bunny..." />
+            <button type="button"
+                    class="bgp-btn bgp-btn--glass bgp-btn--sm"
+                    data-sync-search-btn>
+                Tra cứu dữ liệu
+            </button>
+        </div>
+
+        <div class="bgp-sync-status" data-sync-status hidden></div>
+        <div class="bgp-sync-results" data-sync-results></div>
+    </section>
+
+    <section class="bgp-ops-card">
+        <div class="bgp-ops-card__header">
+            <h2 class="bgp-ops-card__title">Biểu mẫu Hồ sơ Tác phẩm</h2>
+            <span class="badge bgp-ops-badge bgp-ops-badge--amber">DRAFT</span>
+        </div>
+        <div class="bgp-ops-card__body">
+            <form id="movieCreateForm" asp-action="MovieCreate" method="post">
                 @Html.AntiForgeryToken()
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Tên phim <span class="text-danger">*</span></label>
-                    <input type="text" name="Title" value="@Model.Title" class="form-control" placeholder="Ví dụ: Đào, Phở và Piano" required maxlength="250" />
-                    <div class="form-text">Tối đa 250 ký tự. Không được để trống.</div>
+                <div class="bgp-ops-form-group">
+                    <label for="createTitle" class="bgp-ops-label">Tên phim phát hành <span style="color: #F87171;">*</span></label>
+                    <input id="createTitle"
+                           type="text"
+                           name="Title"
+                           value="@Model.Title"
+                           class="bgp-ops-input"
+                           placeholder="Ví dụ: Đêm trắng kinh hoàng (Night of the Living Dead)"
+                           required
+                           maxlength="200" />
+                    <div class="bgp-ops-hint">Tối đa 200 ký tự. Không được để trống.</div>
                 </div>
 
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Thời lượng (phút) <span class="text-danger">*</span></label>
-                        <input type="number" name="DurationMin" value="@Model.DurationMin" class="form-control" min="1" max="480" required />
-                        <div class="form-text">Ràng buộc hợp lệ từ 1 đến 480 phút.</div>
+                <div class="bgp-ops-form-row-2 bgp-ops-form-group">
+                    <div>
+                        <label for="createDuration" class="bgp-ops-label">Thời lượng (phút) <span style="color: #F87171;">*</span></label>
+                        <input id="createDuration"
+                               type="number"
+                               name="DurationMin"
+                               value="@Model.DurationMin"
+                               class="bgp-ops-input bgp-ops-mono"
+                               min="1"
+                               max="480"
+                               required />
+                        <div class="bgp-ops-hint">Ràng buộc hợp lệ từ 1 đến 480 phút.</div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Nhãn độ tuổi</label>
-                        <select name="AgeLabel" class="form-select">
+                    <div>
+                        <label for="createAgeLabel" class="bgp-ops-label">Phân loại độ tuổi Việt Nam</label>
+                        <select id="createAgeLabel" name="AgeLabel" class="bgp-ops-select">
+                            <option value="" selected="@(string.IsNullOrEmpty(Model.AgeLabel))">-- Chưa phân loại độ tuổi VN --</option>
                             <option value="P" selected="@(Model.AgeLabel == "P")">P — Phổ biến cho mọi độ tuổi</option>
                             <option value="K" selected="@(Model.AgeLabel == "K")">K — Dưới 13 tuổi có người bảo hộ</option>
-                            <option value="T13" selected="@(Model.AgeLabel == "T13")">T13 — Phù hợp từ 13 tuổi trở lên</option>
-                            <option value="T16" selected="@(Model.AgeLabel == "T16")">T16 — Phù hợp từ 16 tuổi trở lên</option>
-                            <option value="T18" selected="@(Model.AgeLabel == "T18")">T18 — Phù hợp từ 18 tuổi trở lên</option>
+                            <option value="T13" selected="@(Model.AgeLabel == "T13")">T13 — Phù hợp từ đủ 13 tuổi trở lên</option>
+                            <option value="T16" selected="@(Model.AgeLabel == "T16")">T16 — Phù hợp từ đủ 16 tuổi trở lên</option>
+                            <option value="T18" selected="@(Model.AgeLabel == "T18")">T18 — Phù hợp từ đủ 18 tuổi trở lên</option>
+                            <option value="C" selected="@(Model.AgeLabel == "C")">C — Không phổ biến</option>
                         </select>
+                        <div class="bgp-ops-hint">Không tự đổi xếp hạng nước ngoài (PG-13/R) thành nhãn VN.</div>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Thể loại phim</label>
-                    <input type="text" name="GenreText" value="@Model.GenreText" class="form-control" placeholder="Ví dụ: Hành động, Phiêu lưu, Viễn tưởng" maxlength="160" />
-                    <div class="form-text">Tối đa 160 ký tự.</div>
+                <div class="bgp-ops-form-group">
+                    <label for="createGenre" class="bgp-ops-label">Thể loại phim</label>
+                    <input id="createGenre"
+                           type="text"
+                           name="GenreText"
+                           value="@Model.GenreText"
+                           class="bgp-ops-input"
+                           placeholder="Ví dụ: Bí ẩn, Giật gân, Lãng mạn"
+                           maxlength="100" />
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Đường dẫn Poster (URL hoặc Relative Path)</label>
-                    <input type="text" name="PosterUrl" value="@Model.PosterUrl" class="form-control" placeholder="https://example.com/poster.jpg hoặc /images/posters/movie.jpg" maxlength="500" />
-                    <div class="form-text">Đường dẫn HTTP/HTTPS hợp lệ hoặc đường dẫn nội bộ (bắt đầu bằng /). Tối đa 500 ký tự.</div>
+                <div class="bgp-ops-form-group">
+                    <label for="createPosterUrl" class="bgp-ops-label">Đường dẫn Poster chính thức (HTTPS hoặc đường dẫn nội bộ /)</label>
+                    <input id="createPosterUrl"
+                           type="text"
+                           name="PosterUrl"
+                           value="@Model.PosterUrl"
+                           class="bgp-ops-input bgp-ops-mono"
+                           placeholder="https://... hoặc /media/verified/posters/..."
+                           maxlength="500" />
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label fw-semibold">Tóm tắt nội dung (Synopsis)</label>
-                    <textarea name="Synopsis" rows="4" class="form-control" placeholder="Mô tả tóm tắt cốt truyện và thông tin đạo diễn, diễn viên...">@Model.Synopsis</textarea>
+                <div class="bgp-ops-form-group">
+                    <label for="createSynopsis" class="bgp-ops-label">Tóm tắt nội dung xác minh (Synopsis)</label>
+                    <textarea id="createSynopsis"
+                              name="Synopsis"
+                              rows="4"
+                              maxlength="2000"
+                              class="bgp-ops-textarea"
+                              placeholder="Tóm tắt nội dung đúng với tác phẩm...">@Model.Synopsis</textarea>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2">
-                    <a asp-action="Movies" class="btn btn-outline-secondary">Hủy bỏ</a>
-                    <button type="submit" class="btn btn-primary px-4">Lưu Phim (DRAFT)</button>
+                <details class="bgp-override-box" data-provenance-details @(string.IsNullOrWhiteSpace(Model.WikidataQid) && string.IsNullOrWhiteSpace(Model.ImdbId) && !Model.TmdbId.HasValue ? null : "open")>
+                    <summary style="cursor:pointer; font-weight:700; color:#FFFFFF; font-size:0.88rem;">
+                        Định danh nguồn xác minh &amp; Tư liệu bổ sung (Wikidata / IMDb / TMDB / Backdrop / Trailer)
+                    </summary>
+                    <div style="margin-top: 14px;">
+                        <div class="bgp-ops-form-row-2 bgp-ops-form-group">
+                            <div>
+                                <label for="createOriginalTitle" class="bgp-ops-label">Tựa gốc (Original Title)</label>
+                                <input id="createOriginalTitle" type="text" name="OriginalTitle" value="@Model.OriginalTitle" class="bgp-ops-input" maxlength="200" />
+                            </div>
+                            <div>
+                                <label for="createDirector" class="bgp-ops-label">Đạo diễn</label>
+                                <input id="createDirector" type="text" name="DirectorNames" value="@Model.DirectorNames" class="bgp-ops-input" maxlength="200" />
+                            </div>
+                        </div>
+
+                        <div class="bgp-ops-form-row-3 bgp-ops-form-group">
+                            <div>
+                                <label for="createReleaseYear" class="bgp-ops-label">Năm phát hành</label>
+                                <input id="createReleaseYear" type="number" name="ReleaseYear" value="@Model.ReleaseYear" class="bgp-ops-input bgp-ops-mono" min="1888" max="2100" />
+                            </div>
+                            <div>
+                                <label for="createCountry" class="bgp-ops-label">Quốc gia</label>
+                                <input id="createCountry" type="text" name="OriginCountry" value="@Model.OriginCountry" class="bgp-ops-input" maxlength="80" />
+                            </div>
+                            <div>
+                                <label for="createLang" class="bgp-ops-label">Ngôn ngữ gốc</label>
+                                <input id="createLang" type="text" name="OriginalLanguage" value="@Model.OriginalLanguage" class="bgp-ops-input" maxlength="40" />
+                            </div>
+                        </div>
+
+                        <div class="bgp-ops-form-row-3 bgp-ops-form-group">
+                            <div>
+                                <label for="createWikidata" class="bgp-ops-label">Wikidata QID</label>
+                                <input id="createWikidata" type="text" name="WikidataQid" value="@Model.WikidataQid" class="bgp-ops-input bgp-ops-mono" placeholder="Q496266" maxlength="32" />
+                            </div>
+                            <div>
+                                <label for="createImdb" class="bgp-ops-label">IMDb ID</label>
+                                <input id="createImdb" type="text" name="ImdbId" value="@Model.ImdbId" class="bgp-ops-input bgp-ops-mono" placeholder="tt0056923" maxlength="24" />
+                            </div>
+                            <div>
+                                <label for="createTmdb" class="bgp-ops-label">TMDB ID</label>
+                                <input id="createTmdb" type="number" name="TmdbId" value="@Model.TmdbId" class="bgp-ops-input bgp-ops-mono" placeholder="4808" min="1" />
+                            </div>
+                        </div>
+
+                        <div class="bgp-ops-form-row-2" style="margin-bottom:0;">
+                            <div>
+                                <label for="createBackdropUrl" class="bgp-ops-label">Backdrop ngang 16:9 (HTTPS hoặc /)</label>
+                                <input id="createBackdropUrl" type="text" name="BackdropUrl" value="@Model.BackdropUrl" class="bgp-ops-input bgp-ops-mono" maxlength="500" />
+                            </div>
+                            <div>
+                                <label for="createTrailerId" class="bgp-ops-label">YouTube Trailer ID chính thức (11 ký tự)</label>
+                                <input id="createTrailerId" type="text" name="OfficialTrailerYoutubeId" value="@Model.OfficialTrailerYoutubeId" class="bgp-ops-input bgp-ops-mono" maxlength="32" />
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding-top:16px; border-top:1px solid var(--bgp-border-subtle);">
+                    <a asp-action="Movies" class="bgp-btn bgp-btn--outline">Hủy bỏ</a>
+                    <button type="submit" class="bgp-btn bgp-btn--primary">Lưu Phim (DRAFT)</button>
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
+
+@section Scripts {
+    <script type="module" src="~/js/modules/ops-management.js" asp-append-version="true"></script>
+}

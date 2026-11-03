@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Khám phá Phim (Mobile 390×844) | Beta Giải Phóng</title>
+  <link rel="stylesheet" href="netflix-cinema.css" />
+  <style>
+    body {
+      padding-bottom: 78px;
+      background: #0A0A0C;
+    }
+    .bgp-m-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 10, 12, 0.96);
+      backdrop-filter: blur(12px);
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid var(--bgp-border-subtle);
+    }
+    .bgp-m-brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .bgp-m-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bgp-bg-surface-2);
+      border: 1px solid var(--bgp-border-default);
+      border-radius: 8px;
+      padding: 0 12px;
+      height: 44px;
+      margin-bottom: 8px;
+    }
+    .bgp-m-search input {
+      background: transparent;
+      border: 0;
+      color: var(--bgp-text-primary);
+      font-size: 0.88rem;
+      width: 100%;
+      outline: none;
+    }
+    .bgp-m-pills {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .bgp-m-pill {
+      min-height: 36px;
+      padding: 0 13px;
+      border-radius: var(--bgp-radius-pill);
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      background: var(--bgp-bg-surface-1);
+      border: 1px solid var(--bgp-border-default);
+      color: var(--bgp-text-secondary);
+    }
+    .bgp-m-pill--active {
+      background: var(--bgp-brand-red);
+      border-color: var(--bgp-brand-red);
+      color: #FFFFFF;
+    }
+    .bgp-m-grid {
+      padding: 12px 16px 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 12px;
+    }
+    .bgp-m-card {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .bgp-m-card__top-badges {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+    }
+    .bgp-m-bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 62px;
+      background: rgba(14, 14, 18, 0.97);
+      border-top: 1px solid var(--bgp-border-default);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      z-index: 60;
+    }
+    .bgp-m-bottom-nav a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--bgp-text-muted);
+    }
+    .bgp-m-bottom-nav a.active {
+      color: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+  <header class="bgp-m-topbar">
+    <div class="bgp-m-brand-row">
+      <div class="bgp-brand" style="font-size:1rem;">
+        <span class="bgp-brand__badge" style="padding:3px 7px;font-size:0.76rem;">BETA</span>
+        <span class="bgp-brand__text">Giải Phóng</span>
+      </div>
+      <span style="font-size:0.68rem;color:var(--bgp-text-muted);background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:999px;">
+        Lịch rạp mô phỏng
+      </span>
+    </div>
+
+    <div class="bgp-m-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8A98" stroke-width="2.2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+      </svg>
+      <input type="search" value="" placeholder="Tìm tên phim, đạo diễn..." aria-label="Tìm tên phim" />
+    </div>
+
+    <div class="bgp-m-pills" role="navigation" aria-label="Bộ lọc trạng thái lịch chiếu">
+      <a href="#all" class="bgp-m-pill bgp-m-pill--active">Tất cả (11)</a>
+      <a href="#open" class="bgp-m-pill">Có lịch chiếu (7)</a>
+      <a href="#none" class="bgp-m-pill">Chưa có lịch (4)</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="bgp-m-grid">
+      <!-- 1. Charade (1963) -->
+      <a href="02-movie-detail-desktop.html" class="bgp-m-card">
+        <div class="bgp-poster-frame">
+          <img src="assets/charade-1963-poster.jpg" alt="Poster Mê trong mê (Charade, 1963)" />
+          <div class="bgp-m-card__top-badges">
+            <span class="bgp-badge bgp-badge--cinema-open" style="background:rgba(10,10,12,0.86);">3 suất hôm nay</span>
+          </div>
+        </div>
+        <h2 class="bgp-poster-card__title">Mê Trong Mê</h2>
+        <div class="bgp-poster-card__sub">
+          <span>1963 • 113p</span>
+          <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.8</span>
+        </div>
+      </a>
+
+      <!-- 2. Charge (2022) -->
+      <a href="02-movie-detail-desktop.html" class="bgp-m-card">
+        <div class="bgp-poster-frame">
+          <img src="assets/charge-2022-poster.jpg" alt="Poster Charge (2022)" />
+          <div class="bgp-m-card__top-badges">
+            <span class="bgp-badge bgp-badge--cinema-open" style="background:rgba(10,10,12,0.86);">2 suất hôm nay</span>
+          </div>
+        </div>
+        <h2 class="bgp-poster-card__title">Charge</h2>
+        <div class="bgp-poster-card__sub">
+          <span>2022 • 4p</span>
+          <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.6</span>
+        </div>
+      </a>
+
+      <!-- 3. Sintel (2010) -->
+      <a href="02-movie-detail-desktop.html" class="bgp-m-card">
+        <div class="bgp-poster-frame">
+          <img src="assets/sintel-2010-poster.jpg" alt="Poster Sintel (2010)" />
+          <div class="bgp-m-card__top-badges">
+            <span class="bgp-badge bgp-badge--cinema-open" style="background:rgba(10,10,12,0.86);">Có lịch chiếu</span>
+          </div>
+        </div>
+        <h2 class="bgp-poster-card__title">Sintel</h2>
+        <div class="bgp-poster-card__sub">
+          <span>2010 • 15p</span>
+          <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.4</span>
+        </div>
+      </a>
+
+      <!-- 4. Mai (2024) — Honest Neutral Placeholder when commercial poster awaits TMDB API Key (Rule C.3) -->
+      <a href="02-movie-detail-desktop.html" class="bgp-m-card">
+        <div class="bgp-poster-frame">
+          <div class="bgp-poster-frame__placeholder">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8A8A98" stroke-width="1.6" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <path d="M21 15l-5-5L5 21"></path>
+            </svg>
+            <strong style="font-size:0.78rem;color:var(--bgp-text-secondary);">Chưa có hình ảnh</strong>
+            <span style="font-size:0.68rem;line-height:1.35;">Chờ đồng bộ TMDB #1210973<br />Đạo diễn Trấn Thành</span>
+          </div>
+          <div class="bgp-m-card__top-badges">
+            <span class="bgp-badge bgp-badge--cinema-none" style="background:rgba(10,10,12,0.86);">Chưa có suất</span>
+            <span class="bgp-badge bgp-badge--age-vn">T18</span>
+          </div>
+        </div>
+        <h2 class="bgp-poster-card__title">Mai</h2>
+        <div class="bgp-poster-card__sub">
+          <span>2024 • 131p • VN</span>
+          <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 6.9</span>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <nav class="bgp-m-bottom-nav" aria-label="Điều hướng di động">
+    <a href="01-home-desktop.html">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5V21h-6v-6H9v6H3z"/></svg>
+      <span>Trang chủ</span>
+    </a>
+    <a href="03-catalog-mobile.html" class="active">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E50914" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span>Khám phá</span>
+    </a>
+    <a href="02-movie-detail-desktop.html#showtimes">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+      <span>Lịch chiếu</span>
+    </a>
+    <a href="05-checkout-desktop.html">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>
+      <span>Vé của tôi</span>
+    </a>
+  </nav>
+</body>
+</html>

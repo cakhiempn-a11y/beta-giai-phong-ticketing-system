@@ -45,8 +45,8 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
       await loginInBrowser(mgrPage, 'manager@demo.invalid', state.demoPassword);
 
       // Find an active movie, showtime, and create or find a PAID order for Customer 1 so we can inspect all 9 pages across viewports
-      await custPage.goto('/movies');
-      const movieHref = (await custPage.locator('a[href*="/movies/"]').first().getAttribute('href'))!;
+      await custPage.goto('/movies?filter=has-showtimes');
+      const movieHref = (await custPage.locator('[data-testid="catalog-movie-card"]').first().getAttribute('href'))!;
       await custPage.goto(movieHref);
       const seatMapHref = (await custPage.locator('a[href*="/showtimes/"][href*="/seats"]').first().getAttribute('href'))!;
 
@@ -121,9 +121,11 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
 
       // Clean up pendingOrderId so no seat remains held unnecessarily
       await custPage.goto(`/orders/${pendingOrderId}`);
+      await custPage.click(`form[action="/orders/${pendingOrderId}/cancel"] button[type="submit"]`);
+      await expect(custPage.locator('[data-testid="cancel-order-dialog"]')).toBeVisible();
       await Promise.all([
         custPage.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-        custPage.click(`form[action="/orders/${pendingOrderId}/cancel"] button[type="submit"]`),
+        custPage.click('[data-testid="confirm-cancel-order-btn"]'),
       ]);
     } finally {
       await customerSession.context.close();
@@ -132,7 +134,7 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
     }
   });
 
-  test('8.3: UI-01A Dark theme contrast invariants: bright badges, outline buttons, and input boundaries', async ({
+  test('8.3: Dark theme contrast invariants: bright badges, outline buttons, and input boundaries', async ({
     browser,
   }) => {
     const state = loadE2eState();
@@ -166,33 +168,32 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
     }
 
     try {
-      // 1. Bright badge contrast on /movies (warning & info badges)
+      // 1. Bright badge contrast on /movies (VN age badge & IMDb rating badge in Zero-Bootstrap shell)
       await page.goto('/movies');
       await page.waitForLoadState('networkidle');
 
       const moviesBadges = await page.evaluate(() => {
-        const warning = document.querySelector('.badge.bg-warning') as HTMLElement;
-        const info = document.querySelector('.badge.bg-info') as HTMLElement;
+        const warning = document.querySelector('.bgp-age-badge--t13, .bgp-age-badge--t16') as HTMLElement;
+        const rating = document.querySelector('.bgp-catalog-badge-rating') as HTMLElement;
         return {
           hasWarning: !!warning,
           warningColor: warning ? window.getComputedStyle(warning).color : '',
           warningBg: warning ? window.getComputedStyle(warning).backgroundColor : '',
-          hasInfo: !!info,
-          infoColor: info ? window.getComputedStyle(info).color : '',
-          infoBg: info ? window.getComputedStyle(info).backgroundColor : '',
+          hasRating: !!rating,
+          ratingColor: rating ? window.getComputedStyle(rating).color : '',
+          ratingBg: rating ? window.getComputedStyle(rating).backgroundColor : '',
         };
       });
 
-      // Assert mandatory elements exist (no silent skipping)
-      expect(moviesBadges.hasWarning, 'Expected .badge.bg-warning on /movies').toBe(true);
-      expect(moviesBadges.hasInfo, 'Expected .badge.bg-info on /movies').toBe(true);
+      expect(moviesBadges.hasWarning, 'Expected VN age badge (.bgp-age-badge--t13) on /movies').toBe(true);
+      expect(moviesBadges.hasRating, 'Expected grounded rating badge (.bgp-catalog-badge-rating) on /movies').toBe(true);
 
       const warningRatio = calculateContrast(moviesBadges.warningColor, moviesBadges.warningBg);
-      const infoRatio = calculateContrast(moviesBadges.infoColor, moviesBadges.infoBg);
-      expect(warningRatio, `Warning badge contrast ratio (${warningRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
-      expect(infoRatio, `Info badge contrast ratio (${infoRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
+      const ratingRatio = calculateContrast(moviesBadges.ratingColor, moviesBadges.ratingBg);
+      expect(warningRatio, `Age badge contrast ratio (${warningRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
+      expect(ratingRatio, `Rating badge contrast ratio (${ratingRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
 
-      // 2. Light badge inside card & actual outline button on /
+      // 2. Light room pill inside card & outline button on /
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
@@ -206,11 +207,11 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
             }
             curr = curr.parentElement;
           }
-          return 'rgb(20, 20, 20)';
+          return 'rgb(10, 10, 12)';
         }
 
-        const lightBadgeInCard = document.querySelector('.card .badge.bg-light, .badge.bg-light') as HTMLElement;
-        const outlineBtn = document.querySelector('.btn-outline-primary, .btn-outline-light') as HTMLElement;
+        const lightBadgeInCard = document.querySelector('.bgp-upcoming-room-pill, .bgp-badge--imdb-solid') as HTMLElement;
+        const outlineBtn = document.querySelector('.bgp-btn--outline') as HTMLElement;
 
         return {
           hasLightBadge: !!lightBadgeInCard,
@@ -222,8 +223,8 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
         };
       });
 
-      expect(homeElements.hasLightBadge, 'Expected .badge.bg-light on /').toBe(true);
-      expect(homeElements.hasOutlineBtn, 'Expected outline button on /').toBe(true);
+      expect(homeElements.hasLightBadge, 'Expected .bgp-upcoming-room-pill or .bgp-badge--imdb-solid on /').toBe(true);
+      expect(homeElements.hasOutlineBtn, 'Expected .bgp-btn--outline button on /').toBe(true);
 
       const lightBadgeRatio = calculateContrast(homeElements.lightBadgeColor, homeElements.lightBadgeBg);
       expect(lightBadgeRatio, `Light badge contrast ratio (${lightBadgeRatio.toFixed(2)}:1)`).toBeGreaterThanOrEqual(7.0);
@@ -316,7 +317,7 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
     }
   });
 
-  test('8.5: UI-01A Operational role navigation in mobile viewports', async ({ browser }) => {
+  test('8.5: UI-01A / UI-P1 Operational role navigation in mobile viewports (Dual-Shell)', async ({ browser }) => {
     const state = loadE2eState();
     const staffContext = await browser.newContext({
       baseURL: state.baseUrl,
@@ -331,31 +332,49 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
     const mgrPage = await mgrContext.newPage();
 
     try {
-      // Staff on mobile
+      // Staff on mobile: Consumer shell shows single clean context switch -> Operations shell drawer shows CheckIn links
       await loginInBrowser(staffPage, 'staff@demo.invalid', state.demoPassword);
       await staffPage.goto('/');
       await staffPage.waitForLoadState('networkidle');
 
-      const staffToggler = staffPage.locator('.navbar-toggler');
-      await expect(staffToggler).toBeVisible();
-      await staffToggler.click();
-      await staffPage.waitForTimeout(400);
+      const staffCinemaToggle = staffPage.locator('[data-testid="cinema-mobile-toggle"]');
+      await expect(staffCinemaToggle).toBeVisible();
+      await staffCinemaToggle.click();
 
-      // Staff must see CheckIn links in mobile menu
-      await expect(staffPage.locator('nav a[href*="/staff/check-in"]').first()).toBeVisible();
+      const staffSwitch = staffPage.locator('[data-testid="ops-console-switch-mobile"]');
+      await expect(staffSwitch).toBeVisible();
+      await Promise.all([
+        staffPage.waitForNavigation({ waitUntil: 'networkidle' }),
+        staffSwitch.click(),
+      ]);
+      await expect(staffPage).toHaveURL(/\/staff\/check-in/);
 
-      // Manager on mobile
+      const staffOpsToggle = staffPage.locator('[data-testid="ops-mobile-toggle"]');
+      await expect(staffOpsToggle).toBeVisible();
+      await staffOpsToggle.click();
+      await expect(staffPage.locator('[data-testid="ops-sidebar"] a[href*="/staff/check-in"]').first()).toBeVisible();
+
+      // Manager on mobile: Consumer shell shows single clean context switch -> Operations shell drawer shows Management links
       await loginInBrowser(mgrPage, 'manager@demo.invalid', state.demoPassword);
       await mgrPage.goto('/');
       await mgrPage.waitForLoadState('networkidle');
 
-      const mgrToggler = mgrPage.locator('.navbar-toggler');
-      await expect(mgrToggler).toBeVisible();
-      await mgrToggler.click();
-      await mgrPage.waitForTimeout(400);
+      const mgrCinemaToggle = mgrPage.locator('[data-testid="cinema-mobile-toggle"]');
+      await expect(mgrCinemaToggle).toBeVisible();
+      await mgrCinemaToggle.click();
 
-      // Manager must see Vận hành dropdown in mobile menu
-      await expect(mgrPage.locator('nav #managementDropdown')).toBeVisible();
+      const mgrSwitch = mgrPage.locator('[data-testid="ops-console-switch-mobile"]');
+      await expect(mgrSwitch).toBeVisible();
+      await Promise.all([
+        mgrPage.waitForNavigation({ waitUntil: 'networkidle' }),
+        mgrSwitch.click(),
+      ]);
+      await expect(mgrPage).toHaveURL(/\/management\/reports/);
+
+      const mgrOpsToggle = mgrPage.locator('[data-testid="ops-mobile-toggle"]');
+      await expect(mgrOpsToggle).toBeVisible();
+      await mgrOpsToggle.click();
+      await expect(mgrPage.locator('[data-testid="ops-management-nav"]')).toBeVisible();
     } finally {
       await staffContext.close();
       await mgrContext.close();

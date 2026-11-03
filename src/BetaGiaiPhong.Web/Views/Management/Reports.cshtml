@@ -4,346 +4,330 @@
     var report = Model.Report;
 }
 
-<div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-            <h1 class="h3 fw-bold mb-1 text-dark">Báo cáo Vận hành & Doanh thu</h1>
-            <p class="text-secondary mb-0 small">Dữ liệu từ <code>dbo.vw_ShowtimeSales</code> — Doanh thu thực tế chỉ ghi nhận từ các đơn hàng PAID có vé phát hành hợp lệ.</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a asp-action="Movies" class="btn btn-outline-primary btn-sm">Quản lý Phim</a>
-            <a asp-action="Showtimes" class="btn btn-outline-success btn-sm">Quản lý Suất chiếu</a>
-            <a asp-action="Rooms" class="btn btn-outline-secondary btn-sm">Sơ đồ Phòng</a>
-        </div>
-    </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-ops.css" asp-append-version="true" />
+}
 
-    <!-- Filters Card -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body p-3">
-            <form method="get" asp-action="Reports" class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted mb-1">Từ ngày (VN)</label>
-                    <input type="date" name="fromDate" value="@Model.FromDateVn" class="form-control form-control-sm" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted mb-1">Đến ngày (VN)</label>
-                    <input type="date" name="toDate" value="@Model.ToDateVn" class="form-control form-control-sm" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted mb-1">Phim</label>
-                    <select name="movieId" class="form-select form-select-sm">
-                        <option value="">-- Tất cả phim --</option>
-                        @foreach (var m in Model.Movies)
-                        {
-                            <option value="@m.MovieId" selected="@(Model.SelectedMovieId == m.MovieId)">@m.Title</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold text-muted mb-1">Phòng chiếu</label>
-                    <select name="roomId" class="form-select form-select-sm">
-                        <option value="">-- Tất cả phòng --</option>
-                        @foreach (var r in Model.Rooms)
-                        {
-                            <option value="@r.RoomId" selected="@(Model.SelectedRoomId == r.RoomId)">@r.RoomName</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-1 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm w-100">Lọc</button>
-                    <a asp-action="Reports" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">&#x21bb;</a>
-                </div>
-            </form>
+<div class="bgp-ops-page">
+    <header class="bgp-ops-header">
+        <div class="bgp-ops-header__main">
+            <div class="bgp-ops-eyebrow">MIS EXECUTIVE ANALYTICS • REAL-TIME RECONCILIATION</div>
+            <h1 class="bgp-ops-title">Báo cáo Vận hành & Doanh thu</h1>
+            <p class="bgp-ops-subtitle">
+                Đối soát trực tiếp từ <code>dbo.vw_ShowtimeSales</code> — doanh thu chỉ ghi nhận từ đơn <code>PAID</code> có vé phát hành hợp lệ.
+            </p>
         </div>
+        <div class="bgp-ops-actions">
+            <a asp-action="Movies" class="bgp-btn bgp-btn--outline bgp-btn--sm">Quản lý Phim</a>
+            <a asp-action="Showtimes" class="bgp-btn bgp-btn--outline bgp-btn--sm">Lịch chiếu</a>
+            <a asp-action="Rooms" class="bgp-btn bgp-btn--glass bgp-btn--sm">Sơ đồ Phòng</a>
+        </div>
+    </header>
+
+    <!-- Bộ lọc báo cáo -->
+    <div class="bgp-ops-filter-bar">
+        <form method="get" asp-action="Reports" class="bgp-ops-filter-grid">
+            <div>
+                <label for="reportFromDate" class="bgp-ops-label">Từ ngày (VN)</label>
+                <input id="reportFromDate" type="date" name="fromDate" value="@Model.FromDateVn" class="bgp-ops-input" />
+            </div>
+            <div>
+                <label for="reportToDate" class="bgp-ops-label">Đến ngày (VN)</label>
+                <input id="reportToDate" type="date" name="toDate" value="@Model.ToDateVn" class="bgp-ops-input" />
+            </div>
+            <div>
+                <label for="reportMovieId" class="bgp-ops-label">Phim</label>
+                <select id="reportMovieId" name="movieId" class="bgp-ops-select">
+                    <option value="">-- Tất cả phim --</option>
+                    @foreach (var m in Model.Movies)
+                    {
+                        <option value="@m.MovieId" selected="@(Model.SelectedMovieId == m.MovieId)">@m.Title</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="reportRoomId" class="bgp-ops-label">Phòng chiếu</label>
+                <select id="reportRoomId" name="roomId" class="bgp-ops-select">
+                    <option value="">-- Tất cả phòng --</option>
+                    @foreach (var r in Model.Rooms)
+                    {
+                        <option value="@r.RoomId" selected="@(Model.SelectedRoomId == r.RoomId)">@r.RoomName</option>
+                    }
+                </select>
+            </div>
+            <div class="bgp-ops-filter-actions">
+                <button type="submit" class="bgp-btn bgp-btn--primary bgp-btn--sm">Lọc báo cáo</button>
+                <a asp-action="Reports" class="bgp-btn bgp-btn--outline bgp-btn--sm" title="Đặt lại bộ lọc">Đặt lại</a>
+            </div>
+        </form>
     </div>
 
     <!-- Top KPI Stat Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-primary text-white">
-                <div class="card-body p-3">
-                    <div class="text-white-50 small text-uppercase fw-bold">Tổng Doanh thu Hợp lệ</div>
-                    <div class="fs-3 fw-bold mt-1">@report.TotalRevenueVnd.ToString("N0") <small class="fs-6">VND</small></div>
-                    <div class="small mt-2 text-white-50">Chỉ tính đơn PAID &amp; vé phát hành</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-success text-white">
-                <div class="card-body p-3">
-                    <div class="text-white-50 small text-uppercase fw-bold">Tổng Vé Đã Bán</div>
-                    <div class="fs-3 fw-bold mt-1">@report.TotalTicketsSold.ToString("N0") <small class="fs-6">vé</small></div>
-                    <div class="small mt-2 text-white-50">Vé thực tế thuộc đơn PAID</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-info text-white">
-                <div class="card-body p-3">
-                    <div class="text-white-50 small text-uppercase fw-bold">Tỷ lệ Lấp đầy Bình quân</div>
-                    <div class="fs-3 fw-bold mt-1">@report.WeightedOccupancyPct.ToString("F2")%</div>
-                    <div class="small mt-2 text-white-50">Tổng vé bán / Tổng sức chứa suất</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-dark text-white">
-                <div class="card-body p-3">
-                    <div class="text-white-50 small text-uppercase fw-bold">Tổng Số Suất Chiếu</div>
-                    <div class="fs-3 fw-bold mt-1">@report.TotalShowtimes.ToString("N0") <small class="fs-6">suất</small></div>
-                    <div class="small mt-2 text-white-50">Trong phạm vi bộ lọc hiện tại</div>
-                </div>
-            </div>
-        </div>
+    <div class="bgp-ops-kpi-grid" data-testid="reports-kpi-grid">
+        <article class="bgp-ops-kpi bgp-ops-kpi--emerald">
+            <div class="bgp-ops-kpi__label">Tổng Doanh thu Hợp lệ</div>
+            <div class="bgp-ops-kpi__value">@report.TotalRevenueVnd.ToString("N0") <span class="bgp-ops-kpi__unit">VND</span></div>
+            <div class="bgp-ops-kpi__note">Chỉ tính đơn PAID &amp; vé đã phát hành</div>
+        </article>
+        <article class="bgp-ops-kpi bgp-ops-kpi--brand">
+            <div class="bgp-ops-kpi__label">Tổng Vé Đã Bán</div>
+            <div class="bgp-ops-kpi__value">@report.TotalTicketsSold.ToString("N0") <span class="bgp-ops-kpi__unit">vé</span></div>
+            <div class="bgp-ops-kpi__note">Vé thực tế thuộc đơn thanh toán thành công</div>
+        </article>
+        <article class="bgp-ops-kpi bgp-ops-kpi--sky">
+            <div class="bgp-ops-kpi__label">Tỷ lệ Lấp đầy Bình quân</div>
+            <div class="bgp-ops-kpi__value">@report.WeightedOccupancyPct.ToString("F2")%</div>
+            <div class="bgp-ops-kpi__note">Tổng vé bán / Tổng sức chứa mở bán</div>
+        </article>
+        <article class="bgp-ops-kpi bgp-ops-kpi--gold">
+            <div class="bgp-ops-kpi__label">Tổng Số Suất Chiếu</div>
+            <div class="bgp-ops-kpi__value">@report.TotalShowtimes.ToString("N0") <span class="bgp-ops-kpi__unit">suất</span></div>
+            <div class="bgp-ops-kpi__note">Trong phạm vi bộ lọc hiện tại</div>
+        </article>
     </div>
 
-    <!-- Charts / Breakdowns -->
-    <div class="row g-4 mb-4">
-        <!-- Revenue by Movie -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3 fw-bold border-bottom">
-                    Doanh thu &amp; Lượng vé theo Phim
-                </div>
-                <div class="card-body p-0">
-                    @if (report.RevenueByMovie.Count == 0)
-                    {
-                        <div class="text-center py-4 text-muted small">Không có dữ liệu trong khoảng thời gian này.</div>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light small">
-                                    <tr>
-                                        <th>Tên phim</th>
-                                        <th class="text-center">Vé bán</th>
-                                        <th class="text-end">Doanh thu</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var m in report.RevenueByMovie)
-                                    {
-                                        <tr>
-                                            <td class="fw-semibold">@m.Title</td>
-                                            <td class="text-center"><span class="badge bg-light text-dark border">@m.TicketsSold</span></td>
-                                            <td class="text-end text-success fw-bold">@m.RevenueVnd.ToString("N0") đ</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </div>
+    <!-- Breakdown Row 1: By Movie & By Room -->
+    <div class="bgp-ops-split-2">
+        <section class="bgp-ops-card" style="margin-bottom:0;">
+            <div class="bgp-ops-card__header">
+                <h2 class="bgp-ops-card__title">Doanh thu &amp; Lượng vé theo Phim</h2>
             </div>
-        </div>
+            <div class="bgp-ops-card__body bgp-ops-card__body--flush">
+                @if (report.RevenueByMovie.Count == 0)
+                {
+                    <div style="padding: 28px 16px; text-align: center; color: var(--bgp-text-muted); font-size: 0.85rem;">
+                        Không có dữ liệu trong khoảng thời gian này.
+                    </div>
+                }
+                else
+                {
+                    <div class="bgp-ops-table-wrap">
+                        <table class="bgp-ops-table">
+                            <thead>
+                                <tr>
+                                    <th>Tên phim</th>
+                                    <th class="is-center">Vé bán</th>
+                                    <th class="is-right">Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in report.RevenueByMovie)
+                                {
+                                    <tr>
+                                        <td style="font-weight: 700; color: #FFFFFF;">@m.Title</td>
+                                        <td class="is-center"><span class="badge bgp-ops-badge bgp-ops-badge--slate bgp-ops-mono">@m.TicketsSold</span></td>
+                                        <td class="is-right bgp-ops-money">@m.RevenueVnd.ToString("N0") đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
 
-        <!-- Revenue by Room -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3 fw-bold border-bottom">
-                    Doanh thu theo Phòng chiếu
-                </div>
-                <div class="card-body p-0">
-                    @if (report.RevenueByRoom.Count == 0)
-                    {
-                        <div class="text-center py-4 text-muted small">Không có dữ liệu trong khoảng thời gian này.</div>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light small">
-                                    <tr>
-                                        <th>Phòng chiếu</th>
-                                        <th class="text-center">Vé bán</th>
-                                        <th class="text-end">Doanh thu</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var r in report.RevenueByRoom)
-                                    {
-                                        <tr>
-                                            <td class="fw-semibold">@r.RoomName</td>
-                                            <td class="text-center"><span class="badge bg-light text-dark border">@r.TicketsSold</span></td>
-                                            <td class="text-end text-success fw-bold">@r.RevenueVnd.ToString("N0") đ</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </div>
+        <section class="bgp-ops-card" style="margin-bottom:0;">
+            <div class="bgp-ops-card__header">
+                <h2 class="bgp-ops-card__title">Doanh thu theo Phòng chiếu</h2>
             </div>
-        </div>
+            <div class="bgp-ops-card__body bgp-ops-card__body--flush">
+                @if (report.RevenueByRoom.Count == 0)
+                {
+                    <div style="padding: 28px 16px; text-align: center; color: var(--bgp-text-muted); font-size: 0.85rem;">
+                        Không có dữ liệu trong khoảng thời gian này.
+                    </div>
+                }
+                else
+                {
+                    <div class="bgp-ops-table-wrap">
+                        <table class="bgp-ops-table">
+                            <thead>
+                                <tr>
+                                    <th>Phòng chiếu</th>
+                                    <th class="is-center">Vé bán</th>
+                                    <th class="is-right">Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in report.RevenueByRoom)
+                                {
+                                    <tr>
+                                        <td style="font-weight: 700; color: #FFFFFF;">@r.RoomName</td>
+                                        <td class="is-center"><span class="badge bgp-ops-badge bgp-ops-badge--slate bgp-ops-mono">@r.TicketsSold</span></td>
+                                        <td class="is-right bgp-ops-money">@r.RevenueVnd.ToString("N0") đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
     </div>
 
-    <!-- Revenue by Day & Top Showtimes -->
-    <div class="row g-4 mb-4">
-        <!-- Daily Breakdown -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3 fw-bold border-bottom">
-                    Doanh thu theo Ngày chiếu (Giờ VN)
-                </div>
-                <div class="card-body p-0">
-                    @if (report.RevenueByDay.Count == 0)
-                    {
-                        <div class="text-center py-4 text-muted small">Không có dữ liệu trong khoảng thời gian này.</div>
-                    }
-                    else
-                    {
-                        <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light small sticky-top">
-                                    <tr>
-                                        <th>Ngày chiếu (VN)</th>
-                                        <th class="text-center">Vé bán</th>
-                                        <th class="text-end">Doanh thu</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var d in report.RevenueByDay)
-                                    {
-                                        <tr>
-                                            <td class="fw-semibold">@d.DateVn</td>
-                                            <td class="text-center"><span class="badge bg-light text-dark border">@d.TicketsSold</span></td>
-                                            <td class="text-end text-success fw-bold">@d.RevenueVnd.ToString("N0") đ</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </div>
+    <!-- Breakdown Row 2: Daily (VN) & Top 5 Showtimes -->
+    <div class="bgp-ops-split-2">
+        <section class="bgp-ops-card" style="margin-bottom:0;">
+            <div class="bgp-ops-card__header">
+                <h2 class="bgp-ops-card__title">Doanh thu theo Ngày chiếu (Giờ VN)</h2>
             </div>
-        </div>
+            <div class="bgp-ops-card__body bgp-ops-card__body--flush">
+                @if (report.RevenueByDay.Count == 0)
+                {
+                    <div style="padding: 28px 16px; text-align: center; color: var(--bgp-text-muted); font-size: 0.85rem;">
+                        Không có dữ liệu trong khoảng thời gian này.
+                    </div>
+                }
+                else
+                {
+                    <div class="bgp-ops-table-wrap" style="max-height: 280px; overflow-y: auto;">
+                        <table class="bgp-ops-table">
+                            <thead>
+                                <tr>
+                                    <th>Ngày chiếu (VN)</th>
+                                    <th class="is-center">Vé bán</th>
+                                    <th class="is-right">Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var d in report.RevenueByDay)
+                                {
+                                    <tr>
+                                        <td class="bgp-ops-mono" style="font-weight: 700; color: #FFFFFF;">@d.DateVn</td>
+                                        <td class="is-center"><span class="badge bgp-ops-badge bgp-ops-badge--slate bgp-ops-mono">@d.TicketsSold</span></td>
+                                        <td class="is-right bgp-ops-money">@d.RevenueVnd.ToString("N0") đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
 
-        <!-- Top Showtimes -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3 fw-bold border-bottom">
-                    Top 5 Suất chiếu có Doanh thu cao nhất
-                </div>
-                <div class="card-body p-0">
-                    @if (report.TopShowtimes.Count == 0)
-                    {
-                        <div class="text-center py-4 text-muted small">Không có dữ liệu suất chiếu.</div>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light small">
-                                    <tr>
-                                        <th>Suất chiếu</th>
-                                        <th>Thời gian</th>
-                                        <th class="text-center">Lấp đầy</th>
-                                        <th class="text-end">Doanh thu</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var ts in report.TopShowtimes)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <a asp-action="ShowtimeDetail" asp-route-id="@ts.ShowtimeId" class="fw-semibold text-decoration-none">
-                                                    @ts.MovieTitle
-                                                </a>
-                                                <div class="small text-muted">@ts.RoomName</div>
-                                            </td>
-                                            <td class="small">@ts.StartUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-info text-dark">@ts.OccupancyPct.ToString("F1")%</span>
-                                                <div class="small text-muted">@ts.TicketsSold vé</div>
-                                            </td>
-                                            <td class="text-end text-success fw-bold">@ts.RevenueVnd.ToString("N0") đ</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </div>
+        <section class="bgp-ops-card" style="margin-bottom:0;">
+            <div class="bgp-ops-card__header">
+                <h2 class="bgp-ops-card__title">Top 5 Suất chiếu có Doanh thu cao nhất</h2>
             </div>
-        </div>
+            <div class="bgp-ops-card__body bgp-ops-card__body--flush">
+                @if (report.TopShowtimes.Count == 0)
+                {
+                    <div style="padding: 28px 16px; text-align: center; color: var(--bgp-text-muted); font-size: 0.85rem;">
+                        Không có dữ liệu suất chiếu.
+                    </div>
+                }
+                else
+                {
+                    <div class="bgp-ops-table-wrap">
+                        <table class="bgp-ops-table">
+                            <thead>
+                                <tr>
+                                    <th>Suất chiếu</th>
+                                    <th>Thời gian</th>
+                                    <th class="is-center">Lấp đầy</th>
+                                    <th class="is-right">Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ts in report.TopShowtimes)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-action="ShowtimeDetail" asp-route-id="@ts.ShowtimeId" class="bgp-ops-link">
+                                                @ts.MovieTitle
+                                            </a>
+                                            <div class="bgp-ops-movie-sub">@ts.RoomName</div>
+                                        </td>
+                                        <td class="bgp-ops-mono" style="white-space: nowrap;">@ts.StartUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td class="is-center">
+                                            <span class="badge bgp-ops-badge bgp-ops-badge--info bgp-ops-mono">@ts.OccupancyPct.ToString("F1")%</span>
+                                            <div class="bgp-ops-movie-sub">@ts.TicketsSold vé</div>
+                                        </td>
+                                        <td class="is-right bgp-ops-money">@ts.RevenueVnd.ToString("N0") đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
     </div>
 
     <!-- Paginated Details Table -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <div class="fw-bold">Bảng Chi tiết Doanh thu theo Suất chiếu</div>
-            <span class="badge bg-secondary">Tổng cộng: @report.ShowtimeDetails.TotalCount suất</span>
+    <section class="bgp-ops-card">
+        <div class="bgp-ops-card__header">
+            <h2 class="bgp-ops-card__title">Bảng Chi tiết Doanh thu theo Suất chiếu</h2>
+            <span class="badge bgp-ops-badge bgp-ops-badge--slate">Tổng cộng: @report.ShowtimeDetails.TotalCount suất</span>
         </div>
-        <div class="card-body p-0">
+        <div class="bgp-ops-card__body bgp-ops-card__body--flush">
             @if (report.ShowtimeDetails.Items.Count == 0)
             {
-                <div class="text-center py-5 text-muted">
-                    <p class="mb-0">Không tìm thấy suất chiếu nào khớp với điều kiện lọc.</p>
+                <div style="padding: 36px 16px; text-align: center; color: var(--bgp-text-muted);">
+                    Không tìm thấy suất chiếu nào khớp với điều kiện lọc.
                 </div>
             }
             else
             {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light small">
+                <div class="bgp-ops-table-wrap">
+                    <table class="bgp-ops-table">
+                        <thead>
                             <tr>
                                 <th>#ID</th>
                                 <th>Phim &amp; Phòng</th>
                                 <th>Khung giờ (VN)</th>
-                                <th class="text-center">Trạng thái</th>
-                                <th class="text-center">Vé bán / Sức chứa</th>
-                                <th class="text-center">Tỷ lệ lấp đầy</th>
-                                <th class="text-end">Doanh thu</th>
-                                <th class="text-center">Thao tác</th>
+                                <th class="is-center">Trạng thái</th>
+                                <th class="is-center">Vé bán / Sức chứa</th>
+                                <th class="is-center">Tỷ lệ lấp đầy</th>
+                                <th class="is-right">Doanh thu</th>
+                                <th class="is-right">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var s in report.ShowtimeDetails.Items)
                             {
+                                var meterMod = s.OccupancyPct >= 70m ? "bgp-ops-meter__fill--high" : s.OccupancyPct >= 30m ? "bgp-ops-meter__fill--mid" : "";
                                 <tr>
-                                    <td class="text-muted small">#@s.ShowtimeId</td>
+                                    <td class="bgp-ops-mono">#@s.ShowtimeId</td>
                                     <td>
-                                        <div class="fw-semibold">@s.MovieTitle</div>
-                                        <div class="small text-muted">@s.RoomName</div>
+                                        <div style="font-weight: 700; color: #FFFFFF;">@s.MovieTitle</div>
+                                        <div class="bgp-ops-movie-sub">@s.RoomName</div>
                                     </td>
-                                    <td class="small">
-                                        <div>@s.StartUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</div>
-                                        <div class="text-muted small">đến @s.EndUtc.AddHours(7).ToString("HH:mm")</div>
+                                    <td class="bgp-ops-mono" style="white-space: nowrap;">
+                                        <div style="color: var(--bgp-text-primary);">@s.StartUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</div>
+                                        <div class="bgp-ops-movie-sub">đến @s.EndUtc.AddHours(7).ToString("HH:mm")</div>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="is-center">
                                         @if (s.Status == "ON_SALE")
                                         {
-                                            <span class="badge bg-success">ĐANG BÁN</span>
+                                            <span class="badge bgp-ops-badge bgp-ops-badge--emerald">ĐANG BÁN</span>
                                         }
                                         else if (s.Status == "CLOSED")
                                         {
-                                            <span class="badge bg-secondary">ĐÃ ĐÓNG</span>
+                                            <span class="badge bgp-ops-badge bgp-ops-badge--slate">ĐÃ ĐÓNG</span>
                                         }
                                         else if (s.Status == "CANCELLED")
                                         {
-                                            <span class="badge bg-danger">ĐÃ HỦY</span>
+                                            <span class="badge bgp-ops-badge bgp-ops-badge--danger">ĐÃ HỦY</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-warning text-dark">@s.Status</span>
+                                            <span class="badge bgp-ops-badge bgp-ops-badge--amber">@s.Status</span>
                                         }
                                     </td>
-                                    <td class="text-center">
-                                        <span class="fw-bold">@s.TicketsSold</span>
-                                        <span class="text-muted">/ @s.SellableCapacity</span>
+                                    <td class="is-center bgp-ops-mono">
+                                        <strong style="color: #FFFFFF;">@s.TicketsSold</strong>
+                                        <span>/ @s.SellableCapacity</span>
                                     </td>
-                                    <td class="text-center">
-                                        <div class="progress" style="height: 6px; width: 80px; margin: 0 auto 4px;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: @Math.Min(s.OccupancyPct, 100m)%"></div>
+                                    <td class="is-center">
+                                        <div class="bgp-ops-meter">
+                                            <div class="bgp-ops-meter__fill @meterMod" style="width: @Math.Min(s.OccupancyPct, 100m).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                         </div>
-                                        <span class="small fw-semibold">@s.OccupancyPct.ToString("F1")%</span>
+                                        <span class="bgp-ops-mono" style="font-size: 0.78rem; font-weight: 700; color: #FFFFFF;">@s.OccupancyPct.ToString("F1")%</span>
                                     </td>
-                                    <td class="text-end text-success fw-bold">
-                                        @s.RevenueVnd.ToString("N0") đ
-                                    </td>
-                                    <td class="text-center">
-                                        <a asp-action="ShowtimeDetail" asp-route-id="@s.ShowtimeId" class="btn btn-outline-primary btn-sm py-0 px-2" title="Xem chi tiết">
+                                    <td class="is-right bgp-ops-money">@s.RevenueVnd.ToString("N0") đ</td>
+                                    <td class="is-right">
+                                        <a asp-action="ShowtimeDetail" asp-route-id="@s.ShowtimeId" class="bgp-btn bgp-btn--outline bgp-btn--sm">
                                             Chi tiết
                                         </a>
                                     </td>
@@ -352,29 +336,34 @@
                         </tbody>
                     </table>
                 </div>
-
-                @if (report.ShowtimeDetails.TotalPages > 1)
-                {
-                    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
-                        <small class="text-muted">Trang @report.ShowtimeDetails.Page / @report.ShowtimeDetails.TotalPages</small>
-                        <nav>
-                            <ul class="pagination pagination-sm mb-0">
-                                @for (int p = 1; p <= report.ShowtimeDetails.TotalPages; p++)
-                                {
-                                    <li class="page-item @(p == report.ShowtimeDetails.Page ? "active" : "")">
-                                        <a class="page-link" asp-action="Reports"
-                                           asp-route-page="@p"
-                                           asp-route-fromDate="@Model.FromDateVn"
-                                           asp-route-toDate="@Model.ToDateVn"
-                                           asp-route-movieId="@Model.SelectedMovieId"
-                                           asp-route-roomId="@Model.SelectedRoomId">@p</a>
-                                    </li>
-                                }
-                            </ul>
-                        </nav>
-                    </div>
-                }
             }
         </div>
-    </div>
+
+        @if (report.ShowtimeDetails.TotalPages > 1)
+        {
+            <div class="bgp-ops-card__footer">
+                <span class="bgp-ops-hint" style="margin:0;">Trang @report.ShowtimeDetails.Page / @report.ShowtimeDetails.TotalPages</span>
+                <nav aria-label="Phân trang chi tiết doanh thu">
+                    <ul class="bgp-ops-pagination">
+                        @for (int p = 1; p <= report.ShowtimeDetails.TotalPages; p++)
+                        {
+                            <li>
+                                <a class="bgp-ops-page-link @(p == report.ShowtimeDetails.Page ? "is-active" : "")"
+                                   asp-action="Reports"
+                                   asp-route-page="@p"
+                                   asp-route-fromDate="@Model.FromDateVn"
+                                   asp-route-toDate="@Model.ToDateVn"
+                                   asp-route-movieId="@Model.SelectedMovieId"
+                                   asp-route-roomId="@Model.SelectedRoomId">@p</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        }
+    </section>
 </div>
+
+@section Scripts {
+    <script type="module" src="~/js/modules/ops-management.js" asp-append-version="true"></script>
+}

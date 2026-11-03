@@ -1780,4 +1780,168 @@ public sealed class ManagementWebTests(TestDatabaseFixture fixture) : IClassFixt
             Assert.Equal("CANNOT_ARCHIVE_ACTIVE_SHOWTIMES", bEx.Code);
         }
     }
+
+    [Fact]
+    public async Task TC_MGMT_25_ExternalLookupApi_EnforcesManagerRbac_AndHandlesMissingTmdbTokenGracefully()
+    {
+        var client = CreateNewClient();
+
+        // 1. Anonymous -> 401 or redirect to login
+        var anonResp = await client.GetAsync("/api/management/movies/external-lookup?query=tt0807840");
+        Assert.True(
+            anonResp.StatusCode == HttpStatusCode.Unauthorized || anonResp.StatusCode == HttpStatusCode.Redirect,
+            $"Expected 401 or Redirect for anonymous, got {anonResp.StatusCode}");
+
+        // 2. CUSTOMER -> 403 or redirect to access-denied
+        var (custAuth, _, _) = await LoginAndGetTokensAsync(client, "customer1@demo.invalid");
+        var custReq = new HttpRequestMessage(HttpMethod.Get, "/api/management/movies/external-lookup?query=tt0807840");
+        custReq.Headers.Add("Cookie", custAuth);
+        var custResp = await client.SendAsync(custReq);
+        Assert.True(
+            custResp.StatusCode == HttpStatusCode.Forbidden ||
+            (custResp.StatusCode == HttpStatusCode.Redirect && custResp.Headers.Location?.ToString().Contains("access-denied") == true),
+            $"Expected 403 or redirect to access-denied for CUSTOMER, got {custResp.StatusCode}");
+
+        // 3. STAFF -> 403 or redirect to access-denied
+        var (staffAuth, _, _) = await LoginAndGetTokensAsync(client, "staff@demo.invalid");
+        var staffReq = new HttpRequestMessage(HttpMethod.Get, "/api/management/movies/external-lookup?query=tt0807840");
+        staffReq.Headers.Add("Cookie", staffAuth);
+        var staffResp = await client.SendAsync(staffReq);
+        Assert.True(
+            staffResp.StatusCode == HttpStatusCode.Forbidden ||
+            (staffResp.StatusCode == HttpStatusCode.Redirect && staffResp.Headers.Location?.ToString().Contains("access-denied") == true),
+            $"Expected 403 or redirect to access-denied for STAFF, got {staffResp.StatusCode}");
+
+        // 4. MANAGER -> 200 OK on verified entry (Elephants Dream tt0807840)
+        var (mgrAuth, _, _) = await LoginAndGetTokensAsync(client, "manager@demo.invalid");
+        var mgrReq = new HttpRequestMessage(HttpMethod.Get, "/api/management/movies/external-lookup?query=tt0807840");
+        mgrReq.Headers.Add("Cookie", mgrAuth);
+        var mgrResp = await client.SendAsync(mgrReq);
+        Assert.Equal(HttpStatusCode.OK, mgrResp.StatusCode);
+
+        var lookupJson = await mgrResp.Content.ReadAsStringAsync();
+        using var doc = System.Text.Json.JsonDocument.Parse(lookupJson);
+        Assert.Equal("OK", doc.RootElement.GetProperty("statusCode").GetString());
+        var candidates = doc.RootElement.GetProperty("items");
+        Assert.True(candidates.GetArrayLength() >= 1);
+        var first = candidates[0];
+        Assert.Equal("Elephants Dream", first.GetProperty("title").GetString());
+        Assert.Equal("Q737719", first.GetProperty("wikidataQid").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, first.GetProperty("ageLabelVn").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, first.GetProperty("ratingValue").ValueKind);
+
+        // 5. Unknown numeric TMDB ID when BGP_TMDB_READ_TOKEN is absent -> graceful 200 OK (never 500)
+        var missingReq = new HttpRequestMessage(HttpMethod.Get, "/api/management/movies/external-lookup?query=999888777");
+        missingReq.Headers.Add("Cookie", mgrAuth);
+        var missingResp = await client.SendAsync(missingReq);
+        Assert.Equal(HttpStatusCode.OK, missingResp.StatusCode);
+
+        var missingJson = await missingResp.Content.ReadAsStringAsync();
+        using var missingDoc = System.Text.Json.JsonDocument.Parse(missingJson);
+        var missingStatus = missingDoc.RootElement.GetProperty("statusCode").GetString();
+        Assert.Contains(missingStatus, new[] { "TMDB_TOKEN_MISSING", "NO_MATCH" });
+    }
+
+    [Fact]
+    public async Task TC_MGMT_26_SyncExternalMovie_ImportsDraft_AndPreservesManualOverrideLocksOnResync()
+    {
+        var client = CreateNewClient();
+        var (mgrAuth, _, _) = await LoginAndGetTokensAsync(client, "manager@demo.invalid");
+
+        // Verify Zero-Bootstrap on /management/movies
+        var (listAfCookie, listAfToken) = await ExtractAntiforgeryTokenAsync(client, "/management/movies", mgrAuth);
+        var listCheckReq = new HttpRequestMessage(HttpMethod.Get, "/management/movies");
+        listCheckReq.Headers.Add("Cookie", mgrAuth);
+        var listCheckResp = await client.SendAsync(listCheckReq);
+        var listHtml = await listCheckResp.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("bootstrap.min.css", listHtml);
+        Assert.DoesNotContain("dark-compat.css", listHtml);
+
+        // 1. Import Big Buck Bunny (2008) from verified external registry -> DRAFT with null AgeLabel
+        var syncReq = new HttpRequestMessage(HttpMethod.Post, "/management/movies/sync-external")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = listAfToken,
+                ["VerifiedKey"] = "big-buck-bunny-2008"
+            })
+        };
+        syncReq.Headers.Add("Cookie", $"{mgrAuth}; {listAfCookie}");
+        var syncResp = await client.SendAsync(syncReq);
+        Assert.Equal(HttpStatusCode.Redirect, syncResp.StatusCode);
+
+        var location = syncResp.Headers.Location?.ToString() ?? string.Empty;
+        var idMatch = Regex.Match(location, @"/management/movies/(\d+)$");
+        Assert.True(idMatch.Success, $"Expected redirect to /management/movies/{{id}}, got {location}");
+        var movieId = long.Parse(idMatch.Groups[1].Value);
+
+        await using (var dbCheck = await fixture.CreateDbContextAsync())
+        {
+            var imported = await dbCheck.Movies.SingleAsync(m => m.MovieId == movieId);
+            Assert.Equal("DRAFT", imported.Status);
+            Assert.Equal("Q731114", imported.WikidataQid);
+            Assert.Equal("tt1254207", imported.ImdbId);
+            Assert.Null(imported.AgeLabel);
+            Assert.Null(imported.RatingValue);
+        }
+
+        // 2. Edit movie with Vietnamese release title + VN AgeLabel "P" and explicit ManualOverrideMask locks
+        var (editAfCookie, editAfToken) = await ExtractAntiforgeryTokenAsync(client, $"/management/movies/{movieId}/edit", mgrAuth);
+        var customTitle = "Chú Thỏ Khổng Lồ (Bản Chiếu Rạp VN)";
+        var editPairs = new List<KeyValuePair<string, string>>
+        {
+            new("__RequestVerificationToken", editAfToken),
+            new("MovieId", movieId.ToString()),
+            new("Title", customTitle),
+            new("OriginalTitle", "Big Buck Bunny"),
+            new("ReleaseYear", "2008"),
+            new("DurationMin", "10"),
+            new("GenreText", "Hoạt hình, Hài hước, Gia đình"),
+            new("AgeLabel", "P"),
+            new("DirectorNames", "Sacha Goedegebure"),
+            new("OriginCountry", "Hà Lan"),
+            new("OriginalLanguage", "Không lời"),
+            new("WikidataQid", "Q731114"),
+            new("ImdbId", "tt1254207"),
+            new("TmdbId", "10378"),
+            new("PosterUrl", "/media/verified/big-buck-bunny-2008-poster.jpg"),
+            new("BackdropUrl", "/media/verified/big-buck-bunny-2008-backdrop.jpg"),
+            new("ApplyOverrideLocks", "true"),
+            new("ManualOverrides", "title"),
+            new("ManualOverrides", "age_label")
+        };
+
+        var editReq = new HttpRequestMessage(HttpMethod.Post, $"/management/movies/{movieId}/edit")
+        {
+            Content = new FormUrlEncodedContent(editPairs)
+        };
+        editReq.Headers.Add("Cookie", $"{mgrAuth}; {editAfCookie}");
+        var editResp = await client.SendAsync(editReq);
+        Assert.Equal(HttpStatusCode.Redirect, editResp.StatusCode);
+
+        // 3. Re-sync external metadata -> locked fields (title, age_label) MUST remain intact!
+        var (detailAfCookie, detailAfToken) = await ExtractAntiforgeryTokenAsync(client, $"/management/movies/{movieId}", mgrAuth);
+        var resyncReq = new HttpRequestMessage(HttpMethod.Post, "/management/movies/sync-external")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = detailAfToken,
+                ["VerifiedKey"] = "big-buck-bunny-2008",
+                ["TargetMovieId"] = movieId.ToString()
+            })
+        };
+        resyncReq.Headers.Add("Cookie", $"{mgrAuth}; {detailAfCookie}");
+        var resyncResp = await client.SendAsync(resyncReq);
+        Assert.Equal(HttpStatusCode.Redirect, resyncResp.StatusCode);
+
+        await using (var dbVerify = await fixture.CreateDbContextAsync())
+        {
+            var resynced = await dbVerify.Movies.SingleAsync(m => m.MovieId == movieId);
+            Assert.Equal(customTitle, resynced.Title);
+            Assert.Equal("P", resynced.AgeLabel);
+            Assert.True(resynced.HasManualOverride("title"));
+            Assert.True(resynced.HasManualOverride("age_label"));
+            Assert.Equal("Q731114", resynced.WikidataQid);
+        }
+    }
 }

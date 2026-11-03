@@ -12,10 +12,32 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
 {
     private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
 
+    private static DateTimeOffset ToVietnamOffset(DateTime utc)
+        => new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+
     private static string FormatVietnamTime(DateTime utc)
+        => ToVietnamOffset(utc).ToString("dd/MM/yyyy HH:mm");
+
+    private static string FormatVietnamDateTimeWithSec(DateTime utc)
+        => ToVietnamOffset(utc).ToString("dd/MM/yyyy HH:mm:ss");
+
+    private static string FormatVietnamTimeOnly(DateTime utc)
+        => ToVietnamOffset(utc).ToString("HH:mm");
+
+    private static string FormatVietnamWeekdayDate(DateTime utc)
     {
-        var dto = new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
-        return dto.ToString("dd/MM/yyyy HH:mm");
+        var vn = ToVietnamOffset(utc);
+        var weekday = vn.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "Thứ Hai",
+            DayOfWeek.Tuesday => "Thứ Ba",
+            DayOfWeek.Wednesday => "Thứ Tư",
+            DayOfWeek.Thursday => "Thứ Năm",
+            DayOfWeek.Friday => "Thứ Sáu",
+            DayOfWeek.Saturday => "Thứ Bảy",
+            _ => "Chủ Nhật"
+        };
+        return $"{weekday}, {vn:dd/MM/yyyy}";
     }
 
     public async Task<OrderTicketsViewModel?> GetCustomerOrderTicketsAsync(
@@ -23,32 +45,61 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
     {
         var order = await db.Orders
             .AsNoTracking()
-            .Where(o => o.OrderId == orderId && o.UserId == customerId)
-            .Select(o => new
-            {
-                o.OrderId,
-                o.OrderCode,
-                o.Status,
-                ShowtimeId = o.ShowtimeId,
-                MovieTitle = o.Showtime != null && o.Showtime.Movie != null ? o.Showtime.Movie.Title : "N/A",
-                RoomName = o.Showtime != null && o.Showtime.Room != null ? o.Showtime.Room.RoomName : "Phòng chiếu",
-                StartUtc = o.Showtime != null ? o.Showtime.StartUtc : o.CreatedUtc
-            })
-            .SingleOrDefaultAsync(ct);
+            .Include(o => o.Showtime)
+                .ThenInclude(s => s!.Movie)
+            .Include(o => o.Showtime)
+                .ThenInclude(s => s!.Room)
+            .SingleOrDefaultAsync(o => o.OrderId == orderId && o.UserId == customerId, ct);
 
         if (order is null || order.Status != OrderStates.Paid) return null;
 
         var dtos = await GetCustomerTicketDtosAsync(customerId, orderId, ct);
 
+        var showtime = order.Showtime;
+        var movie = showtime?.Movie;
+        var startUtc = showtime?.StartUtc ?? order.CreatedUtc;
+        var endUtc = showtime?.EndUtc
+            ?? (movie is { DurationMin: > 0 } ? startUtc.AddMinutes(movie.DurationMin) : startUtc.AddMinutes(110));
+
+        var startVn = ToVietnamOffset(startUtc);
+        var endVn = ToVietnamOffset(endUtc);
+        bool crossesMidnight = endVn.Date > startVn.Date;
+
+        var ratingDto = movie is not null
+            ? CatalogService.BuildRatingDto(
+                movie.RatingSource,
+                movie.RatingValue,
+                movie.RatingScaleMax,
+                movie.RatingVoteCount,
+                movie.RatingFetchedUtc)
+            : null;
+
+        var artworkDto = movie is not null ? CatalogService.BuildArtworkDto(movie) : null;
+
         return new OrderTicketsViewModel(
-            order.OrderId,
-            order.OrderCode,
-            order.Status,
-            order.MovieTitle,
-            order.RoomName,
-            order.StartUtc,
-            FormatVietnamTime(order.StartUtc),
-            dtos
+            OrderId: order.OrderId,
+            OrderCode: order.OrderCode,
+            OrderStatus: order.Status,
+            MovieTitle: movie?.Title ?? "N/A",
+            RoomName: showtime?.Room?.RoomName ?? "Phòng chiếu",
+            StartUtc: startUtc,
+            FormattedStartUtc: FormatVietnamTime(startUtc),
+            Tickets: dtos,
+            ShowtimeId: order.ShowtimeId,
+            MovieId: movie?.MovieId ?? 0,
+            MovieOriginalTitle: movie?.OriginalTitle,
+            MovieReleaseYear: movie?.ReleaseYear,
+            MovieDurationMin: movie?.DurationMin ?? 0,
+            MovieDirectorNames: movie?.DirectorNames,
+            MovieAgeLabel: movie?.AgeLabel ?? "P",
+            MovieAgeLabelMarket: movie?.AgeLabelMarket,
+            MovieRating: ratingDto,
+            MovieArtwork: artworkDto,
+            StartVietnamDateText: FormatVietnamWeekdayDate(startUtc),
+            StartVietnamTimeOnlyText: FormatVietnamTimeOnly(startUtc),
+            EndVietnamTimeOnlyText: FormatVietnamTimeOnly(endUtc),
+            CrossesMidnight: crossesMidnight,
+            PaidVietnamText: order.PaidUtc.HasValue ? FormatVietnamDateTimeWithSec(order.PaidUtc.Value) : null
         );
     }
 
@@ -89,23 +140,25 @@ public sealed class TicketQueryService(BetaDbContext db, QrTokenProtector qrProt
         var items = await query.ToListAsync(ct);
 
         return items.Select(x => new CustomerTicketDto(
-            x.TicketId,
-            x.TicketCode,
-            x.OrderId,
-            x.OrderCode,
-            x.ShowtimeId,
-            x.MovieTitle,
-            x.RoomName,
-            x.StartUtc,
-            FormatVietnamTime(x.StartUtc),
-            x.SeatId,
-            x.SeatCode,
-            x.SeatType,
-            x.PriceVnd,
-            x.Status,
-            x.IssuedUtc,
-            x.UsedUtc,
-            $"/tickets/{x.TicketId}/qr"
+            TicketId: x.TicketId,
+            TicketCode: x.TicketCode,
+            OrderId: x.OrderId,
+            OrderCode: x.OrderCode,
+            ShowtimeId: x.ShowtimeId,
+            MovieTitle: x.MovieTitle,
+            RoomName: x.RoomName,
+            StartUtc: x.StartUtc,
+            FormattedStartUtc: FormatVietnamTime(x.StartUtc),
+            SeatId: x.SeatId,
+            SeatCode: x.SeatCode,
+            SeatType: x.SeatType,
+            PriceVnd: x.PriceVnd,
+            Status: x.Status,
+            IssuedUtc: x.IssuedUtc,
+            UsedUtc: x.UsedUtc,
+            QrCodeUrl: $"/tickets/{x.TicketId}/qr",
+            IssuedVietnamText: FormatVietnamDateTimeWithSec(x.IssuedUtc),
+            UsedVietnamText: x.UsedUtc.HasValue ? FormatVietnamDateTimeWithSec(x.UsedUtc.Value) : null
         )).ToList();
     }
 

@@ -261,6 +261,267 @@
           "null": false,
           "identity": false,
           "default": "('DRAFT')"
+        },
+        {
+          "name": "original_title",
+          "prop": "OriginalTitle",
+          "sql": "nvarchar(250)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "release_year",
+          "prop": "ReleaseYear",
+          "sql": "smallint",
+          "cs": "short",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "release_date_vn",
+          "prop": "ReleaseDateVn",
+          "sql": "date",
+          "cs": "DateOnly",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "origin_country",
+          "prop": "OriginCountry",
+          "sql": "nvarchar(100)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "original_language",
+          "prop": "OriginalLanguage",
+          "sql": "varchar(16)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "tmdb_id",
+          "prop": "TmdbId",
+          "sql": "int",
+          "cs": "int",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "imdb_id",
+          "prop": "ImdbId",
+          "sql": "varchar(16)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "wikidata_qid",
+          "prop": "WikidataQid",
+          "sql": "varchar(16)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "poster_w342_url",
+          "prop": "PosterW342Url",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "backdrop_url",
+          "prop": "BackdropUrl",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "backdrop_w780_url",
+          "prop": "BackdropW780Url",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "title_logo_url",
+          "prop": "TitleLogoUrl",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "official_trailer_youtube_id",
+          "prop": "OfficialTrailerYoutubeId",
+          "sql": "varchar(32)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "artwork_source",
+          "prop": "ArtworkSource",
+          "sql": "varchar(32)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "artwork_license_text",
+          "prop": "ArtworkLicenseText",
+          "sql": "nvarchar(300)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "artwork_attribution_text",
+          "prop": "ArtworkAttributionText",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "rating_source",
+          "prop": "RatingSource",
+          "sql": "varchar(32)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "rating_value",
+          "prop": "RatingValue",
+          "sql": "decimal(3,1)",
+          "cs": "decimal",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "rating_scale_max",
+          "prop": "RatingScaleMax",
+          "sql": "decimal(4,1)",
+          "cs": "decimal",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "rating_vote_count",
+          "prop": "RatingVoteCount",
+          "sql": "int",
+          "cs": "int",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "rating_fetched_utc",
+          "prop": "RatingFetchedUtc",
+          "sql": "datetime2(0)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "age_label_market",
+          "prop": "AgeLabelMarket",
+          "sql": "varchar(8)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "age_label_source",
+          "prop": "AgeLabelSource",
+          "sql": "nvarchar(200)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "director_names",
+          "prop": "DirectorNames",
+          "sql": "nvarchar(300)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "cast_json",
+          "prop": "CastJson",
+          "sql": "nvarchar(max)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "metadata_source",
+          "prop": "MetadataSource",
+          "sql": "varchar(32)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "external_synced_utc",
+          "prop": "ExternalSyncedUtc",
+          "sql": "datetime2(0)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "external_expires_utc",
+          "prop": "ExternalExpiresUtc",
+          "sql": "datetime2(0)",
+          "cs": "DateTime",
+          "null": true,
+          "identity": false,
+          "default": null
+        },
+        {
+          "name": "manual_override_mask",
+          "prop": "ManualOverrideMask",
+          "sql": "nvarchar(500)",
+          "cs": "string",
+          "null": true,
+          "identity": false,
+          "default": null
         }
       ],
       "pk": [
@@ -279,6 +540,30 @@
         [
           "CK_Movies_02",
           "(status IN ('DRAFT','PUBLISHED','ARCHIVED'))"
+        ],
+        [
+          "CK_Movies_03",
+          "(release_year IS NULL OR release_year BETWEEN 1888 AND 2100)"
+        ],
+        [
+          "CK_Movies_04",
+          "(artwork_source IS NULL OR artwork_source IN ('TMDB','WIKIMEDIA_COMMONS','DISTRIBUTOR','PENDING_TMDB_API_KEY','NONE'))"
+        ],
+        [
+          "CK_Movies_05",
+          "(rating_source IS NULL OR rating_source IN ('IMDB','TMDB'))"
+        ],
+        [
+          "CK_Movies_06",
+          "(rating_value IS NULL OR (rating_scale_max IS NOT NULL AND rating_scale_max > 0 AND rating_value >= 0 AND rating_value <= rating_scale_max AND rating_vote_count IS NOT NULL AND rating_vote_count >= 0))"
+        ],
+        [
+          "CK_Movies_07",
+          "(cast_json IS NULL OR ISJSON(cast_json) = 1)"
+        ],
+        [
+          "CK_Movies_08",
+          "(age_label_market IS NULL OR age_label_market IN ('VN'))"
         ]
       ]
     },

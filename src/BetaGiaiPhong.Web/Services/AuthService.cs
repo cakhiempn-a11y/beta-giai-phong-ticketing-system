@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
+using BetaGiaiPhong.Data.Services;
 using BetaGiaiPhong.Web.Models.Responses;
 
 namespace BetaGiaiPhong.Web.Services;
@@ -21,6 +22,12 @@ public interface IAuthService
 public sealed class AuthService(BetaDbContext db, ILogger<AuthService> logger) : IAuthService
 {
     private static readonly PasswordHasher<AppUser> Hasher = new();
+    private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
+
+    private static string FormatVietnamDateTime(DateTime utc)
+        => new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeSpan.Zero)
+            .ToOffset(VietnamOffset)
+            .ToString("dd/MM/yyyy HH:mm");
 
     public async Task<AuthResult> LoginAsync(string email, string password, bool rememberMe, HttpContext httpContext, CancellationToken ct = default)
     {
@@ -103,6 +110,7 @@ public sealed class AuthService(BetaDbContext db, ILogger<AuthService> logger) :
     public async Task<UserProfileDto?> GetUserProfileAsync(long userId, CancellationToken ct = default)
     {
         var user = await db.Users
+            .AsNoTracking()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .SingleOrDefaultAsync(u => u.UserId == userId, ct);
@@ -115,6 +123,23 @@ public sealed class AuthService(BetaDbContext db, ILogger<AuthService> logger) :
             .Distinct()
             .ToList();
 
-        return new UserProfileDto(user.UserId, user.Email, user.DisplayName, user.Status, roles);
+        int totalOrders = 0;
+        int paidOrders = 0;
+        if (roles.Contains("CUSTOMER", StringComparer.OrdinalIgnoreCase))
+        {
+            totalOrders = await db.Orders.AsNoTracking().CountAsync(o => o.UserId == userId, ct);
+            paidOrders = await db.Orders.AsNoTracking().CountAsync(o => o.UserId == userId && o.Status == OrderStates.Paid, ct);
+        }
+
+        return new UserProfileDto(
+            UserId: user.UserId,
+            Email: user.Email,
+            DisplayName: user.DisplayName,
+            Status: user.Status,
+            Roles: roles,
+            CreatedVietnamText: FormatVietnamDateTime(user.CreatedUtc),
+            TotalOrdersCount: totalOrders,
+            PaidOrdersCount: paidOrders
+        );
     }
 }

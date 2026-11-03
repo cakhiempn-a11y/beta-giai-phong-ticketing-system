@@ -23,10 +23,10 @@ public sealed class OrdersController(
     ILogger<OrdersController> logger) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index([FromQuery] int page = 1, CancellationToken ct = default)
+    public async Task<IActionResult> Index([FromQuery] int page = 1, [FromQuery] string? status = null, CancellationToken ct = default)
     {
         var customerId = GetCurrentCustomerId();
-        var (orders, totalCount) = await bookingQueryService.GetCustomerOrdersAsync(customerId, page, 10, ct);
+        var (orders, totalCount) = await bookingQueryService.GetCustomerOrdersAsync(customerId, page, 10, ct, status);
 
         var viewModel = new OrderListViewModel
         {
@@ -35,6 +35,7 @@ public sealed class OrdersController(
             PageSize = 10,
             TotalCount = totalCount,
             TotalPages = (int)Math.Max(1, Math.Ceiling((double)totalCount / 10)),
+            StatusFilter = status,
             FlashMessage = TempData["Success"]?.ToString(),
             FlashError = TempData["Error"]?.ToString()
         };
@@ -58,6 +59,7 @@ public sealed class OrdersController(
         {
             Order = order,
             FlashMessage = TempData["Success"]?.ToString(),
+            FlashWarning = TempData["Warning"]?.ToString(),
             FlashError = TempData["Error"]?.ToString()
         };
 
@@ -210,7 +212,12 @@ public sealed class OrdersController(
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        return View(ticketsModel);
+        var enrichedModel = ticketsModel with
+        {
+            FlashMessage = TempData["Success"]?.ToString()
+        };
+
+        return View(enrichedModel);
     }
 
     [HttpPost("{id:long}/cancel")]

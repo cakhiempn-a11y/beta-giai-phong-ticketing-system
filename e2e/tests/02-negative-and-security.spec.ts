@@ -42,8 +42,8 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       // Setup: Find Showtime A from 01-full-journey (starts ~15m in future, inside check-in window)
       // and publish Showtime B (starts +240m in future, outside 30-min check-in window)
       // -----------------------------------------------------------------------
-      await cust1Page.goto('/movies');
-      const existingMovieHref = (await cust1Page.locator('a[href*="/movies/"]').first().getAttribute('href'))!;
+      await cust1Page.goto('/movies?q=Phim+E2E'); if ((await cust1Page.locator('[data-testid="catalog-movie-card"]').count()) === 0) { await cust1Page.goto('/movies?filter=has-showtimes'); }
+      const existingMovieHref = (await cust1Page.locator('[data-testid="catalog-movie-card"]').first().getAttribute('href'))!;
       await cust1Page.goto(existingMovieHref);
       const existingSeatHref = (await cust1Page.locator('a[href*="/showtimes/"][href*="/seats"]').first().getAttribute('href'))!;
       const showtimeAId = Number(existingSeatHref.match(/\/showtimes\/(\d+)\/seats/)![1]);
@@ -109,9 +109,11 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       await managerPage.goto(`/management/movies/${movieId}`);
       const archiveBtn = managerPage.locator(`form[action*="/management/movies/${movieId}/archive"] button[type="submit"]`);
       if ((await archiveBtn.count()) > 0 && (await archiveBtn.isEnabled())) {
+        await archiveBtn.click();
+        await expect(managerPage.locator('[data-testid="archive-movie-dialog"]')).toBeVisible();
         await Promise.all([
           managerPage.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          archiveBtn.click(),
+          managerPage.click('[data-testid="confirm-archive-movie-btn"]'),
         ]);
         await expect(managerPage.locator('.alert-danger')).toBeVisible();
       }
@@ -179,9 +181,11 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
 
       // Cancel the winner's order so the seat is freed cleanly
       const raceOrderId = Number(winnerPage.url().match(/\/orders\/(\d+)$/)![1]);
+      await winnerPage.click(`form[action="/orders/${raceOrderId}/cancel"] button[type="submit"]`);
+      await expect(winnerPage.locator('[data-testid="cancel-order-dialog"]')).toBeVisible();
       await Promise.all([
         winnerPage.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-        winnerPage.click(`form[action="/orders/${raceOrderId}/cancel"] button[type="submit"]`),
+        winnerPage.click('[data-testid="confirm-cancel-order-btn"]'),
       ]);
       await expect(winnerPage.locator('body')).toContainText('Đã hủy');
 
@@ -196,9 +200,11 @@ test.describe('BE-05B Phase 6: Negative, Concurrency, Authorization & Security E
       ]);
       const failedOrderId = Number(cust1Page.url().match(/\/orders\/(\d+)$/)![1]);
       await cust1Page.goto(`/orders/${failedOrderId}/checkout`);
+      await cust1Page.click('#btnPayFailed');
+      await expect(cust1Page.locator('[data-testid="fail-payment-dialog"]')).toBeVisible();
       await Promise.all([
         cust1Page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-        cust1Page.click('#btnPayFailed'),
+        cust1Page.click('[data-testid="confirm-fail-payment-btn"]'),
       ]);
       await expect(cust1Page).toHaveURL(new RegExp(`/orders/${failedOrderId}$`));
       await expect(cust1Page.locator('body')).toContainText('FAILED');

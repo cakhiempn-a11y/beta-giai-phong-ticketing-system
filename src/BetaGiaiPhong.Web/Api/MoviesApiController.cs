@@ -34,6 +34,23 @@ public sealed class MoviesApiController(ICatalogService catalogService) : Contro
         return Ok(movie);
     }
 
+    [HttpGet("{id:long}/quick-preview")]
+    [ProducesResponseType(typeof(MovieQuickPreviewDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MovieQuickPreviewDto>> GetMovieQuickPreview(long id, CancellationToken ct)
+    {
+        var preview = await catalogService.GetMovieQuickPreviewAsync(id, ct);
+        if (preview is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Movie Not Found",
+                detail: $"Phim có mã ID {id} không tồn tại hoặc chưa được công bố.");
+        }
+
+        return Ok(preview);
+    }
+
     [HttpGet("{id:long}/showtimes")]
     [ProducesResponseType(typeof(IReadOnlyList<ShowtimeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

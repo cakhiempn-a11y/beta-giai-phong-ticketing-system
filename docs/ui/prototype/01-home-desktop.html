@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beta Giải Phóng — Trang chủ Điện ảnh (Netflix-Inspired Prototype)</title>
+  <link rel="stylesheet" href="netflix-cinema.css" />
+</head>
+<body>
+  <!-- Consumer Translucent-to-Solid Cinema Header -->
+  <header class="bgp-header" data-scroll-elevate>
+    <div class="bgp-header__left">
+      <a href="01-home-desktop.html" class="bgp-brand" aria-label="Beta Giải Phóng Trang chủ">
+        <span class="bgp-brand__badge">BETA</span>
+        <span class="bgp-brand__text">Giải Phóng</span>
+      </a>
+      <nav class="bgp-nav" aria-label="Điều hướng chính">
+        <a href="01-home-desktop.html" class="bgp-nav__link bgp-nav__link--active">Trang chủ</a>
+        <a href="03-catalog-mobile.html" class="bgp-nav__link">Danh mục phim</a>
+        <a href="02-movie-detail-desktop.html#showtimes" class="bgp-nav__link">Lịch chiếu hôm nay</a>
+        <a href="05-checkout-desktop.html" class="bgp-nav__link">Vé &amp; Đơn hàng</a>
+      </nav>
+    </div>
+
+    <div class="bgp-header__right">
+      <form class="bgp-search-pill" action="03-catalog-mobile.html" method="get" role="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B8B8C2" stroke-width="2.2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20l-3.5-3.5"></path>
+        </svg>
+        <input type="search" name="q" placeholder="Tìm phim, đạo diễn, diễn viên..." aria-label="Tìm kiếm phim" />
+      </form>
+      <span class="bgp-sim-notice-pill" title="Tác phẩm điện ảnh thật 100% — Lịch chiếu & giá vé mô phỏng học thuật MIS">
+        Lịch rạp mô phỏng • Phim thật xác minh
+      </span>
+      <div class="bgp-user-chip">
+        <span class="bgp-user-chip__avatar">KH</span>
+        <span>Nguyễn Minh Anh</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Full-Bleed Photographic Hero (Verified Public Domain Criterion Widescreen Still) -->
+    <section class="bgp-hero" aria-labelledby="hero-movie-title">
+      <img
+        class="bgp-hero__backdrop"
+        src="assets/charade-1963-backdrop.jpg"
+        alt="Cảnh phim Mê trong mê (Charade, 1963) với Audrey Hepburn và Cary Grant"
+        fetchpriority="high"
+        decoding="async"
+      />
+      <div class="bgp-hero__vignette" aria-hidden="true"></div>
+
+      <div class="bgp-hero__content">
+        <div class="bgp-hero__eyebrow">
+          <span class="bgp-badge bgp-badge--cinema-open">CÓ LỊCH CHIẾU • 3 SUẤT HÔM NAY (UTC+7)</span>
+          <span class="bgp-badge bgp-badge--imdb">IMDb 7.8/10 (95.223 lượt)</span>
+          <span class="bgp-badge bgp-badge--age-unrated">Chưa có phân loại tại VN</span>
+        </div>
+
+        <h1 id="hero-movie-title" class="bgp-hero__title">Mê Trong Mê</h1>
+        <p class="bgp-hero__subtitle">Tên gốc: Charade (1963) • Hoa Kỳ • Bí ẩn, Giật gân, Lãng mạn</p>
+
+        <div class="bgp-hero__meta">
+          <span><strong>113 phút</strong></span>
+          <span class="bgp-dot"></span>
+          <span>Phòng Chiếu 01 &amp; 02 (2D Phụ đề Việt)</span>
+          <span class="bgp-dot"></span>
+          <span>Giá từ <strong>70.000 đ</strong></span>
+        </div>
+
+        <p class="bgp-hero__synopsis">
+          Trở về Paris với ý định ly hôn, Regina Lampert bàng hoàng phát hiện căn hộ bị vét sạch và người chồng đã bị sát hại trên chuyến tàu rời thành phố. Cô lập tức bị cuốn vào cuộc truy lùng 250.000 đô la Mỹ mất tích cùng những kẻ lạ mặt đầy bí ẩn.
+        </p>
+
+        <p class="bgp-hero__credits">
+          <strong>Đạo diễn:</strong> Stanley Donen &nbsp;•&nbsp;
+          <strong>Diễn viên:</strong> Cary Grant, Audrey Hepburn, Walter Matthau, James Coburn
+        </p>
+
+        <div class="bgp-hero__actions">
+          <a href="02-movie-detail-desktop.html#showtimes" class="bgp-btn bgp-btn--primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+              <path d="M8 5v14M16 5v14"></path>
+            </svg>
+            Đặt vé • Chọn suất chiếu
+          </a>
+          <a href="02-movie-detail-desktop.html" class="bgp-btn bgp-btn--glass">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            Chi tiết &amp; Trailer chính thức
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <div class="bgp-rails-stack">
+      <!-- RAIL 1: Movies Open for Booking Today (16:9 Cinema Backdrop Cards + Active Hover Quick-Preview State) -->
+      <section class="bgp-rail" aria-labelledby="rail-today-title">
+        <div class="bgp-rail__header">
+          <h2 id="rail-today-title" class="bgp-rail__title">
+            Đang mở bán vé hôm nay
+            <span class="bgp-rail__sub">Thứ Tư, 04/11/2026 (Giờ Việt Nam UTC+7) • Bấm giờ chiếu để chọn ghế ngay</span>
+          </h2>
+          <a href="03-catalog-mobile.html?filter=has-showtimes" class="bgp-rail__more">Xem tất cả 7 phim có suất &rarr;</a>
+        </div>
+
+        <div class="bgp-wide-grid" style="margin-bottom:58px;">
+          <!-- Card 1 -->
+          <article class="bgp-wide-card">
+            <a href="02-movie-detail-desktop.html" class="bgp-wide-card__media">
+              <img src="assets/charade-1963-still-2.jpg" alt="Mê trong mê (Charade, 1963)" />
+              <div class="bgp-wide-card__overlay">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                  <strong style="font-size:0.95rem;">Mê Trong Mê (1963)</strong>
+                  <span class="bgp-badge bgp-badge--imdb">IMDb 7.8/10</span>
+                </div>
+              </div>
+            </a>
+            <div class="bgp-wide-card__body">
+              <div style="font-size:0.75rem;color:var(--bgp-text-muted);display:flex;justify-content:space-between;">
+                <span>113 phút • Bí ẩn, Giật gân</span>
+                <span>95.223 lượt</span>
+              </div>
+              <div class="bgp-time-pills">
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill bgp-time-pill--highlight">19:15</a>
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill">21:30</a>
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill">23:15 (+1d)</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Card 2 (Hovered Target -> Shows Netflix-Style Elevated Quick-Preview Popover) -->
+          <article class="bgp-wide-card" aria-describedby="charge-quick-preview">
+            <div class="bgp-wide-card__media">
+              <img src="assets/charge-2022-backdrop.jpg" alt="Charge (2022) — Blender Studio" />
+            </div>
+            <div class="bgp-wide-card__body">
+              <div style="font-size:0.84rem;font-weight:700;">Charge (2022)</div>
+              <div class="bgp-time-pills">
+                <span class="bgp-time-pill">18:45</span>
+                <span class="bgp-time-pill">20:00</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Netflix-Style Elevated Quick-Preview Card over Card 2 -->
+          <aside id="charge-quick-preview" class="bgp-preview-popover" aria-label="Xem nhanh phim Charge (2022)">
+            <div class="bgp-preview-popover__media">
+              <img src="assets/charge-2022-backdrop.jpg" alt="Cảnh phim Charge (2022) — Blender Studio" />
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,0.06) 45%,rgba(24,24,31,0.92) 100%);"></div>
+              <span class="bgp-preview-popover__tag">XEM NHANH • CÓ SUẤT</span>
+            </div>
+            <div class="bgp-preview-popover__body">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                <span class="bgp-badge bgp-badge--imdb">IMDb 7.6/10 (71 lượt)</span>
+                <span style="font-size:0.75rem;color:var(--bgp-text-secondary);font-weight:600;">2022 • 4 phút • CC BY 4.0</span>
+              </div>
+              <p style="margin:0 0 10px;font-size:0.79rem;color:var(--bgp-text-secondary);line-height:1.45;">
+                Đạo diễn <strong>Hjalti Hjálmarsson</strong> (Blender Studio). Hành trình đột nhập nhà máy năng lượng băng giá của người đàn ông mang chi giả cơ khí.
+              </p>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div class="bgp-time-pills">
+                  <a href="04-seat-selection-desktop.html" class="bgp-time-pill bgp-time-pill--highlight">18:45</a>
+                  <a href="04-seat-selection-desktop.html" class="bgp-time-pill">20:00</a>
+                </div>
+                <a href="02-movie-detail-desktop.html" class="bgp-btn bgp-btn--outline bgp-btn--sm" style="min-height:30px;padding:0 10px;font-size:0.75rem;">Chi tiết</a>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Card 3 -->
+          <article class="bgp-wide-card">
+            <a href="02-movie-detail-desktop.html" class="bgp-wide-card__media">
+              <img src="assets/tears-of-steel-2012-backdrop.jpg" alt="Tears of Steel (2012)" loading="lazy" />
+              <div class="bgp-wide-card__overlay">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                  <strong style="font-size:0.95rem;">Tears of Steel (2012)</strong>
+                  <span class="bgp-badge bgp-badge--imdb">IMDb 5.5/10</span>
+                </div>
+              </div>
+            </a>
+            <div class="bgp-wide-card__body">
+              <div style="font-size:0.75rem;color:var(--bgp-text-muted);display:flex;justify-content:space-between;">
+                <span>12 phút • Khoa học viễn tưởng</span>
+                <span>1.576 lượt</span>
+              </div>
+              <div class="bgp-time-pills">
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill bgp-time-pill--highlight">18:00</a>
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill">20:45</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Card 4 -->
+          <article class="bgp-wide-card">
+            <a href="02-movie-detail-desktop.html" class="bgp-wide-card__media">
+              <img src="assets/notld-1968-backdrop.jpg" alt="Night of the Living Dead (1968)" loading="lazy" />
+              <div class="bgp-wide-card__overlay">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                  <strong style="font-size:0.95rem;">Night of the Living Dead</strong>
+                  <span class="bgp-badge bgp-badge--imdb">IMDb 7.8/10</span>
+                </div>
+              </div>
+            </a>
+            <div class="bgp-wide-card__body">
+              <div style="font-size:0.75rem;color:var(--bgp-text-muted);display:flex;justify-content:space-between;">
+                <span>96 phút • Kinh dị kinh điển (1968)</span>
+                <span>153.645 lượt</span>
+              </div>
+              <div class="bgp-time-pills">
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill bgp-time-pill--highlight">22:15</a>
+                <a href="04-seat-selection-desktop.html" class="bgp-time-pill">23:45 (+1d)</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- RAIL 2: 2:3 Official Theatrical Posters (Zero Duplication, Real Verified Ratings & Honest Showtime Status) -->
+      <section class="bgp-rail" aria-labelledby="rail-catalog-title">
+        <div class="bgp-rail__header">
+          <h2 id="rail-catalog-title" class="bgp-rail__title">
+            Tuyển tập Điện ảnh Kinh điển &amp; Hoạt hình Độc lập
+            <span class="bgp-rail__sub">100% Poster chính thức hợp pháp (Public Domain &amp; Creative Commons) • Không nhân bản phim</span>
+          </h2>
+          <a href="03-catalog-mobile.html" class="bgp-rail__more">Mở danh mục đầy đủ (11 phim) &rarr;</a>
+        </div>
+
+        <div class="bgp-poster-grid">
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/his-girl-friday-1940-poster.jpg" alt="Poster His Girl Friday (1940)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">His Girl Friday</h3>
+            <div class="bgp-poster-card__sub">
+              <span>1940 • 92p</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.8</span>
+            </div>
+          </a>
+
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/sintel-2010-poster.jpg" alt="Poster Sintel (2010)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">Sintel</h3>
+            <div class="bgp-poster-card__sub">
+              <span>2010 • 15p</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.4</span>
+            </div>
+          </a>
+
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/spring-2019-poster.jpg" alt="Poster Spring (2019)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">Spring</h3>
+            <div class="bgp-poster-card__sub">
+              <span>2019 • 8p</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.2</span>
+            </div>
+          </a>
+
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/the-general-1926-poster.png" alt="Poster The General (1926)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">The General</h3>
+            <div class="bgp-poster-card__sub">
+              <span>1926 • Chưa có suất</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 8.1</span>
+            </div>
+          </a>
+
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/cosmos-2015-poster.jpg" alt="Poster Cosmos Laundromat (2015)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">Cosmos Laundromat</h3>
+            <div class="bgp-poster-card__sub">
+              <span style="white-space:nowrap;">2015 • Chưa có suất</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;white-space:nowrap;">IMDb 6.8</span>
+            </div>
+          </a>
+
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/tears-of-steel-2012-poster.png" alt="Poster Tears of Steel (2012)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">Tears of Steel</h3>
+            <div class="bgp-poster-card__sub">
+              <span>2012 • Có suất</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 5.5</span>
+            </div>
+          </a>
+
+          <a href="02-movie-detail-desktop.html" class="bgp-poster-card">
+            <div class="bgp-poster-frame">
+              <img src="assets/notld-1968-poster.jpg" alt="Poster Night of the Living Dead (1968)" loading="lazy" />
+            </div>
+            <h3 class="bgp-poster-card__title">Night of the Living Dead</h3>
+            <div class="bgp-poster-card__sub">
+              <span>1968 • Có suất</span>
+              <span style="color:var(--bgp-accent-gold);font-weight:700;">IMDb 7.8</span>
+            </div>
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="bgp-footer">
+    <div>
+      <strong style="color:var(--bgp-text-secondary);">Beta Giải Phóng — Nguyên mẫu Học thuật Hệ thống Thông tin Quản lý (MIS)</strong><br />
+      Lịch chiếu, phòng chiếu và giá vé là dữ liệu vận hành mô phỏng học thuật; không phải lịch chiếu thương mại chính thức của Beta Cinemas.
+    </div>
+    <div style="text-align:right;">
+      Điểm đánh giá: <em>Information courtesy of IMDb (https://www.imdb.com). Used with permission (03/11/2026).</em><br />
+      Artwork: Public Domain &amp; CC BY 3.0 / 4.0 (Blender Foundation / Blender Studio / Wikimedia Commons).
+    </div>
+  </footer>
+
+  <script src="prototype.js"></script>
+</body>
+</html>

@@ -1,21 +1,37 @@
 @{
+    Layout = "_CinemaLayout";
     ViewData["Title"] = "Từ chối truy cập (403 Forbidden)";
 }
 
-<div class="container mt-5 mb-5 text-center">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-sm border-0 p-4 p-md-5">
-                <div class="display-1 text-danger fw-bold mb-3">403</div>
-                <h2 class="h3 fw-bold mb-2">Truy Cập Bị Từ Chối</h2>
-                <p class="text-muted mb-4">
-                    Tài khoản của bạn không có đủ đặc quyền hoặc vai trò (Role) phù hợp để truy cập vào tài nguyên này.
-                </p>
-                <div class="d-flex justify-content-center gap-2">
-                    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Về trang chủ</a>
-                    <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Login">Đổi tài khoản khác</a>
-                </div>
+<section class="bgp-static-page" aria-labelledby="access-denied-title">
+    <div class="bgp-container--center">
+        <div class="bgp-panel bgp-panel--elevated bgp-status-panel" data-testid="access-denied-panel">
+            <div class="bgp-status-panel__code bgp-status-panel__code--danger">403</div>
+            <h1 id="access-denied-title" class="bgp-status-panel__title">Truy Cập Bị Từ Chối</h1>
+            <p class="bgp-status-panel__message">
+                Tài khoản hiện tại không có đủ đặc quyền hoặc vai trò (Role) phù hợp để truy cập vào khu vực này.
+                Nếu bạn là nhân sự vận hành, vui lòng đăng nhập đúng tài khoản công vụ được phân quyền.
+            </p>
+            <div class="bgp-status-panel__actions">
+                <a class="bgp-btn bgp-btn--primary bgp-btn--responsive" href="/">
+                    Về trang chủ
+                </a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="bgp-btn bgp-btn--outline bgp-btn--responsive">
+                            Đăng xuất để đổi tài khoản
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <a class="bgp-btn bgp-btn--outline bgp-btn--responsive" asp-controller="Account" asp-action="Login">
+                        Đăng nhập tài khoản khác
+                    </a>
+                }
             </div>
         </div>
     </div>
-</div>
+</section>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thanh toán &amp; Vé QR — Đơn #BGP-8F42C91A | Beta Giải Phóng</title>
+  <link rel="stylesheet" href="netflix-cinema.css" />
+  <style>
+    .bgp-hold-banner {
+      margin: calc(var(--bgp-header-h) + 16px) var(--bgp-gutter) 0;
+      padding: 12px 18px;
+      border-radius: var(--bgp-radius-md);
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(229, 9, 20, 0.14));
+      border: 1px solid rgba(245, 158, 11, 0.42);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .bgp-checkout-grid {
+      padding: 18px var(--bgp-gutter) 36px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .bgp-ticket-preview {
+      margin-top: 16px;
+      background: #17171E;
+      border: 1px solid var(--bgp-border-default);
+      border-radius: var(--bgp-radius-md);
+      display: grid;
+      grid-template-columns: 1fr 164px;
+      overflow: hidden;
+    }
+    .bgp-ticket-preview__stub {
+      border-left: 2px dashed rgba(255, 255, 255, 0.18);
+      background: #121218;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header class="bgp-header bgp-header--solid">
+    <div class="bgp-header__left">
+      <a href="01-home-desktop.html" class="bgp-brand">
+        <span class="bgp-brand__badge">BETA</span>
+        <span class="bgp-brand__text">Giải Phóng</span>
+      </a>
+      <nav class="bgp-nav" aria-label="Điều hướng chính">
+        <a href="01-home-desktop.html" class="bgp-nav__link">Trang chủ</a>
+        <a href="03-catalog-mobile.html" class="bgp-nav__link">Danh mục phim</a>
+        <a href="05-checkout-desktop.html" class="bgp-nav__link bgp-nav__link--active">Vé &amp; Đơn hàng</a>
+      </nav>
+    </div>
+    <div class="bgp-header__right">
+      <div class="bgp-user-chip">
+        <span class="bgp-user-chip__avatar">KH</span>
+        <span>Nguyễn Minh Anh</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Server-Synchronized Hold Countdown Banner -->
+  <section class="bgp-hold-banner" aria-label="Thời hạn giữ ghế từ máy chủ">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="bgp-badge" style="background:#F59E0B;color:#0A0A0C;font-weight:800;">PENDING_PAYMENT</span>
+      <div style="font-size:0.86rem;">
+        Máy chủ đã khóa tạm <strong>2 ghế (C5, C6)</strong> cho đơn <strong style="font-family:var(--bgp-font-mono);">#BGP-8F42C91A</strong>
+        <span style="color:var(--bgp-text-secondary);"> • Hết hạn lúc 19:05:00 (Giờ VN — Nguồn: <code>HoldExpiresUtc</code>)</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:0.74rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--bgp-text-secondary);font-weight:700;">Còn lại</span>
+      <span style="font-family:var(--bgp-font-mono);font-size:1.35rem;font-weight:800;color:#FCD34D;background:rgba(10,10,12,0.65);padding:3px 12px;border-radius:6px;border:1px solid rgba(245,158,11,0.4);">04:42</span>
+    </div>
+  </section>
+
+  <main class="bgp-checkout-grid">
+    <!-- Left Column: Order Summary + Post-Payment Perforated QR Pass Preview -->
+    <section class="bgp-summary-panel" aria-labelledby="order-summary-heading">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h1 id="order-summary-heading" style="margin:0;font-size:1.12rem;font-weight:800;">Chi tiết đơn đặt vé &amp; Cấu trúc vé điện tử</h1>
+        <span style="font-size:0.75rem;color:var(--bgp-text-muted);">Tất cả mốc giờ hiển thị theo UTC+7</span>
+      </div>
+
+      <div style="display:flex;gap:16px;padding:14px;background:var(--bgp-bg-surface-2);border-radius:10px;border:1px solid var(--bgp-border-subtle);margin-bottom:14px;">
+        <img src="assets/charade-1963-poster.jpg" alt="Poster Mê trong mê (Charade, 1963)" style="width:74px;height:111px;object-fit:cover;border-radius:6px;" />
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <h2 style="margin:0 0 2px;font-size:1.1rem;font-weight:800;">Mê Trong Mê (Charade, 1963)</h2>
+              <div style="font-size:0.78rem;color:var(--bgp-text-secondary);">Đạo diễn Stanley Donen • 113 phút • IMDb 7.8/10 (95.223 lượt)</div>
+            </div>
+            <span class="bgp-badge bgp-badge--cinema-open">Phòng Chiếu 01</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--bgp-border-subtle);font-size:0.79rem;">
+            <div><span style="color:var(--bgp-text-muted);display:block;">Ngày chiếu</span><strong>Thứ Tư, 04/11/2026</strong></div>
+            <div><span style="color:var(--bgp-text-muted);display:block;">Khung giờ (VN)</span><strong>19:15 &rarr; 21:08</strong></div>
+            <div><span style="color:var(--bgp-text-muted);display:block;">Ghế giữ chỗ</span><strong style="font-family:var(--bgp-font-mono);color:#FF858B;">C5 (VIP), C6 (VIP)</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bgp-bg-surface-2);border-radius:10px;padding:12px 16px;font-size:0.83rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="color:var(--bgp-text-secondary);">2 &times; Ghế VIP (C5, C6) &times; 90.000 đ</span>
+          <strong>180.000 đ</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="color:var(--bgp-text-secondary);">Phí tiện ích / Khuyến mãi</span>
+          <span>0 đ</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:8px;border-top:1px solid var(--bgp-border-default);">
+          <strong style="font-size:0.95rem;">Tổng thanh toán (VND nguyên)</strong>
+          <strong style="font-size:1.45rem;font-weight:800;color:#FFFFFF;">180.000 đ</strong>
+        </div>
+      </div>
+
+      <!-- Perforated QR Boarding Pass Design Spec (High Contrast White Quiet Zone, Zero Filter) -->
+      <div class="bgp-ticket-preview" aria-label="Mẫu vé điện tử QR độ tương phản cao cấp sau khi thanh toán">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:0.7rem;font-weight:800;letter-spacing:0.08em;color:var(--bgp-text-muted);">MẪU VÉ ĐIỆN TỬ PHÁT HÀNH SAU KHI PAID</span>
+              <span class="bgp-badge" style="background:var(--bgp-status-success-bg);color:#86EFAC;border:1px solid rgba(34,197,94,0.35);">ISSUED • HỢP LỆ</span>
+            </div>
+            <div style="font-size:0.96rem;font-weight:800;">Mê Trong Mê • Phòng 01 • Ghế C5 (VIP)</div>
+            <div style="font-family:var(--bgp-font-mono);font-size:0.74rem;color:var(--bgp-text-secondary);margin-top:3px;">
+              Mã vé: TKT-9024A8F1E3C7 • Suất 19:15 (04/11/2026)
+            </div>
+          </div>
+          <div style="font-size:0.72rem;color:var(--bgp-text-muted);margin-top:10px;">
+            Vùng QR luôn khóa nền trắng tinh <code>#FFFFFF</code> + viền tĩnh <code>10px</code>, tuyệt đối không áp bộ lọc tối.
+          </div>
+        </div>
+        <div class="bgp-ticket-preview__stub">
+          <div class="bgp-qr-box" aria-label="Mã QR soát vé độ tương phản tối đa">
+            <svg width="92" height="92" viewBox="0 0 21 21" shape-rendering="crispEdges" role="img" aria-label="QR Code">
+              <rect width="21" height="21" fill="#FFFFFF"/>
+              <path fill="#000000" d="M0,0h7v7h-7zM1,1v5h5v-5zM2,2h3v3h-3zM14,0h7v7h-7zM15,1v5h5v-5zM16,2h3v3h-3zM0,14h7v7h-7zM1,15v5h5v-5zM2,16h3v3h-3zM8,1h2v2h-2zM11,2h2v3h-2zM8,5h3v2h-3zM1,8h3v2h-3zM5,8h2v3h-2zM9,8h4v2h-4zM14,9h3v2h-3zM18,8h3v2h-3zM2,11h2v2h-2zM8,11h2v4h-2zM11,12h4v2h-4zM16,12h2v3h-2zM19,11h2v4h-2zM9,16h3v2h-3zM13,15h2v4h-2zM16,17h5v2h-5zM10,19h3v2h-3zM17,20h3v1h-3z"/>
+            </svg>
+          </div>
+          <span style="font-family:var(--bgp-font-mono);font-size:0.65rem;color:var(--bgp-text-secondary);">QUÉT TẠI CỔNG</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Unmistakably Honest Academic Mock Payment Simulator -->
+    <aside class="bgp-summary-panel" aria-labelledby="payment-sim-heading">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span class="bgp-badge" style="background:var(--bgp-status-warning-bg);color:#FCD34D;border:1px solid rgba(245,158,11,0.4);">
+          MÔI TRƯỜNG MÔ PHỎNG HỌC THUẬT (MIS)
+        </span>
+        <span style="font-family:var(--bgp-font-mono);font-size:0.72rem;color:var(--bgp-text-muted);">HMAC-SHA256 Signed</span>
+      </div>
+
+      <h2 id="payment-sim-heading" style="margin:0 0 8px;font-size:1.1rem;font-weight:800;">
+        Trình mô phỏng Phản hồi Cổng Thanh toán
+      </h2>
+
+      <p style="margin:0 0 16px;font-size:0.81rem;line-height:1.55;color:var(--bgp-text-secondary);background:rgba(255,255,255,0.04);padding:11px 12px;border-radius:8px;border:1px solid var(--bgp-border-subtle);">
+        <strong> Minh bạch giao dịch:</strong> Đây là bộ giả lập kết quả callback có chữ ký HMAC-SHA256 để kiểm chứng nghiệp vụ cấp vé nguyên tử. Hệ thống <strong>không thu tiền thật</strong> và <strong>không hiển thị ô nhập số thẻ ngân hàng giả</strong> gây nhầm lẫn với cổng thương mại.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button type="button" class="bgp-btn bgp-btn--primary" style="width:100%;justify-content:space-between;padding:0 18px;">
+          <span>Xác nhận Mô phỏng Thành công (SUCCESS)</span>
+          <span style="font-family:var(--bgp-font-mono);font-size:0.8rem;opacity:0.9;">180.000 đ &rarr;</span>
+        </button>
+
+        <button type="button" class="bgp-btn bgp-btn--danger-outline" style="width:100%;justify-content:space-between;padding:0 18px;">
+          <span>Mô phỏng Giao dịch Bị từ chối (FAILED)</span>
+          <span style="font-size:0.75rem;">Nhả ghế ngay</span>
+        </button>
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--bgp-border-subtle);margin:18px 0;" />
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <a href="04-seat-selection-desktop.html" style="font-size:0.82rem;color:var(--bgp-text-secondary);">&larr; Xem lại chi tiết đơn</a>
+        <button type="button" class="bgp-btn bgp-btn--outline bgp-btn--sm">
+          Hủy giữ chỗ (Mở hộp thoại xác nhận)
+        </button>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>

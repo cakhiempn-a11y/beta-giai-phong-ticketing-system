@@ -12,6 +12,7 @@ public sealed class ShowtimeItemViewModel
     public bool CrossesMidnight => EndVietnam.Date > StartVietnam.Date;
     public string EndDateShortText => EndVietnam.ToString("dd/MM");
     public bool IsSoldOut => Showtime.AvailableSeatsCount <= 0;
+    public bool IsLowAvailability => Showtime.AvailableSeatsCount > 0 && Showtime.AvailableSeatsCount <= 10;
 }
 
 public sealed class ShowtimeDateGroupViewModel
@@ -30,4 +31,5 @@ public sealed class MovieDetailViewModel
     public IReadOnlyDictionary<string, List<ShowtimeDto>> ShowtimesByDate { get; set; } = new Dictionary<string, List<ShowtimeDto>>();
     public IReadOnlyList<ShowtimeDateGroupViewModel> DateGroups { get; set; } = [];
     public string SelectedDateKey { get; set; } = string.Empty;
+    public IReadOnlyList<MovieSummaryDto> SuggestedOnSaleMovies { get; set; } = [];
 }

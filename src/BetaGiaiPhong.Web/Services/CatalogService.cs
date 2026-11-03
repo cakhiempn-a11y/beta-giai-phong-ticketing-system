@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using BetaGiaiPhong.Data.Entities;
 using BetaGiaiPhong.Data.Persistence;
@@ -10,6 +12,8 @@ public interface ICatalogService
 {
     Task<IReadOnlyList<MovieSummaryDto>> GetPublishedMoviesAsync(CancellationToken ct = default);
     Task<MovieDetailDto?> GetMovieDetailAsync(long movieId, CancellationToken ct = default);
+    Task<MovieQuickPreviewDto?> GetMovieQuickPreviewAsync(long movieId, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<long, MovieQuickPreviewDto>> GetMoviesQuickPreviewMapAsync(IEnumerable<long> movieIds, CancellationToken ct = default);
     Task<IReadOnlyList<ShowtimeDto>> GetMovieShowtimesAsync(long movieId, CancellationToken ct = default);
     Task<ShowtimeDetailDto?> GetShowtimeDetailAsync(long showtimeId, CancellationToken ct = default);
     Task<SeatMapDto?> GetShowtimeSeatMapAsync(long showtimeId, CancellationToken ct = default);
@@ -19,6 +23,10 @@ public interface ICatalogService
 public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICatalogService
 {
     private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
+    private static readonly JsonSerializerOptions CastJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private static string FormatVietnamTime(DateTime utc)
     {
@@ -32,45 +40,190 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
         return dto.ToString("HH:mm");
     }
 
+    internal static MovieRatingDto? BuildRatingDto(
+        string? source,
+        decimal? score,
+        decimal? scaleMax,
+        int? voteCount,
+        DateTime? fetchedUtc)
+    {
+        if (string.IsNullOrWhiteSpace(source) ||
+            !score.HasValue ||
+            !scaleMax.HasValue ||
+            scaleMax.Value <= 0m ||
+            !voteCount.HasValue ||
+            voteCount.Value <= 0)
+        {
+            return null;
+        }
+
+        var normalizedSource = string.Equals(source, "IMDB", StringComparison.OrdinalIgnoreCase)
+            ? "IMDb"
+            : source.Trim().ToUpperInvariant();
+
+        var scoreText = score.Value.ToString("0.0", CultureInfo.InvariantCulture);
+        var scaleText = scaleMax.Value % 1m == 0m
+            ? ((int)scaleMax.Value).ToString(CultureInfo.InvariantCulture)
+            : scaleMax.Value.ToString("0.0", CultureInfo.InvariantCulture);
+        var votesText = voteCount.Value.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"));
+        var displayText = $"{normalizedSource} {scoreText}/{scaleText} ({votesText} lượt)";
+
+        return new MovieRatingDto(
+            source.Trim().ToUpperInvariant(),
+            score.Value,
+            scaleMax.Value,
+            voteCount.Value,
+            fetchedUtc,
+            displayText);
+    }
+
+    internal static MovieArtworkDto BuildArtworkDto(Movie m)
+    {
+        var resolvedSource = string.IsNullOrWhiteSpace(m.ArtworkSource)
+            ? (!string.IsNullOrWhiteSpace(m.PosterUrl) || !string.IsNullOrWhiteSpace(m.BackdropUrl) ? "UNSPECIFIED" : "NONE")
+            : m.ArtworkSource.Trim().ToUpperInvariant();
+
+        bool hasVerifiedPoster = !string.IsNullOrWhiteSpace(m.PosterUrl) &&
+            !m.PosterUrl.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(resolvedSource, "NONE", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(resolvedSource, "PENDING_TMDB_API_KEY", StringComparison.OrdinalIgnoreCase);
+
+        bool hasVerifiedBackdrop = !string.IsNullOrWhiteSpace(m.BackdropUrl) &&
+            !m.BackdropUrl.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(resolvedSource, "NONE", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(resolvedSource, "PENDING_TMDB_API_KEY", StringComparison.OrdinalIgnoreCase);
+
+        return new MovieArtworkDto(
+            m.PosterUrl,
+            m.PosterW342Url ?? m.PosterUrl,
+            m.BackdropUrl,
+            m.BackdropW780Url ?? m.BackdropUrl,
+            m.TitleLogoUrl,
+            resolvedSource,
+            m.ArtworkLicenseText,
+            m.ArtworkAttributionText,
+            hasVerifiedPoster,
+            hasVerifiedBackdrop);
+    }
+
+    private static MovieProvenanceDto BuildProvenanceDto(Movie m) => new(
+        m.TmdbId,
+        m.ImdbId,
+        m.WikidataQid,
+        m.MetadataSource,
+        m.AgeLabelMarket,
+        m.AgeLabelSource,
+        m.ExternalSyncedUtc,
+        m.ExternalExpiresUtc);
+
+    private static IReadOnlyList<MovieCastMemberDto> ParseCastList(string? castJson)
+    {
+        if (string.IsNullOrWhiteSpace(castJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            var items = JsonSerializer.Deserialize<List<MovieCastMemberDto>>(castJson, CastJsonOptions);
+            if (items is null || items.Count == 0)
+            {
+                return [];
+            }
+
+            return items
+                .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static string? BuildShortSynopsis(string? synopsis, int maxChars = 190)
+    {
+        if (string.IsNullOrWhiteSpace(synopsis))
+        {
+            return null;
+        }
+
+        var trimmed = synopsis.Trim();
+        if (trimmed.Length <= maxChars)
+        {
+            return trimmed;
+        }
+
+        var cut = trimmed.Substring(0, maxChars);
+        var lastSpace = cut.LastIndexOf(' ');
+        if (lastSpace > 80)
+        {
+            cut = cut.Substring(0, lastSpace);
+        }
+
+        return cut.TrimEnd(',', '.', ';', ' ') + "…";
+    }
+
     public async Task<IReadOnlyList<MovieSummaryDto>> GetPublishedMoviesAsync(CancellationToken ct = default)
     {
         var now = clock.UtcNow;
-        var movies = await db.Movies
+        var rows = await db.Movies
             .AsNoTracking()
             .Where(m => m.Status == "PUBLISHED")
-            .OrderBy(m => m.Title)
-            .Select(m => new MovieSummaryDto(
-                m.MovieId,
-                m.Title,
-                m.DurationMin,
-                m.GenreText,
-                m.Status,
-                m.Showtimes.Count(s => s.Status == "ON_SALE" && s.StartUtc > now),
-                m.AgeLabel,
-                m.Synopsis,
-                m.PosterUrl
-            ))
+            .Select(m => new
+            {
+                Movie = m,
+                UpcomingCount = m.Showtimes.Count(s => s.Status == "ON_SALE" && s.StartUtc > now),
+                NextStartUtc = m.Showtimes
+                    .Where(s => s.Status == "ON_SALE" && s.StartUtc > now)
+                    .OrderBy(s => s.StartUtc)
+                    .Select(s => (DateTime?)s.StartUtc)
+                    .FirstOrDefault()
+            })
             .ToListAsync(ct);
 
-        return movies;
+        return rows
+            .OrderBy(r => string.IsNullOrWhiteSpace(r.Movie.PosterUrl) ? 1 : 0)
+            .ThenByDescending(r => r.UpcomingCount > 0 ? 1 : 0)
+            .ThenBy(r => r.NextStartUtc ?? DateTime.MaxValue)
+            .ThenBy(r => r.Movie.Title, StringComparer.CurrentCultureIgnoreCase)
+            .Select(r =>
+            {
+                var m = r.Movie;
+                return new MovieSummaryDto(
+                    MovieId: m.MovieId,
+                    Title: m.Title,
+                    DurationMin: m.DurationMin,
+                    GenreText: m.GenreText,
+                    Status: m.Status,
+                    UpcomingShowtimesCount: r.UpcomingCount,
+                    AgeLabel: m.AgeLabel,
+                    Synopsis: m.Synopsis,
+                    PosterUrl: m.PosterUrl,
+                    OriginalTitle: m.OriginalTitle,
+                    ReleaseYear: m.ReleaseYear,
+                    ReleaseDateVn: m.ReleaseDateVn,
+                    OriginCountry: m.OriginCountry,
+                    OriginalLanguage: m.OriginalLanguage,
+                    DirectorNames: m.DirectorNames,
+                    OfficialTrailerYoutubeId: m.OfficialTrailerYoutubeId,
+                    IsHeroEligible: m.IsHeroEligible,
+                    Rating: BuildRatingDto(m.RatingSource, m.RatingValue, m.RatingScaleMax, m.RatingVoteCount, m.RatingFetchedUtc),
+                    Artwork: BuildArtworkDto(m),
+                    Provenance: BuildProvenanceDto(m));
+            })
+            .ToList();
     }
 
     public async Task<MovieDetailDto?> GetMovieDetailAsync(long movieId, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
-        var movie = await db.Movies
+        var row = await db.Movies
             .AsNoTracking()
             .Where(m => m.MovieId == movieId && m.Status == "PUBLISHED")
             .Select(m => new
             {
-                m.MovieId,
-                m.Title,
-                m.DurationMin,
-                m.GenreText,
-                m.Status,
-                m.AgeLabel,
-                m.Synopsis,
-                m.PosterUrl,
+                Movie = m,
                 Showtimes = m.Showtimes
                     .Where(s => s.Status == "ON_SALE" && s.StartUtc > now)
                     .OrderBy(s => s.StartUtc)
@@ -94,9 +247,10 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             })
             .SingleOrDefaultAsync(ct);
 
-        if (movie is null) return null;
+        if (row is null) return null;
 
-        var showtimeDtos = movie.Showtimes.Select(s => new ShowtimeDto(
+        var m = row.Movie;
+        var showtimeDtos = row.Showtimes.Select(s => new ShowtimeDto(
             s.ShowtimeId,
             s.MovieId,
             s.MovieTitle,
@@ -113,16 +267,170 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
         )).ToList();
 
         return new MovieDetailDto(
-            movie.MovieId,
-            movie.Title,
-            movie.DurationMin,
-            movie.GenreText,
-            movie.Status,
-            showtimeDtos,
-            movie.AgeLabel,
-            movie.Synopsis,
-            movie.PosterUrl
-        );
+            MovieId: m.MovieId,
+            Title: m.Title,
+            DurationMin: m.DurationMin,
+            GenreText: m.GenreText,
+            Status: m.Status,
+            UpcomingShowtimes: showtimeDtos,
+            AgeLabel: m.AgeLabel,
+            Synopsis: m.Synopsis,
+            PosterUrl: m.PosterUrl,
+            OriginalTitle: m.OriginalTitle,
+            ReleaseYear: m.ReleaseYear,
+            ReleaseDateVn: m.ReleaseDateVn,
+            OriginCountry: m.OriginCountry,
+            OriginalLanguage: m.OriginalLanguage,
+            DirectorNames: m.DirectorNames,
+            OfficialTrailerYoutubeId: m.OfficialTrailerYoutubeId,
+            IsHeroEligible: m.IsHeroEligible,
+            Rating: BuildRatingDto(m.RatingSource, m.RatingValue, m.RatingScaleMax, m.RatingVoteCount, m.RatingFetchedUtc),
+            Artwork: BuildArtworkDto(m),
+            Provenance: BuildProvenanceDto(m),
+            Cast: ParseCastList(m.CastJson));
+    }
+
+    public async Task<MovieQuickPreviewDto?> GetMovieQuickPreviewAsync(long movieId, CancellationToken ct = default)
+    {
+        var now = clock.UtcNow;
+        var row = await db.Movies
+            .AsNoTracking()
+            .Where(m => m.MovieId == movieId && m.Status == "PUBLISHED")
+            .Select(m => new
+            {
+                Movie = m,
+                TotalUpcoming = m.Showtimes.Count(s => s.Status == "ON_SALE" && s.StartUtc > now),
+                NextShowtimes = m.Showtimes
+                    .Where(s => s.Status == "ON_SALE" && s.StartUtc > now)
+                    .OrderBy(s => s.StartUtc)
+                    .Take(4)
+                    .Select(s => new
+                    {
+                        s.ShowtimeId,
+                        s.StartUtc,
+                        s.EndUtc,
+                        RoomName = s.Room != null ? s.Room.RoomName : "Phòng chiếu",
+                        AvailableCount = s.ShowtimeSeats.Count(ss =>
+                            ss.State == SeatStates.Available ||
+                            (ss.State == SeatStates.Held && ss.HoldExpiresUtc <= now))
+                    })
+                    .ToList()
+            })
+            .SingleOrDefaultAsync(ct);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        var m = row.Movie;
+        var chips = row.NextShowtimes
+            .Select(s =>
+            {
+                var startVn = new DateTimeOffset(DateTime.SpecifyKind(s.StartUtc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+                var endVn = new DateTimeOffset(DateTime.SpecifyKind(s.EndUtc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+                return new QuickPreviewShowtimeChipDto(
+                    s.ShowtimeId,
+                    FormatVietnamTime(s.StartUtc),
+                    FormatVietnamTimeOnly(s.StartUtc),
+                    s.RoomName,
+                    s.AvailableCount,
+                    endVn.Date > startVn.Date);
+            })
+            .ToList();
+
+        return new MovieQuickPreviewDto(
+            MovieId: m.MovieId,
+            Title: m.Title,
+            OriginalTitle: m.OriginalTitle,
+            ReleaseYear: m.ReleaseYear,
+            DurationMin: m.DurationMin,
+            GenreText: m.GenreText,
+            AgeLabel: m.AgeLabel,
+            AgeLabelMarket: m.AgeLabelMarket,
+            DirectorNames: m.DirectorNames,
+            ShortSynopsis: BuildShortSynopsis(m.Synopsis),
+            OfficialTrailerYoutubeId: m.OfficialTrailerYoutubeId,
+            UpcomingShowtimesCount: row.TotalUpcoming,
+            NextShowtimes: chips,
+            Rating: BuildRatingDto(m.RatingSource, m.RatingValue, m.RatingScaleMax, m.RatingVoteCount, m.RatingFetchedUtc),
+            Artwork: BuildArtworkDto(m));
+    }
+
+    public async Task<IReadOnlyDictionary<long, MovieQuickPreviewDto>> GetMoviesQuickPreviewMapAsync(
+        IEnumerable<long> movieIds,
+        CancellationToken ct = default)
+    {
+        var ids = movieIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<long, MovieQuickPreviewDto>();
+        }
+
+        var now = clock.UtcNow;
+        var rows = await db.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.MovieId) && m.Status == "PUBLISHED")
+            .Select(m => new
+            {
+                Movie = m,
+                TotalUpcoming = m.Showtimes.Count(s => s.Status == "ON_SALE" && s.StartUtc > now),
+                NextShowtimes = m.Showtimes
+                    .Where(s => s.Status == "ON_SALE" && s.StartUtc > now)
+                    .OrderBy(s => s.StartUtc)
+                    .Take(4)
+                    .Select(s => new
+                    {
+                        s.ShowtimeId,
+                        s.StartUtc,
+                        s.EndUtc,
+                        RoomName = s.Room != null ? s.Room.RoomName : "Phòng chiếu",
+                        AvailableCount = s.ShowtimeSeats.Count(ss =>
+                            ss.State == SeatStates.Available ||
+                            (ss.State == SeatStates.Held && ss.HoldExpiresUtc <= now))
+                    })
+                    .ToList()
+            })
+            .ToListAsync(ct);
+
+        var dict = new Dictionary<long, MovieQuickPreviewDto>(rows.Count);
+        foreach (var row in rows)
+        {
+            var m = row.Movie;
+            var chips = row.NextShowtimes
+                .Select(s =>
+                {
+                    var startVn = new DateTimeOffset(DateTime.SpecifyKind(s.StartUtc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+                    var endVn = new DateTimeOffset(DateTime.SpecifyKind(s.EndUtc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+                    return new QuickPreviewShowtimeChipDto(
+                        s.ShowtimeId,
+                        FormatVietnamTime(s.StartUtc),
+                        FormatVietnamTimeOnly(s.StartUtc),
+                        s.RoomName,
+                        s.AvailableCount,
+                        endVn.Date > startVn.Date);
+                })
+                .ToList();
+
+            dict[m.MovieId] = new MovieQuickPreviewDto(
+                MovieId: m.MovieId,
+                Title: m.Title,
+                OriginalTitle: m.OriginalTitle,
+                ReleaseYear: m.ReleaseYear,
+                DurationMin: m.DurationMin,
+                GenreText: m.GenreText,
+                AgeLabel: m.AgeLabel,
+                AgeLabelMarket: m.AgeLabelMarket,
+                DirectorNames: m.DirectorNames,
+                ShortSynopsis: BuildShortSynopsis(m.Synopsis),
+                OfficialTrailerYoutubeId: m.OfficialTrailerYoutubeId,
+                UpcomingShowtimesCount: row.TotalUpcoming,
+                NextShowtimes: chips,
+                Rating: BuildRatingDto(m.RatingSource, m.RatingValue, m.RatingScaleMax, m.RatingVoteCount, m.RatingFetchedUtc),
+                Artwork: BuildArtworkDto(m));
+        }
+
+        return dict;
     }
 
     public async Task<IReadOnlyList<ShowtimeDto>> GetMovieShowtimesAsync(long movieId, CancellationToken ct = default)
@@ -331,10 +639,14 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             ));
         }
 
+        var startVn = new DateTimeOffset(DateTime.SpecifyKind(showtime.StartUtc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+        var endVn = new DateTimeOffset(DateTime.SpecifyKind(showtime.EndUtc, DateTimeKind.Utc), TimeSpan.Zero).ToOffset(VietnamOffset);
+        var m = showtime.Movie;
+
         return new SeatMapDto(
             showtime.ShowtimeId,
             showtime.MovieId,
-            showtime.Movie.Title,
+            m.Title,
             showtime.RoomId,
             showtime.Room?.RoomName ?? "Phòng chiếu",
             showtime.StartUtc,
@@ -346,7 +658,19 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
             priceMap,
             seatDtos,
             isOpenForBooking,
-            ineligibleReason
+            ineligibleReason,
+            showtime.EndUtc,
+            FormatVietnamTimeOnly(showtime.EndUtc),
+            endVn.Date > startVn.Date,
+            showtime.Status,
+            m.DurationMin,
+            m.GenreText,
+            m.AgeLabel,
+            m.AgeLabelMarket,
+            m.OriginalTitle,
+            m.ReleaseYear,
+            BuildRatingDto(m.RatingSource, m.RatingValue, m.RatingScaleMax, m.RatingVoteCount, m.RatingFetchedUtc),
+            BuildArtworkDto(m)
         );
     }
 }

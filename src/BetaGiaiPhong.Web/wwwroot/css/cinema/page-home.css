@@ -1,0 +1,701 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   page-home.css: Full-Bleed Photographic Hero, Overlapping Cinema Rails,
+                  16:9 On-Sale Quick-Showtime Cards, 2:3 Theatrical Poster Rail
+                  & Upcoming UTC+7 Schedule Panel (Zero Bootstrap)
+   ========================================================================== */
+
+.bgp-home {
+  width: 100%;
+  padding-bottom: 56px;
+}
+
+/* --- 1. Full-Bleed Photographic Hero Billboard --- */
+.bgp-home-hero {
+  position: relative;
+  width: 100%;
+  min-height: clamp(500px, 68vh, 660px);
+  display: flex;
+  align-items: flex-end;
+  padding: calc(var(--bgp-header-h) + 36px) 0 92px;
+  overflow: hidden;
+  background: radial-gradient(circle at 75% 24%, #1C1B24 0%, #0D0D11 56%, #0A0A0C 100%);
+}
+
+.bgp-home-hero--empty {
+  min-height: 430px;
+  padding-bottom: 52px;
+}
+
+.bgp-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 72% 22%;
+  z-index: 0;
+  filter: saturate(1.04) contrast(1.03);
+}
+
+.bgp-hero__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      #0A0A0C 0%,
+      rgba(10, 10, 12, 0.95) 34%,
+      rgba(10, 10, 12, 0.62) 58%,
+      rgba(10, 10, 12, 0.14) 84%,
+      rgba(10, 10, 12, 0.34) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(10, 10, 12, 0.66) 0%,
+      rgba(10, 10, 12, 0.04) 24%,
+      rgba(10, 10, 12, 0.08) 62%,
+      rgba(10, 10, 12, 0.92) 88%,
+      #0A0A0C 100%
+    );
+}
+
+.bgp-hero__inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.bgp-hero__content {
+  max-width: 630px;
+  min-width: 0;
+}
+
+.bgp-hero-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.bgp-hero-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-brand-red);
+  color: #FFFFFF;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.4);
+}
+
+.bgp-hero-title {
+  margin: 0 0 8px;
+  font-size: var(--bgp-text-hero);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: #FFFFFF;
+  text-shadow: 0 6px 26px rgba(0, 0, 0, 0.72);
+  overflow-wrap: anywhere;
+}
+
+.bgp-hero__subtitle {
+  margin: 0 0 12px;
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 14px;
+  font-size: 0.86rem;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-hero-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.bgp-hero-synopsis {
+  margin: 0 0 14px;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: rgba(245, 245, 247, 0.92);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bgp-hero__credits {
+  margin: 0 0 18px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-hero__credits strong {
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-hero__quick-times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.bgp-hero__quick-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 991.98px) {
+  .bgp-home-hero {
+    min-height: 460px;
+    padding: calc(var(--bgp-header-h) + 28px) 0 48px;
+  }
+
+  .bgp-hero__vignette {
+    background:
+      linear-gradient(180deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.56) 45%, #0A0A0C 100%),
+      linear-gradient(90deg, rgba(10, 10, 12, 0.92) 0%, rgba(10, 10, 12, 0.54) 100%);
+  }
+}
+
+@media (max-width: 479.98px) {
+  .bgp-home-hero {
+    min-height: 410px;
+    padding: calc(var(--bgp-header-h) + 20px) 0 36px;
+  }
+
+  .bgp-hero-actions {
+    width: 100%;
+  }
+
+  .bgp-hero-actions .bgp-btn {
+    flex: 1 1 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* --- 2. Overlapping Rails Stack --- */
+.bgp-rails-stack {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+@media (min-width: 992px) {
+  .bgp-rails-stack--overlap {
+    margin-top: -48px;
+  }
+}
+
+.bgp-rail-section {
+  width: 100%;
+  min-width: 0;
+}
+
+.bgp-rail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bgp-rail-title {
+  margin: 0;
+  font-size: var(--bgp-text-h2);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: #FFFFFF;
+}
+
+.bgp-rail-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-rail-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--bgp-radius-pill);
+  border: 1px solid var(--bgp-border-default);
+  background: rgba(22, 22, 27, 0.82);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--bgp-text-primary) !important;
+  white-space: nowrap;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-rail-more:hover {
+  background: var(--bgp-bg-surface-2);
+  border-color: var(--bgp-border-strong);
+  color: #FFFFFF !important;
+}
+
+/* --- 3. Rail Carousel Wrapper & Accessible Arrow Controls --- */
+.bgp-rail-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.bgp-rail-btn {
+  position: absolute;
+  top: 42%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 68px;
+  border-radius: var(--bgp-radius-sm);
+  border: 1px solid var(--bgp-border-strong);
+  background: rgba(10, 10, 12, 0.86);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 6;
+  padding: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  transition: background-color var(--bgp-duration-fast) ease, opacity var(--bgp-duration-fast) ease;
+}
+
+.bgp-rail-btn:hover:not(:disabled) {
+  background: var(--bgp-brand-red);
+  border-color: var(--bgp-brand-red);
+}
+
+.bgp-rail-btn:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.bgp-rail-btn--prev {
+  left: -10px;
+}
+
+.bgp-rail-btn--next {
+  right: -10px;
+}
+
+@media (max-width: 768px) {
+  .bgp-rail-btn {
+    display: none !important;
+  }
+}
+
+/* --- 4. Rail 1: 16:9 On-Sale Widescreen Cards + Quick Showtime Chips --- */
+.bgp-wide-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(260px, 28vw, 348px);
+  gap: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 4px 2px 10px;
+}
+
+.bgp-wide-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* Few-movies mode (1..3 items): clean non-duplicating Spotlight Grid */
+.bgp-wide-rail--spotlight {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  overflow-x: visible;
+}
+
+.bgp-wide-card {
+  scroll-snap-align: start;
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-subtle);
+  border-radius: var(--bgp-radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: border-color var(--bgp-duration-fast) ease, transform var(--bgp-duration-base) var(--bgp-ease-out);
+}
+
+.bgp-wide-card:hover {
+  border-color: var(--bgp-border-strong);
+  transform: translateY(-3px);
+}
+
+.bgp-wide-card__stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #121217;
+  overflow: hidden;
+}
+
+.bgp-wide-card__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  color: #FFFFFF !important;
+}
+
+.bgp-wide-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 320ms var(--bgp-ease-out);
+}
+
+.bgp-wide-card:hover .bgp-wide-card__img {
+  transform: scale(1.03);
+}
+
+.bgp-wide-card__img--contain {
+  object-fit: contain;
+  background: radial-gradient(circle at center, #1F1F28 0%, #101015 100%);
+}
+
+.bgp-wide-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 10, 12, 0.08) 28%, rgba(10, 10, 12, 0.90) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px 14px;
+}
+
+.bgp-wide-card__top-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+
+.bgp-wide-card__preview-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(10, 10, 12, 0.78);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-wide-card__preview-btn:hover {
+  background: var(--bgp-brand-red);
+  border-color: var(--bgp-brand-red);
+}
+
+.bgp-wide-card__title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #FFFFFF;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bgp-wide-card__body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+}
+
+.bgp-wide-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--bgp-text-muted);
+  min-width: 0;
+}
+
+.bgp-wide-card__meta > span:first-child {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bgp-wide-card__genre {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- 5. Rail 2: 2:3 Theatrical Poster Horizontal Scroll Rail (#now-showing) --- */
+.bgp-movie-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(148px, 16vw, 206px);
+  gap: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 4px 2px 12px;
+}
+
+.bgp-movie-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.bgp-movie-card {
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  color: var(--bgp-text-primary) !important;
+  text-decoration: none !important;
+  border-radius: var(--bgp-radius-sm);
+  transition: transform var(--bgp-duration-base) var(--bgp-ease-out);
+}
+
+.bgp-movie-card:hover {
+  transform: translateY(-4px);
+}
+
+.bgp-card-poster-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--bgp-radius-sm);
+  overflow: hidden;
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-subtle);
+  box-shadow: var(--bgp-shadow-card);
+  transition: border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-movie-card:hover .bgp-card-poster-wrap {
+  border-color: var(--bgp-border-strong);
+}
+
+.bgp-card-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bgp-card-badge-age {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+}
+
+.bgp-card-badge-rating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: var(--bgp-radius-xs);
+  background: rgba(10, 10, 12, 0.86);
+  border: 1px solid rgba(245, 197, 24, 0.45);
+  color: var(--bgp-accent-gold);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.bgp-card-badge-showtimes {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: var(--bgp-radius-xs);
+  background: rgba(10, 10, 12, 0.88);
+  border: 1px solid var(--bgp-status-success-border);
+  color: var(--bgp-status-success-fg);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bgp-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bgp-card-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--bgp-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.bgp-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--bgp-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty State on Homepage */
+.bgp-empty-state {
+  background: var(--bgp-bg-surface-1);
+  border: 1px dashed var(--bgp-border-strong);
+  border-radius: var(--bgp-radius-lg);
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.bgp-empty-state-icon {
+  color: var(--bgp-text-muted);
+  margin-bottom: 4px;
+}
+
+.bgp-empty-state__title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-empty-state__desc {
+  margin: 0 0 8px;
+  max-width: 460px;
+  font-size: 0.88rem;
+  color: var(--bgp-text-secondary);
+}
+
+/* --- 6. Section 3: Upcoming Showtimes Quick Table --- */
+.bgp-upcoming-section {
+  margin-top: 8px;
+}
+
+.bgp-upcoming-card {
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-md);
+  box-shadow: var(--bgp-shadow-card);
+  overflow: hidden;
+}
+
+.bgp-upcoming-card .bgp-table-wrap {
+  border: 0;
+  border-radius: 0;
+}
+
+.bgp-upcoming-time {
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #FFFFFF;
+}
+
+.bgp-upcoming-end {
+  display: block;
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--bgp-text-muted);
+  margin-top: 2px;
+}
+
+.bgp-upcoming-movie-link {
+  font-weight: 700;
+  color: var(--bgp-text-primary) !important;
+  text-decoration: none !important;
+}
+
+.bgp-upcoming-movie-link:hover {
+  color: #FFFFFF !important;
+  text-decoration: underline !important;
+}
+
+.bgp-upcoming-room-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--bgp-radius-xs);
+  background: #E4E4EA;
+  color: #0A0A0C;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bgp-upcoming-action-cell {
+  text-align: right;
+  white-space: nowrap;
+}

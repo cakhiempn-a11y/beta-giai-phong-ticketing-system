@@ -1,55 +1,172 @@
 @model BetaGiaiPhong.Web.Models.Responses.UserProfileDto
 @{
+    Layout = "_CinemaLayout";
+    ViewData["HeaderOverlay"] = false;
     ViewData["Title"] = "Hồ sơ tài khoản";
+
+    string displayTitle = string.IsNullOrWhiteSpace(Model.DisplayName) ? Model.Email : Model.DisplayName;
+    string avatarInitial = !string.IsNullOrWhiteSpace(displayTitle)
+        ? char.ToUpperInvariant(displayTitle.Trim()[0]).ToString()
+        : "U";
+
+    bool isCustomer = Model.Roles.Any(r => string.Equals(r, "CUSTOMER", StringComparison.OrdinalIgnoreCase));
+    bool isManagerOrAdmin = Model.Roles.Any(r =>
+        string.Equals(r, "MANAGER", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(r, "ADMIN", StringComparison.OrdinalIgnoreCase));
+    bool isStaff = Model.Roles.Any(r => string.Equals(r, "STAFF", StringComparison.OrdinalIgnoreCase));
 }
 
-<div class="container mt-4 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3">
-                    <h3 class="h4 fw-bold mb-0">Hồ Sơ Người Dùng</h3>
-                </div>
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
-                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fs-2 fw-bold me-3" style="width: 64px; height: 64px;">
-                            @(string.IsNullOrEmpty(Model.DisplayName) ? "U" : Model.DisplayName[..1].ToUpperInvariant())
-                        </div>
-                        <div>
-                            <h4 class="fw-bold mb-1">@(Model.DisplayName ?? Model.Email)</h4>
-                            <span class="text-muted small">Mã định danh (User ID): <strong>@Model.UserId</strong></span>
-                        </div>
-                    </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-account.css" asp-append-version="true" />
+}
 
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <label class="text-muted small d-block">Địa chỉ Email</label>
-                            <span class="fw-semibold">@Model.Email</span>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="text-muted small d-block">Trạng thái tài khoản</label>
-                            <span class="badge bg-success">@Model.Status</span>
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small d-block">Vai trò & Quyền hạn (Roles)</label>
-                            <div class="d-flex flex-wrap gap-2 mt-1">
-                                @foreach (var role in Model.Roles)
-                                {
-                                    <span class="badge bg-dark px-3 py-2">@role</span>
-                                }
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top d-flex justify-content-between">
-                        <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">&larr; Quay lại trang chủ</a>
-                        <form asp-controller="Account" asp-action="Logout" method="post">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-outline-danger">Đăng xuất</button>
-                        </form>
+<div class="bgp-profile-page" data-testid="profile-page">
+    <section class="bgp-profile-card" aria-labelledby="profile-heading">
+        <header class="bgp-profile-banner">
+            <div class="bgp-profile-identity">
+                <div class="bgp-profile-avatar" aria-hidden="true">@avatarInitial</div>
+                <div class="bgp-profile-identity__body">
+                    <h1 id="profile-heading" class="bgp-profile-name">@displayTitle</h1>
+                    <div class="bgp-profile-sub">
+                        @Model.Email &bull; Mã định danh (User ID): <strong>#@Model.UserId</strong>
                     </div>
                 </div>
             </div>
+
+            <span class="bgp-profile-status-pill">
+                <span aria-hidden="true">&#9679;</span>
+                <span>@Model.Status</span>
+            </span>
+        </header>
+
+        <div class="bgp-profile-body">
+            <!-- Key Identity & Activity Metrics -->
+            <div class="bgp-profile-grid">
+                <div class="bgp-profile-stat">
+                    <span class="bgp-profile-stat__label">Địa chỉ Email xác thực</span>
+                    <span class="bgp-profile-stat__val">@Model.Email</span>
+                </div>
+
+                <div class="bgp-profile-stat">
+                    <span class="bgp-profile-stat__label">Thời điểm khởi tạo</span>
+                    <span class="bgp-profile-stat__val bgp-profile-stat__val--mono">
+                        @(string.IsNullOrWhiteSpace(Model.CreatedVietnamText) ? "Đang hoạt động" : $"{Model.CreatedVietnamText} (UTC+7)")
+                    </span>
+                </div>
+
+                @if (isCustomer)
+                {
+                    <div class="bgp-profile-stat">
+                        <span class="bgp-profile-stat__label">Lịch sử giao dịch đặt vé</span>
+                        <span class="bgp-profile-stat__val bgp-profile-stat__val--mono">
+                            @Model.PaidOrdersCount đơn PAID / @Model.TotalOrdersCount đơn
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <div class="bgp-profile-stat">
+                        <span class="bgp-profile-stat__label">Phân vùng làm việc</span>
+                        <span class="bgp-profile-stat__val">Console Vận hành &amp; Quản trị</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Assigned Security Roles -->
+            <div class="bgp-profile-roles-section">
+                <h2 class="bgp-profile-section-title">Vai trò &amp; Quyền hạn hệ thống (RBAC)</h2>
+                <div class="bgp-profile-roles">
+                    @foreach (var role in Model.Roles)
+                    {
+                        string roleDesc = role.ToUpperInvariant() switch
+                        {
+                            "CUSTOMER" => "Khách hàng đặt vé & sở hữu vé QR",
+                            "STAFF" => "Nhân viên cổng soát vé QR",
+                            "MANAGER" => "Quản lý lịch chiếu, phòng & doanh thu",
+                            "ADMIN" => "Quản trị viên hệ thống toàn quyền",
+                            _ => "Thành viên hệ thống"
+                        };
+
+                        <span class="bgp-role-chip" data-testid="profile-role-chip">
+                            <span class="bgp-role-chip__code">@role</span>
+                            <span>&bull; @roleDesc</span>
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <!-- Role-Aware Shortcuts -->
+            <div class="bgp-profile-roles-section">
+                <h2 class="bgp-profile-section-title">Lối tắt thao tác nhanh</h2>
+                <div class="bgp-profile-shortcuts">
+                    @if (isCustomer)
+                    {
+                        <a class="bgp-profile-shortcut" asp-controller="Orders" asp-action="Index">
+                            <div>
+                                <span class="bgp-profile-shortcut__title">Đơn hàng &amp; Vé điện tử của tôi</span>
+                                <span class="bgp-profile-shortcut__desc">Mở mã QR soát vé hoặc tiếp tục thanh toán đơn giữ ghế</span>
+                            </div>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                        <a class="bgp-profile-shortcut" asp-controller="Movies" asp-action="Index" asp-route-filter="has-showtimes">
+                            <div>
+                                <span class="bgp-profile-shortcut__title">Khám phá lịch chiếu hôm nay</span>
+                                <span class="bgp-profile-shortcut__desc">Chọn suất chiếu mới trên sơ đồ khán phòng</span>
+                            </div>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    }
+
+                    @if (isManagerOrAdmin)
+                    {
+                        <a class="bgp-profile-shortcut" asp-controller="Management" asp-action="Reports">
+                            <div>
+                                <span class="bgp-profile-shortcut__title">Báo cáo doanh thu &amp; Lấp đầy</span>
+                                <span class="bgp-profile-shortcut__desc">Truy cập Console Quản trị rạp Beta Giải Phóng</span>
+                            </div>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                        <a class="bgp-profile-shortcut" asp-controller="Management" asp-action="Movies">
+                            <div>
+                                <span class="bgp-profile-shortcut__title">Quản lý danh mục phim &amp; Suất chiếu</span>
+                                <span class="bgp-profile-shortcut__desc">Cập nhật phim xác minh và lập lịch phòng chiếu</span>
+                            </div>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    }
+                    else if (isStaff)
+                    {
+                        <a class="bgp-profile-shortcut" asp-controller="StaffCheckIn" asp-action="Index">
+                            <div>
+                                <span class="bgp-profile-shortcut__title">Cổng Soát vé QR Trực tiếp</span>
+                                <span class="bgp-profile-shortcut__desc">Quét camera, tải ảnh QR hoặc kiểm tra mã vé</span>
+                            </div>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                        <a class="bgp-profile-shortcut" asp-controller="StaffCheckIn" asp-action="History">
+                            <div>
+                                <span class="bgp-profile-shortcut__title">Nhật ký soát vé theo suất chiếu</span>
+                                <span class="bgp-profile-shortcut__desc">Đối chiếu lịch sử ACCEPTED &amp; ALREADY_USED</span>
+                            </div>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="bgp-profile-footer">
+                <a class="bgp-btn bgp-btn--outline" asp-controller="Home" asp-action="Index">
+                    &larr; Quay lại trang chủ
+                </a>
+
+                <form asp-controller="Account" asp-action="Logout" method="post" style="margin: 0;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="bgp-btn bgp-btn--danger" data-testid="profile-logout-btn">
+                        Đăng xuất phiên làm việc
+                    </button>
+                </form>
+            </div>
         </div>
-    </div>
+    </section>
 </div>

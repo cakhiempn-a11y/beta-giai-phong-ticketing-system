@@ -1,0 +1,124 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   01-tokens.css: Semantic Surfaces, Brand Accents, Vietnamese Typography,
+                  Spacing, Radii, Shadows & Motion Easing
+   WCAG 2.1 AA / AAA Verified Contrast Hierarchy
+   ========================================================================== */
+
+:root {
+  /* 1. Multi-Layered Obsidian Cinema Surfaces */
+  --bgp-bg-canvas: #0A0A0C;
+  --bgp-bg-ops-canvas: #0B0B0E;
+  --bgp-bg-elevated-0: #101014;
+  --bgp-bg-surface-1: #16161B;
+  --bgp-bg-surface-2: #1E1E25;
+  --bgp-bg-surface-3: #272731;
+  --bgp-bg-popover: #18181F;
+  --bgp-bg-footer: #070709;
+  --bgp-bg-glass: rgba(16, 16, 20, 0.86);
+  --bgp-bg-header-top: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.90) 0%,
+    rgba(8, 8, 10, 0.52) 62%,
+    rgba(8, 8, 10, 0) 100%
+  );
+  --bgp-bg-header-solid: rgba(10, 10, 12, 0.95);
+
+  /* 2. Text Contrast Hierarchy (Verified against #0A0A0C & #16161B) */
+  --bgp-text-primary: #F5F5F7;     /* 18.1:1 on #0A0A0C (AAA) */
+  --bgp-text-secondary: #B8B8C2;   /* 10.1:1 on #0A0A0C (AAA) */
+  --bgp-text-muted: #8E8E9D;       /* 5.9:1 on #0A0A0C, 4.9:1 on #16161B (AA) */
+  --bgp-text-inverse: #0A0A0C;
+
+  /* 3. Brand & Semantic Accents (Zero Bootstrap #0d6efd Royal Blue) */
+  --bgp-brand-red: #E50914;
+  --bgp-brand-red-hover: #F40612;
+  --bgp-brand-red-active: #B80710;
+  --bgp-brand-red-soft: rgba(229, 9, 20, 0.16);
+  --bgp-brand-red-border: rgba(229, 9, 20, 0.48);
+
+  --bgp-accent-gold: #F5C518;      /* IMDb & VIP warm gold */
+  --bgp-accent-gold-soft: rgba(245, 197, 24, 0.14);
+  --bgp-accent-gold-border: rgba(245, 197, 24, 0.38);
+
+  /* 4. Operational & Booking Status Tokens (WCAG AA Foreground/Background) */
+  --bgp-status-success: #22C55E;
+  --bgp-status-success-fg: #86EFAC;
+  --bgp-status-success-bg: rgba(34, 197, 94, 0.14);
+  --bgp-status-success-border: rgba(34, 197, 94, 0.38);
+
+  --bgp-status-warning: #F59E0B;
+  --bgp-status-warning-fg: #FCD34D;
+  --bgp-status-warning-bg: rgba(245, 158, 11, 0.15);
+  --bgp-status-warning-border: rgba(245, 158, 11, 0.42);
+
+  --bgp-status-danger: #EF4444;
+  --bgp-status-danger-fg: #FCA5A5;
+  --bgp-status-danger-bg: rgba(239, 68, 68, 0.15);
+  --bgp-status-danger-border: rgba(239, 68, 68, 0.44);
+
+  --bgp-status-info: #38BDF8;
+  --bgp-status-info-fg: #7DD3FC;
+  --bgp-status-info-bg: rgba(56, 189, 248, 0.14);
+  --bgp-status-info-border: rgba(56, 189, 248, 0.38);
+
+  /* 5. Borders, Dividers & Dual-Contrast Keyboard Focus Ring */
+  --bgp-border-subtle: rgba(255, 255, 255, 0.08);
+  --bgp-border-default: rgba(255, 255, 255, 0.15);
+  --bgp-border-control: #7A7A88;   /* >= 3.8:1 non-text contrast on #16161B */
+  --bgp-border-strong: rgba(255, 255, 255, 0.28);
+  --bgp-focus-ring: 0 0 0 2px #0A0A0C, 0 0 0 4px #F5F5F7;
+
+  /* 6. Vietnamese-Optimized Typography Stack & Scale */
+  --bgp-font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bgp-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  --bgp-text-hero: clamp(2.25rem, 4.2vw, 3.65rem);
+  --bgp-text-h1: clamp(1.6rem, 2.5vw, 2.35rem);
+  --bgp-text-h2: clamp(1.2rem, 1.8vw, 1.45rem);
+  --bgp-text-h3: 1.08rem;
+  --bgp-text-body: 0.95rem;
+  --bgp-text-sm: 0.85rem;
+  --bgp-text-xs: 0.75rem;
+
+  /* 7. 4px Grid Spacing Scale */
+  --bgp-sp-1: 4px;
+  --bgp-sp-2: 8px;
+  --bgp-sp-3: 12px;
+  --bgp-sp-4: 16px;
+  --bgp-sp-5: 20px;
+  --bgp-sp-6: 24px;
+  --bgp-sp-8: 32px;
+  --bgp-sp-10: 40px;
+  --bgp-sp-12: 48px;
+  --bgp-sp-16: 64px;
+
+  /* 8. Radii, Shadows & Shell Metrics */
+  --bgp-radius-xs: 4px;
+  --bgp-radius-sm: 6px;
+  --bgp-radius-md: 10px;
+  --bgp-radius-lg: 14px;
+  --bgp-radius-pill: 999px;
+
+  --bgp-shadow-card: 0 10px 28px rgba(0, 0, 0, 0.55);
+  --bgp-shadow-elevated: 0 18px 44px rgba(0, 0, 0, 0.72);
+  --bgp-shadow-popover: 0 22px 54px rgba(0, 0, 0, 0.82), 0 0 0 1px rgba(255, 255, 255, 0.14);
+
+  --bgp-header-h: 68px;
+  --bgp-header-h-mobile: 60px;
+  --bgp-ops-sidebar-w: 248px;
+  --bgp-ops-topbar-h: 60px;
+  --bgp-target-min: 44px;
+  --bgp-gutter: clamp(16px, 4vw, 56px);
+
+  /* 9. Subtle Cinema Motion */
+  --bgp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --bgp-duration-fast: 160ms;
+  --bgp-duration-base: 220ms;
+}
+
+@media (max-width: 991.98px) {
+  :root {
+    --bgp-header-h: 60px;
+  }
+}

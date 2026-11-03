@@ -1,0 +1,353 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   03-shell-ops.css: High-Density Operations Console (_OperationsLayout)
+                     for STAFF, MANAGER & ADMIN Roles
+   ========================================================================== */
+
+.bgp-ops-shell {
+  display: grid;
+  grid-template-columns: var(--bgp-ops-sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bgp-bg-ops-canvas);
+}
+
+/* --- 1. Left Operations Sidebar (Desktop Sticky, Mobile Drawer) --- */
+.bgp-ops-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: #111116;
+  border-right: 1px solid var(--bgp-border-subtle);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  overflow-y: auto;
+  z-index: 1035;
+}
+
+.bgp-ops-sidebar__brand,
+.bgp-ops-sidebar a.bgp-ops-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  text-decoration: none !important;
+  color: #FFFFFF !important;
+}
+
+.bgp-ops-sidebar__badge {
+  background: var(--bgp-brand-red);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  padding: 4px 7px;
+  border-radius: var(--bgp-radius-xs);
+}
+
+.bgp-ops-sidebar__title {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.bgp-ops-sidebar__title strong {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-ops-sidebar__title span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-ops-sidebar__close,
+.bgp-icon-btn.bgp-ops-sidebar__close {
+  display: none;
+}
+
+.bgp-ops-nav-section {
+  margin-top: 18px;
+}
+
+.bgp-ops-nav-section__label {
+  padding: 0 10px;
+  margin-bottom: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-ops-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bgp-ops-nav__link,
+.bgp-ops-sidebar a.bgp-ops-nav__link {
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: var(--bgp-radius-sm);
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--bgp-text-secondary) !important;
+  text-decoration: none !important;
+  transition: background-color var(--bgp-duration-fast) ease, color var(--bgp-duration-fast) ease;
+}
+
+.bgp-ops-nav__link:hover,
+.bgp-ops-sidebar a.bgp-ops-nav__link:hover {
+  background: var(--bgp-bg-surface-1);
+  color: #FFFFFF !important;
+}
+
+.bgp-ops-nav__link.is-active,
+.bgp-ops-sidebar a.bgp-ops-nav__link.is-active {
+  background: var(--bgp-brand-red-soft);
+  border-color: var(--bgp-brand-red-border);
+  color: #FFFFFF !important;
+  font-weight: 700;
+}
+
+.bgp-ops-sidebar__footer {
+  padding-top: 14px;
+  border-top: 1px solid var(--bgp-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bgp-ops-return-link,
+.bgp-ops-sidebar a.bgp-ops-return-link {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--bgp-radius-sm);
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-primary) !important;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none !important;
+}
+
+.bgp-ops-return-link:hover,
+.bgp-ops-sidebar a.bgp-ops-return-link:hover {
+  background: var(--bgp-bg-surface-2);
+}
+
+/* --- 2. Right Workspace & Sticky Console Topbar --- */
+.bgp-ops-workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.bgp-ops-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1015;
+  min-height: var(--bgp-ops-topbar-h);
+  padding: 8px 24px;
+  background: rgba(13, 13, 17, 0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--bgp-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bgp-ops-topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bgp-ops-mobile-toggle,
+.bgp-icon-btn.bgp-ops-mobile-toggle {
+  display: none;
+}
+
+.bgp-ops-topbar__context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bgp-ops-topbar__area {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--bgp-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgp-ops-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.bgp-ops-role-chip {
+  font-family: var(--bgp-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-accent-gold-soft);
+  border: 1px solid var(--bgp-accent-gold-border);
+  color: var(--bgp-accent-gold);
+  letter-spacing: 0.04em;
+}
+
+.bgp-ops-user-email {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--bgp-text-secondary);
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgp-ops-logout-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-status-danger-bg);
+  border: 1px solid var(--bgp-status-danger-border);
+  color: var(--bgp-status-danger-fg);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bgp-ops-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #FFFFFF;
+}
+
+.bgp-ops-main {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 16px 32px;
+}
+
+.bgp-ops-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--bgp-border-subtle);
+  font-size: 0.75rem;
+  color: var(--bgp-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bgp-ops-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1030;
+  background: rgba(0, 0, 0, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--bgp-duration-base) ease;
+}
+
+.bgp-ops-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- 3. Responsive Operations Console (< 992px & 320px Narrow Safe) --- */
+@media (max-width: 991.98px) {
+  .bgp-ops-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bgp-ops-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 88vw);
+    max-width: 100vw;
+    visibility: hidden;
+    transform: translateX(-104%);
+    transition:
+      transform var(--bgp-duration-base) var(--bgp-ease-out),
+      visibility 0s linear var(--bgp-duration-base);
+    box-shadow: var(--bgp-shadow-elevated);
+  }
+
+  .bgp-ops-sidebar.is-open {
+    visibility: visible;
+    transform: translateX(0);
+    transition:
+      transform var(--bgp-duration-base) var(--bgp-ease-out),
+      visibility 0s linear 0s;
+  }
+
+  .bgp-ops-sidebar__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .bgp-ops-sidebar__close,
+  .bgp-icon-btn.bgp-ops-sidebar__close {
+    display: inline-flex;
+  }
+
+  .bgp-ops-mobile-toggle,
+  .bgp-icon-btn.bgp-ops-mobile-toggle {
+    display: inline-flex;
+  }
+
+  .bgp-ops-topbar {
+    padding: 8px 12px;
+  }
+
+  .bgp-ops-user-email {
+    display: none;
+  }
+
+  .bgp-ops-main {
+    padding: 8px 8px 24px;
+  }
+}
+
+@media (max-width: 389.98px) {
+  .bgp-ops-logout-btn {
+    padding: 0 8px;
+    font-size: 0.75rem;
+  }
+}

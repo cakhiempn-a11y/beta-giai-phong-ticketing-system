@@ -1,278 +1,688 @@
 @model BetaGiaiPhong.Web.Models.ViewModels.OrderDetailViewModel
 @{
-    ViewData["Title"] = $"Chi tiết đơn hàng #{Model.Order.OrderCode}";
+    Layout = "_CinemaLayout";
+    ViewData["HeaderOverlay"] = false;
+
     var order = Model.Order;
-    var badgeClass = order.OrderStatus switch
+    ViewData["Title"] = $"Chi tiết đơn hàng #{order.OrderCode}";
+
+    bool isPendingActive = order.OrderStatus == "PENDING_PAYMENT" && !order.IsHoldExpired;
+    bool isExpiredEffective = order.OrderStatus == "EXPIRED" || (order.OrderStatus == "PENDING_PAYMENT" && order.IsHoldExpired);
+    bool isPaid = order.OrderStatus == "PAID";
+    bool isCancelled = order.OrderStatus == "CANCELLED";
+    bool isFailed = order.OrderStatus == "FAILED";
+    bool isNeedsReview = order.OrderStatus == "NEEDS_REVIEW";
+
+    string bannerModifier = order.OrderStatus switch
     {
-        "PENDING_PAYMENT" when !order.IsHoldExpired => "bg-warning text-dark",
-        "PENDING_PAYMENT" when order.IsHoldExpired => "bg-secondary",
-        "PAID" => "bg-success",
-        "CANCELLED" => "bg-danger",
-        "EXPIRED" => "bg-secondary",
-        "FAILED" => "bg-danger",
-        "NEEDS_REVIEW" => "bg-warning text-dark",
-        _ => "bg-info text-dark"
+        "PENDING_PAYMENT" when !order.IsHoldExpired => "",
+        "PAID" => "bgp-hold-banner--paid",
+        "CANCELLED" => "bgp-hold-banner--cancelled",
+        "FAILED" => "bgp-hold-banner--failed",
+        "NEEDS_REVIEW" => "bgp-hold-banner--review",
+        _ => "bgp-hold-banner--expired"
     };
 
-    var statusText = order.OrderStatus switch
+    string statusPillModifier = order.OrderStatus switch
     {
-        "PENDING_PAYMENT" when !order.IsHoldExpired => "Chờ thanh toán",
-        "PENDING_PAYMENT" when order.IsHoldExpired => "Hết hạn giữ chỗ",
-        "PAID" => "Đã thanh toán (PAID)",
-        "CANCELLED" => "Đã hủy",
-        "EXPIRED" => "Hết hạn",
-        "FAILED" => "Thất bại (FAILED)",
-        "NEEDS_REVIEW" => "Cần đối soát (NEEDS_REVIEW)",
+        "PENDING_PAYMENT" when !order.IsHoldExpired => "bgp-status-pill--pending",
+        "PAID" => "bgp-status-pill--paid",
+        "CANCELLED" or "FAILED" => "bgp-status-pill--danger",
+        "NEEDS_REVIEW" => "bgp-status-pill--review",
+        _ => "bgp-status-pill--expired"
+    };
+
+    string statusText = order.OrderStatus switch
+    {
+        "PENDING_PAYMENT" when !order.IsHoldExpired => "Chờ thanh toán • PENDING_PAYMENT",
+        "PENDING_PAYMENT" when order.IsHoldExpired => "Hết hạn giữ chỗ • EXPIRED",
+        "PAID" => "Đã thanh toán • PAID",
+        "CANCELLED" => "Đã hủy • CANCELLED",
+        "EXPIRED" => "Hết hạn giữ chỗ • EXPIRED",
+        "FAILED" => "Thanh toán thất bại • FAILED",
+        "NEEDS_REVIEW" => "Cần đối soát • NEEDS_REVIEW",
         _ => order.OrderStatus
     };
+
+    string seatCodesText = order.Seats.Count > 0
+        ? string.Join(", ", order.Seats.Select(s => s.SeatCode))
+        : "Chưa ghi nhận ghế";
+
+    var art = order.MovieArtwork;
+    bool hasVerifiedPoster = art?.HasVerifiedPoster == true && !string.IsNullOrWhiteSpace(art.PosterUrl);
+    string posterSrc = hasVerifiedPoster
+        ? (art!.PosterW342Url ?? art.PosterUrl!)
+        : "/images/poster-fallback.svg";
+    string? posterSrcSet = hasVerifiedPoster && !string.IsNullOrWhiteSpace(art!.PosterW342Url) && !string.IsNullOrWhiteSpace(art.PosterUrl)
+        ? $"{art.PosterW342Url} 342w, {art.PosterUrl} 780w"
+        : null;
+
+    bool hasVnClassification = !string.IsNullOrWhiteSpace(order.MovieAgeLabel) &&
+        string.Equals(order.MovieAgeLabelMarket, "VN", StringComparison.OrdinalIgnoreCase);
+    string ageCodeLower = (order.MovieAgeLabel ?? "P").Trim().ToLowerInvariant();
+
+    string createdVnDisplay = !string.IsNullOrWhiteSpace(order.CreatedVietnamText)
+        ? $"{order.CreatedVietnamText} (UTC+7)"
+        : $"{order.CreatedUtc:dd/MM/yyyy HH:mm:ss} UTC";
+    string expiresVnDisplay = !string.IsNullOrWhiteSpace(order.ExpiresVietnamText)
+        ? $"{order.ExpiresVietnamText} (UTC+7)"
+        : $"{order.ExpiresUtc:dd/MM/yyyy HH:mm:ss} UTC";
+    string expiresTimeOnlyDisplay = !string.IsNullOrWhiteSpace(order.ExpiresVietnamTimeOnlyText)
+        ? order.ExpiresVietnamTimeOnlyText
+        : order.ExpiresUtc.ToString("HH:mm:ss");
 }
 
-<div class="container mt-4 mb-5">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
-            <li class="breadcrumb-item active" aria-current="page">@order.OrderCode</li>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-checkout.css" asp-append-version="true" />
+}
+
+<div class="bgp-tx-page" data-testid="order-details-page" data-order-status="@order.OrderStatus">
+    <!-- 1. Top Breadcrumb & 4-Step Booking Stepper -->
+    <div class="bgp-tx-topbar">
+        <nav aria-label="Đường dẫn điều hướng">
+            <ol class="bgp-tx-breadcrumb">
+                <li><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="bgp-tx-breadcrumb__sep" aria-hidden="true">/</li>
+                <li><a asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
+                <li class="bgp-tx-breadcrumb__sep" aria-hidden="true">/</li>
+                <li class="bgp-tx-breadcrumb__current" aria-current="page">@order.OrderCode</li>
+            </ol>
+        </nav>
+
+        <ol class="bgp-tx-stepper" aria-label="Tiến trình đặt vé">
+            <li class="bgp-tx-stepper__item">
+                @if (order.MovieId > 0)
+                {
+                    <a class="bgp-tx-stepper__pill bgp-tx-stepper__pill--done"
+                       asp-controller="Movies"
+                       asp-action="Details"
+                       asp-route-id="@order.MovieId"
+                       asp-fragment="showtimes-section">
+                        <span aria-hidden="true">&#10003;</span>
+                        <span>1. Chọn suất chiếu</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="bgp-tx-stepper__pill bgp-tx-stepper__pill--done">
+                        <span aria-hidden="true">&#10003;</span>
+                        <span>1. Chọn suất chiếu</span>
+                    </span>
+                }
+                <span class="bgp-tx-stepper__arrow" aria-hidden="true">&rarr;</span>
+            </li>
+            <li class="bgp-tx-stepper__item">
+                <a class="bgp-tx-stepper__pill bgp-tx-stepper__pill--done"
+                   asp-controller="Showtimes"
+                   asp-action="Seats"
+                   asp-route-id="@order.ShowtimeId">
+                    <span aria-hidden="true">&#10003;</span>
+                    <span>2. Chọn ghế ngồi</span>
+                </a>
+                <span class="bgp-tx-stepper__arrow" aria-hidden="true">&rarr;</span>
+            </li>
+            <li class="bgp-tx-stepper__item">
+                @if (isPaid)
+                {
+                    <span class="bgp-tx-stepper__pill bgp-tx-stepper__pill--done">
+                        <span aria-hidden="true">&#10003;</span>
+                        <span>3. Giữ chỗ &amp; Thanh toán</span>
+                    </span>
+                }
+                else if (isPendingActive)
+                {
+                    <span class="bgp-tx-stepper__pill bgp-tx-stepper__pill--active" aria-current="step">
+                        <span>3. Giữ chỗ &amp; Thanh toán</span>
+                    </span>
+                }
+                else
+                {
+                    <span class="bgp-tx-stepper__pill bgp-tx-stepper__pill--stopped" aria-current="step">
+                        <span>3. Kết quả đơn hàng (@order.OrderStatus)</span>
+                    </span>
+                }
+                <span class="bgp-tx-stepper__arrow" aria-hidden="true">&rarr;</span>
+            </li>
+            <li class="bgp-tx-stepper__item">
+                @if (isPaid)
+                {
+                    <a class="bgp-tx-stepper__pill bgp-tx-stepper__pill--done"
+                       asp-controller="Orders"
+                       asp-action="Tickets"
+                       asp-route-id="@order.OrderId">
+                        <span aria-hidden="true">&#10003;</span>
+                        <span>4. Nhận vé QR</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="bgp-tx-stepper__pill">4. Nhận vé QR</span>
+                }
+            </li>
         </ol>
-    </nav>
+    </div>
 
-    @if (!string.IsNullOrEmpty(Model.FlashMessage))
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
-            <strong>✅ Thông báo:</strong> @Model.FlashMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-
-    @if (!string.IsNullOrEmpty(Model.FlashError))
-    {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
-            <strong>⚠️ Lỗi:</strong> @Model.FlashError
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-
-    <!-- Order Header Card -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div>
-                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                    <h1 class="h4 fw-bold mb-0">Đơn hàng: <span class="font-monospace text-primary">@order.OrderCode</span></h1>
-                    <span class="badge @badgeClass fs-6">@statusText</span>
+    <!-- 2. Flash Alerts -->
+    <div class="bgp-tx-alerts">
+        @if (!string.IsNullOrWhiteSpace(Model.FlashMessage))
+        {
+            <div class="bgp-tx-alert bgp-tx-alert--success alert-success" role="status" data-testid="order-flash-success">
+                <div class="bgp-tx-alert__content">
+                    <span class="bgp-tx-alert__icon" aria-hidden="true">&#10003;</span>
+                    <div class="bgp-tx-alert__body">
+                        <span class="bgp-tx-alert__title">Thông báo giao dịch</span>
+                        <span>@Model.FlashMessage</span>
+                    </div>
                 </div>
-                <p class="text-muted small mb-0">
-                    Mã hệ thống: <strong>#@order.OrderId</strong> |
-                    Ngày tạo: <strong>@order.CreatedUtc.ToString("dd/MM/yyyy HH:mm:ss") UTC</strong>
-                </p>
+                <button type="button" class="bgp-tx-alert__close" data-dismiss-alert aria-label="Đóng thông báo">&times;</button>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.FlashWarning))
+        {
+            <div class="bgp-tx-alert bgp-tx-alert--warning alert-warning" role="alert" data-testid="order-flash-warning">
+                <div class="bgp-tx-alert__content">
+                    <span class="bgp-tx-alert__icon" aria-hidden="true">&#9888;</span>
+                    <div class="bgp-tx-alert__body">
+                        <span class="bgp-tx-alert__title">Lưu ý đối soát đơn hàng</span>
+                        <span>@Model.FlashWarning</span>
+                    </div>
+                </div>
+                <button type="button" class="bgp-tx-alert__close" data-dismiss-alert aria-label="Đóng lưu ý">&times;</button>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.FlashError))
+        {
+            <div class="bgp-tx-alert bgp-tx-alert--danger alert-danger" role="alert" data-testid="order-flash-error">
+                <div class="bgp-tx-alert__content">
+                    <span class="bgp-tx-alert__icon" aria-hidden="true">&#9888;</span>
+                    <div class="bgp-tx-alert__body">
+                        <span class="bgp-tx-alert__title">Không thể thực hiện thao tác</span>
+                        <span>@Model.FlashError</span>
+                    </div>
+                </div>
+                <button type="button" class="bgp-tx-alert__close" data-dismiss-alert aria-label="Đóng thông báo lỗi">&times;</button>
+            </div>
+        }
+    </div>
+
+    <!-- 3. Server-Synchronized Hold Countdown & Order Status Hero Banner -->
+    <section class="bgp-hold-banner @bannerModifier"
+             data-hold-banner
+             data-testid="order-hold-banner"
+             aria-label="Trạng thái đơn đặt vé và thời hạn giữ ghế từ máy chủ">
+        <div class="bgp-hold-banner__main">
+            <div class="bgp-hold-banner__top">
+                <span class="bgp-status-pill @statusPillModifier" data-testid="order-status-badge">@statusText</span>
+                <span class="bgp-hold-banner__code" data-testid="order-code-pill">#@order.OrderCode</span>
             </div>
 
-            @if (order.OrderStatus == "PENDING_PAYMENT" && !order.IsHoldExpired)
+            @if (isPendingActive)
             {
-                <div class="border border-warning bg-warning bg-opacity-10 rounded p-3 text-center">
-                    <span class="d-block small text-muted fw-bold">THỜI GIAN GIỮ CHỖ CÒN LẠI</span>
-                    <span id="countdownTimer" class="h3 fw-bold text-danger font-monospace mb-0" data-remaining="@order.RemainingSeconds">
-                        --:--
-                    </span>
-                </div>
+                <h1 class="bgp-hold-banner__title">
+                    Máy chủ đang khóa tạm @order.Seats.Count ghế (@seatCodesText)
+                </h1>
+                <p class="bgp-hold-banner__desc">
+                    Hết hạn giữ chỗ lúc <strong>@expiresTimeOnlyDisplay</strong> (@expiresVnDisplay &mdash; Nguồn chuẩn máy chủ: <code>HoldExpiresUtc</code>).
+                </p>
             }
-            else if (order.OrderStatus == "PAID")
+            else if (isPaid)
             {
-                <div>
-                    <a class="btn btn-success btn-lg shadow-sm px-4 fw-bold" asp-controller="Orders" asp-action="Tickets" asp-route-id="@order.OrderId">
-                        🎟️ Xem vé điện tử &amp; Mã QR
+                <h1 class="bgp-hold-banner__title">
+                    Giao dịch thanh toán thành công &mdash; Đã phát hành @order.Seats.Count vé điện tử QR
+                </h1>
+                <p class="bgp-hold-banner__desc">
+                    Thời điểm xác nhận thanh toán: <strong>@(order.PaidVietnamText ?? order.CreatedVietnamText) (UTC+7)</strong>. Quý khách có thể mở mã QR để soát vé tại cổng rạp.
+                </p>
+            }
+            else if (isExpiredEffective)
+            {
+                <h1 class="bgp-hold-banner__title">
+                    Đơn hàng đã hết hạn giữ ghế 5 phút (EXPIRED)
+                </h1>
+                <p class="bgp-hold-banner__desc">
+                    Mốc hết hạn <strong>@expiresVnDisplay</strong> đã qua. Hệ thống đã tự động giải phóng ghế (@seatCodesText) để mở bán lại trên sơ đồ khán phòng.
+                </p>
+            }
+            else if (isCancelled)
+            {
+                <h1 class="bgp-hold-banner__title">
+                    Đơn giữ chỗ đã được hủy thành công (CANCELLED)
+                </h1>
+                <p class="bgp-hold-banner__desc">
+                    Toàn bộ @order.Seats.Count ghế (<strong>@seatCodesText</strong>) đã được mở khóa tức thì và không phát sinh bất kỳ giao dịch thu tiền nào.
+                </p>
+            }
+            else if (isFailed)
+            {
+                <h1 class="bgp-hold-banner__title">
+                    Giao dịch thanh toán bị từ chối (FAILED)
+                </h1>
+                <p class="bgp-hold-banner__desc">
+                    Phản hồi từ cổng thanh toán báo thất bại. Không có vé điện tử nào được phát hành và toàn bộ ghế (<strong>@seatCodesText</strong>) đã được nhả về trạng thái trống.
+                </p>
+            }
+            else if (isNeedsReview)
+            {
+                <h1 class="bgp-hold-banner__title">
+                    Đơn hàng cần đối soát hoàn tiền (NEEDS_REVIEW)
+                </h1>
+                <p class="bgp-hold-banner__desc">
+                    Hệ thống nhận được callback thanh toán sau khi thời gian giữ ghế đã hết hạn (@expiresVnDisplay). Theo quy tắc toàn vẹn dữ liệu, vé không được cấp quá hạn và đơn được chuyển sang bộ phận quản trị đối soát.
+                </p>
+            }
+            else
+            {
+                <h1 class="bgp-hold-banner__title">Đơn đặt vé #@order.OrderCode</h1>
+                <p class="bgp-hold-banner__desc">Trạng thái hiện tại: <strong>@order.OrderStatus</strong>.</p>
+            }
+        </div>
+
+        @if (isPendingActive)
+        {
+            <div class="bgp-hold-banner__clock-wrap">
+                <span class="bgp-hold-banner__clock-label">Thời gian giữ chỗ còn lại</span>
+                <span id="countdownTimer"
+                      class="bgp-hold-clock"
+                      data-remaining="@order.RemainingSeconds"
+                      data-window-seconds="300"
+                      data-testid="hold-countdown-timer">
+                    --:--
+                </span>
+            </div>
+            <div class="bgp-hold-progress" aria-hidden="true">
+                <div class="bgp-hold-progress__bar" data-hold-progress></div>
+            </div>
+        }
+        else if (isPaid)
+        {
+            <div class="bgp-hold-banner__clock-wrap">
+                <a class="bgp-btn bgp-btn--primary"
+                   asp-controller="Orders"
+                   asp-action="Tickets"
+                   asp-route-id="@order.OrderId"
+                   data-testid="banner-view-tickets-cta">
+                    <span>Xem vé điện tử &amp; Mã QR</span>
+                    <span aria-hidden="true">&rarr;</span>
+                </a>
+            </div>
+        }
+        else if (isExpiredEffective)
+        {
+            <div class="bgp-hold-banner__clock-wrap">
+                <span class="bgp-hold-banner__clock-label">Trạng thái giữ chỗ</span>
+                <span class="bgp-hold-clock bgp-hold-clock--expired">00:00 (Hết hạn)</span>
+            </div>
+        }
+    </section>
+
+    <div id="bgp-hold-live-status" class="bgp-sr-only" aria-live="polite"></div>
+
+    <!-- 4. Two-Column Transaction Workspace -->
+    <div class="bgp-tx-grid">
+        <!-- Left Column: Verified Film Dossier & Locked Seat Snapshot -->
+        <section class="bgp-tx-panel" aria-labelledby="order-screening-heading">
+            <div class="bgp-tx-panel__head">
+                <h2 id="order-screening-heading" class="bgp-tx-panel__title">Thông tin tác phẩm, suất chiếu &amp; ghế giữ chỗ</h2>
+                <span class="bgp-tx-panel__tz">Hiển thị chuẩn Giờ Việt Nam (UTC+7)</span>
+            </div>
+
+            <div class="bgp-tx-film" data-testid="order-verified-film-card">
+                <div class="bgp-tx-film__poster-wrap">
+                    <img src="@posterSrc"
+                         srcset="@posterSrcSet"
+                         sizes="84px"
+                         alt="Poster phim @order.MovieTitle"
+                         class="bgp-tx-film__poster"
+                         width="84"
+                         height="126"
+                         loading="eager"
+                         onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/images/poster-fallback.svg';" />
+                </div>
+
+                <div class="bgp-tx-film__body">
+                    <div class="bgp-tx-film__badges">
+                        <span class="bgp-tx-room-pill">@order.RoomName</span>
+
+                        @if (hasVnClassification)
+                        {
+                            <span class="bgp-age-badge bgp-age-badge--@ageCodeLower">@order.MovieAgeLabel</span>
+                        }
+                        else
+                        {
+                            <span class="bgp-badge bgp-badge--neutral">Chưa có phân loại tại VN</span>
+                        }
+
+                        @if (order.MovieRating is not null)
+                        {
+                            <span class="bgp-badge bgp-badge--imdb-solid" data-testid="order-movie-rating">
+                                @order.MovieRating.DisplayText
+                            </span>
+                        }
+                    </div>
+
+                    <h3 class="bgp-tx-film__title">
+                        @if (order.MovieId > 0)
+                        {
+                            <a asp-controller="Movies" asp-action="Details" asp-route-id="@order.MovieId">@order.MovieTitle</a>
+                        }
+                        else
+                        {
+                            @order.MovieTitle
+                        }
+                    </h3>
+
+                    <div class="bgp-tx-film__sub">
+                        @if (!string.IsNullOrWhiteSpace(order.MovieOriginalTitle) &&
+                             !string.Equals(order.MovieOriginalTitle, order.MovieTitle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <span>@order.MovieOriginalTitle@(order.MovieReleaseYear.HasValue ? $" ({order.MovieReleaseYear})" : "") &bull; </span>
+                        }
+                        else if (order.MovieReleaseYear.HasValue)
+                        {
+                            <span>Năm @order.MovieReleaseYear &bull; </span>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(order.MovieDirectorNames))
+                        {
+                            <span>Đạo diễn @order.MovieDirectorNames &bull; </span>
+                        }
+
+                        @if (order.MovieDurationMin > 0)
+                        {
+                            <span>@order.MovieDurationMin phút</span>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(order.MovieGenreText))
+                        {
+                            <span> &bull; @order.MovieGenreText</span>
+                        }
+                    </div>
+
+                    <div class="bgp-tx-meta-grid">
+                        <div>
+                            <span class="bgp-tx-meta-item__label">Ngày chiếu (VN)</span>
+                            <span class="bgp-tx-meta-item__val">
+                                @(string.IsNullOrWhiteSpace(order.StartVietnamDateText) ? order.StartVietnamText : order.StartVietnamDateText)
+                            </span>
+                        </div>
+                        <div>
+                            <span class="bgp-tx-meta-item__label">Khung giờ (UTC+7)</span>
+                            <span class="bgp-tx-meta-item__val bgp-tx-meta-item__val--mono">
+                                @if (!string.IsNullOrWhiteSpace(order.StartVietnamTimeOnlyText) && !string.IsNullOrWhiteSpace(order.EndVietnamTimeOnlyText))
+                                {
+                                    @:@order.StartVietnamTimeOnlyText &rarr; @order.EndVietnamTimeOnlyText
+                                }
+                                else
+                                {
+                                    @order.StartVietnamText
+                                }
+                                @if (order.CrossesMidnight)
+                                {
+                                    <span class="bgp-tx-midnight-pill">+1 ngày</span>
+                                }
+                            </span>
+                        </div>
+                        <div>
+                            <span class="bgp-tx-meta-item__label">Tạo đơn (#@order.OrderId)</span>
+                            <span class="bgp-tx-meta-item__val bgp-tx-meta-item__val--mono">@createdVnDisplay</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bgp-tx-section-label">
+                <span>Danh sách ghế chụp nhanh giá (@order.Seats.Count ghế)</span>
+                <span>VND nguyên</span>
+            </div>
+
+            <div class="bgp-tx-seat-table-wrap">
+                <table class="bgp-tx-seat-table" aria-label="Bảng đối chiếu ghế và đơn giá">
+                    <thead>
+                        <tr>
+                            <th scope="col">Mã ghế</th>
+                            <th scope="col">Hạng ghế</th>
+                            <th scope="col" class="is-right">Đơn giá áp dụng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var seat in order.Seats)
+                        {
+                            bool isVip = string.Equals(seat.SeatTypeSnapshot, "VIP", StringComparison.OrdinalIgnoreCase);
+                            <tr>
+                                <td>
+                                    <span class="bgp-tx-seat-code">@seat.SeatCode</span>
+                                </td>
+                                <td>
+                                    @if (isVip)
+                                    {
+                                        <span class="bgp-tx-tier-badge bgp-tx-tier-badge--vip">
+                                            <span aria-hidden="true">&#9733;</span>
+                                            <span>Ghế VIP</span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bgp-tx-tier-badge bgp-tx-tier-badge--std">
+                                            <span aria-hidden="true">&bull;</span>
+                                            <span>Ghế Thường</span>
+                                        </span>
+                                    }
+                                </td>
+                                <td class="is-right bgp-tx-price-mono">@seat.UnitPriceVnd.ToString("N0") đ</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Right Column: Payment Summary & Lifecycle Actions -->
+        <aside class="bgp-tx-panel bgp-tx-panel--sticky" aria-labelledby="order-payment-summary-heading">
+            <div class="bgp-tx-panel__head">
+                <h2 id="order-payment-summary-heading" class="bgp-tx-panel__title">Tóm tắt thanh toán &amp; Thao tác</h2>
+                <span class="bgp-tx-panel__tz">#@order.OrderCode</span>
+            </div>
+
+            <div class="bgp-tx-totals">
+                <div class="bgp-tx-totals__row">
+                    <span>Tạm tính (@order.Seats.Count ghế)</span>
+                    <strong>@order.SubtotalVnd.ToString("N0") đ</strong>
+                </div>
+                <div class="bgp-tx-totals__row">
+                    <span>Phí tiện ích</span>
+                    <strong>@order.FeeVnd.ToString("N0") đ</strong>
+                </div>
+                <div class="bgp-tx-totals__row">
+                    <span>Khuyến mãi / Giảm giá</span>
+                    <strong class="bgp-tx-totals__discount">-@order.DiscountVnd.ToString("N0") đ</strong>
+                </div>
+                <div class="bgp-tx-totals__grand">
+                    <span class="bgp-tx-totals__grand-label">Tổng thanh toán</span>
+                    <strong class="bgp-tx-totals__grand-amount" data-testid="order-total-vnd">@order.TotalVnd.ToString("N0") đ</strong>
+                </div>
+            </div>
+
+            @if (isPendingActive)
+            {
+                <div style="margin-top: 16px;" class="bgp-sim-actions">
+                    <a id="btnProceedCheckout"
+                       class="bgp-btn-pay-primary"
+                       asp-controller="Orders"
+                       asp-action="Checkout"
+                       asp-route-id="@order.OrderId"
+                       data-lock-on-expire
+                       data-testid="proceed-to-checkout-cta">
+                        <span>Tiến hành thanh toán &rarr;</span>
+                        <span class="bgp-btn-pay-primary__amount">@order.TotalVnd.ToString("N0") đ</span>
+                    </a>
+                </div>
+
+                <!-- Dynamic Hold-Expired Lockout Card (Revealed automatically at 00:00) -->
+                <div class="bgp-state-card bgp-state-card--expired"
+                     data-testid="hold-expired-inline-panel"
+                     hidden>
+                    <h3 class="bgp-state-card__title">Đã hết thời gian giữ ghế (00:00)</h3>
+                    <p class="bgp-state-card__desc">
+                        Thời hạn giữ chỗ từ máy chủ đã kết thúc nên nút thanh toán đã tự động khóa. Vui lòng quay lại sơ đồ phòng chiếu để chọn lại ghế còn trống.
+                    </p>
+                    <a class="bgp-btn bgp-btn--outline bgp-btn-full"
+                       asp-controller="Showtimes"
+                       asp-action="Seats"
+                       asp-route-id="@order.ShowtimeId"
+                       data-testid="reselect-seats-cta">
+                        Chọn lại ghế cho suất chiếu này &rarr;
+                    </a>
+                </div>
+
+                @if (order.CanCancel)
+                {
+                    <div style="margin-top: 12px;">
+                        <form asp-controller="Orders"
+                              asp-action="Cancel"
+                              asp-route-id="@order.OrderId"
+                              method="post"
+                              id="formCancelOrder"
+                              data-confirm-dialog="bgp-cancel-order-dialog">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="bgp-btn bgp-btn--danger bgp-btn-full"
+                                    id="btnCancel"
+                                    data-testid="open-cancel-dialog-btn">
+                                Hủy đơn giữ chỗ này
+                            </button>
+                        </form>
+                    </div>
+                }
+            }
+            else if (isPaid)
+            {
+                <div class="bgp-state-card bgp-state-card--paid" data-testid="order-state-card-paid">
+                    <h3 class="bgp-state-card__title">Đã thanh toán thành công (PAID)</h3>
+                    <p class="bgp-state-card__desc">
+                        Vé điện tử kèm mã QR bảo mật của quý khách đã sẵn sàng. Vui lòng xuất trình mã QR trên nền sáng tại quầy soát vé.
+                    </p>
+                    <a class="bgp-btn bgp-btn--primary bgp-btn-full"
+                       asp-controller="Orders"
+                       asp-action="Tickets"
+                       asp-route-id="@order.OrderId">
+                        Xem vé điện tử &amp; Mã QR &rarr;
                     </a>
                 </div>
             }
-            else if (order.OrderStatus == "PENDING_PAYMENT" && order.IsHoldExpired)
+            else if (isExpiredEffective)
             {
-                <div class="border border-secondary bg-light rounded p-3 text-center">
-                    <span class="d-block small text-muted fw-bold">TRẠNG THÁI GIỮ GHẾ</span>
-                    <span class="badge bg-secondary fs-6">Đã hết hạn giữ chỗ</span>
+                <div class="bgp-state-card bgp-state-card--expired" data-testid="order-state-card-expired">
+                    <h3 class="bgp-state-card__title">Đơn giữ chỗ đã quá hạn (EXPIRED)</h3>
+                    <p class="bgp-state-card__desc">
+                        Đơn hàng đã vượt quá 5 phút giữ chỗ và không thể thanh toán tiếp. Bạn có thể chọn lại ghế mới trên sơ đồ suất chiếu.
+                    </p>
+                    <a class="bgp-btn bgp-btn--primary bgp-btn-full"
+                       asp-controller="Showtimes"
+                       asp-action="Seats"
+                       asp-route-id="@order.ShowtimeId"
+                       data-testid="reselect-seats-cta">
+                        Chọn lại ghế cho suất chiếu này &rarr;
+                    </a>
                 </div>
             }
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <!-- Movie & Screening Info -->
-        <div class="col-lg-7">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h2 class="h5 fw-bold mb-0">Thông tin suất chiếu &amp; Ghế ngồi</h2>
+            else if (isCancelled)
+            {
+                <div class="bgp-state-card bgp-state-card--danger" data-testid="order-state-card-cancelled">
+                    <h3 class="bgp-state-card__title">Đơn hàng đã hủy (CANCELLED)</h3>
+                    <p class="bgp-state-card__desc">
+                        Đơn hàng đã được hủy theo yêu cầu và toàn bộ ghế giữ đã được giải phóng.
+                    </p>
+                    <a class="bgp-btn bgp-btn--outline bgp-btn-full"
+                       asp-controller="Showtimes"
+                       asp-action="Seats"
+                       asp-route-id="@order.ShowtimeId">
+                        Đặt lại ghế khác trên suất chiếu này &rarr;
+                    </a>
                 </div>
-                <div class="card-body p-4">
-                    <div class="mb-4">
-                        <span class="badge bg-primary mb-1">@order.RoomName</span>
-                        <h3 class="h4 fw-bold text-dark mb-1">@order.MovieTitle</h3>
-                        <p class="text-muted mb-0">
-                            🕒 Thời gian chiếu: <strong>@order.StartVietnamText</strong> (Giờ Việt Nam)
-                        </p>
-                    </div>
-
-                    <h4 class="h6 fw-bold text-uppercase text-secondary mb-3">Danh sách ghế đã giữ (@order.Seats.Count ghế)</h4>
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Mã ghế</th>
-                                    <th>Hạng ghế</th>
-                                    <th class="text-end">Đơn giá áp dụng</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var seat in order.Seats)
-                                {
-                                    <tr>
-                                        <td>
-                                            <span class="badge bg-dark font-monospace px-2 py-1 fs-6">@seat.SeatCode</span>
-                                        </td>
-                                        <td>
-                                            @if (seat.SeatTypeSnapshot == "VIP")
-                                            {
-                                                <span class="badge bg-danger">VIP</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-primary">Thường</span>
-                                            }
-                                        </td>
-                                        <td class="text-end fw-bold">
-                                            @seat.UnitPriceVnd.ToString("N0") đ
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+            }
+            else if (isFailed)
+            {
+                <div class="bgp-state-card bgp-state-card--danger" data-testid="order-state-card-failed">
+                    <h3 class="bgp-state-card__title">Thanh toán thất bại (FAILED)</h3>
+                    <p class="bgp-state-card__desc">
+                        Giao dịch thanh toán bị từ chối. Hệ thống đã giải phóng ghế giữ chỗ, quý khách có thể tạo đơn đặt ghế mới.
+                    </p>
+                    <a class="bgp-btn bgp-btn--primary bgp-btn-full"
+                       asp-controller="Showtimes"
+                       asp-action="Seats"
+                       asp-route-id="@order.ShowtimeId">
+                        Đặt lại ghế mới &rarr;
+                    </a>
                 </div>
-            </div>
-        </div>
-
-        <!-- Payment & Action Card -->
-        <div class="col-lg-5">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h2 class="h5 fw-bold mb-0">Tóm tắt thanh toán</h2>
+            }
+            else if (isNeedsReview)
+            {
+                <div class="bgp-state-card bgp-state-card--review" data-testid="order-state-card-review">
+                    <h3 class="bgp-state-card__title">Đang chờ đối soát quản trị (NEEDS_REVIEW)</h3>
+                    <p class="bgp-state-card__desc">
+                        Phản hồi thanh toán đến sau thời điểm hết hạn giữ ghế. Vui lòng giữ mã đơn <strong>#@order.OrderCode</strong> để bộ phận vận hành đối soát hoàn tiền.
+                    </p>
+                    <a class="bgp-btn bgp-btn--outline bgp-btn-full"
+                       asp-controller="Showtimes"
+                       asp-action="Seats"
+                       asp-route-id="@order.ShowtimeId">
+                        Xem lại sơ đồ suất chiếu &rarr;
+                    </a>
                 </div>
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Tạm tính:</span>
-                        <span class="fw-semibold">@order.SubtotalVnd.ToString("N0") đ</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Phí tiện ích:</span>
-                        <span class="fw-semibold">@order.FeeVnd.ToString("N0") đ</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Khuyến mãi / Giảm giá:</span>
-                        <span class="text-success fw-semibold">-@order.DiscountVnd.ToString("N0") đ</span>
-                    </div>
-                    <hr class="my-2" />
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <span class="h5 fw-bold mb-0">Tổng thanh toán:</span>
-                        <span class="h4 fw-bold text-primary mb-0">@order.TotalVnd.ToString("N0") đ</span>
-                    </div>
+            }
 
-                    @if (order.OrderStatus == "PENDING_PAYMENT" && !order.IsHoldExpired)
-                    {
-                        <div class="d-grid gap-2 mb-3">
-                            <a class="btn btn-primary btn-lg fw-bold py-3 shadow-sm" asp-controller="Orders" asp-action="Checkout" asp-route-id="@order.OrderId">
-                                💳 Tiến hành thanh toán &rarr;
-                            </a>
-                        </div>
+            <hr class="bgp-tx-divider" />
 
-                        <!-- Cancel Button Form -->
-                        @if (order.CanCancel)
-                        {
-                            <form asp-controller="Orders" asp-action="Cancel" asp-route-id="@order.OrderId" method="post" id="formCancelOrder">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-outline-danger w-100 py-2" id="btnCancel" onclick="return confirm('Quý khách có chắc chắn muốn hủy đơn hàng này không? Ghế sẽ được giải phóng ngay lập tức.')">
-                                    Hủy đơn giữ chỗ này
-                                </button>
-                            </form>
-                        }
-                    }
-                    else if (order.OrderStatus == "PAID")
-                    {
-                        <div class="alert alert-success border mb-3 text-center" role="alert">
-                            <h6 class="alert-heading fw-bold mb-1">🎉 Đã thanh toán thành công</h6>
-                            <p class="small mb-2">Vé điện tử của bạn đã được phát hành kèm mã QR.</p>
-                            <a class="btn btn-success fw-bold w-100 py-2" asp-controller="Orders" asp-action="Tickets" asp-route-id="@order.OrderId">
-                                🎟️ Xem vé điện tử &amp; Mã QR
-                            </a>
-                        </div>
-                    }
-                    else if (order.OrderStatus == "PENDING_PAYMENT" && order.IsHoldExpired)
-                    {
-                        <div class="alert alert-secondary border mb-0 text-center" role="alert">
-                            <p class="small mb-2">Đơn hàng này đã quá thời hạn giữ ghế 5 phút.</p>
-                            <a class="btn btn-outline-primary btn-sm" asp-controller="Showtimes" asp-action="Seats" asp-route-id="@order.ShowtimeId">
-                                Chọn lại ghế cho suất chiếu này
-                            </a>
-                        </div>
-                    }
-                    else if (order.OrderStatus == "CANCELLED")
-                    {
-                        <div class="alert alert-danger border mb-0 text-center" role="alert">
-                            <p class="small mb-0">Đơn hàng đã được hủy và toàn bộ ghế đã được giải phóng.</p>
-                        </div>
-                    }
-                    else if (order.OrderStatus == "FAILED")
-                    {
-                        <div class="alert alert-danger border mb-0 text-center" role="alert">
-                            <h6 class="alert-heading fw-bold mb-1">❌ Thanh toán thất bại</h6>
-                            <p class="small mb-0">Giao dịch thanh toán bị từ chối hoặc lỗi. Toàn bộ ghế giữ đã được giải phóng.</p>
-                        </div>
-                    }
-                    else if (order.OrderStatus == "NEEDS_REVIEW")
-                    {
-                        <div class="alert alert-warning border mb-0 text-center" role="alert">
-                            <h6 class="alert-heading fw-bold mb-1">⚠️ Cần đối soát (NEEDS_REVIEW)</h6>
-                            <p class="small mb-0">Đơn hàng đã nhận khoản thanh toán sau khi hết hạn giữ chỗ. Vui lòng liên hệ ban quản trị để hoàn tiền.</p>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <div>
-                <a class="btn btn-light border w-100 py-2" asp-controller="Orders" asp-action="Index">
+            <div class="bgp-tx-secondary-actions">
+                <a class="bgp-btn bgp-btn--outline bgp-btn-full" asp-controller="Orders" asp-action="Index">
                     &larr; Quay lại danh sách đơn hàng
                 </a>
             </div>
-        </div>
+        </aside>
     </div>
+
+    <!-- Accessible Confirmation <dialog> for Cancelling Active Hold (Zero window.confirm) -->
+    @if (isPendingActive && order.CanCancel)
+    {
+        <dialog id="bgp-cancel-order-dialog"
+                class="bgp-confirm-dialog"
+                aria-labelledby="cancel-dialog-title"
+                aria-describedby="cancel-dialog-desc"
+                data-testid="cancel-order-dialog">
+            <div class="bgp-confirm-dialog__inner">
+                <div class="bgp-confirm-dialog__head">
+                    <span class="bgp-confirm-dialog__badge">Xác nhận hủy giữ chỗ</span>
+                </div>
+                <h2 id="cancel-dialog-title" class="bgp-confirm-dialog__title">
+                    Hủy đơn giữ ghế #@order.OrderCode?
+                </h2>
+                <p id="cancel-dialog-desc" class="bgp-confirm-dialog__desc">
+                    Toàn bộ <strong>@order.Seats.Count ghế (@seatCodesText)</strong> sẽ được giải phóng ngay lập tức cho khách hàng khác đặt mua. Thao tác này không thể hoàn tác.
+                </p>
+                <div class="bgp-confirm-dialog__summary">
+                    @order.MovieTitle &bull; @order.RoomName &bull; @order.TotalVnd.ToString("N0") đ
+                </div>
+                <div class="bgp-confirm-dialog__footer">
+                    <button type="button"
+                            class="bgp-btn bgp-btn--outline"
+                            data-dialog-cancel
+                            data-testid="dismiss-cancel-dialog-btn">
+                        Giữ lại ghế &amp; quay lại
+                    </button>
+                    <button type="button"
+                            class="bgp-btn bgp-btn--primary"
+                            data-dialog-confirm
+                            data-testid="confirm-cancel-order-btn">
+                        Xác nhận hủy giữ chỗ
+                    </button>
+                </div>
+            </div>
+        </dialog>
+    }
 </div>
 
 @section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var timerEl = document.getElementById('countdownTimer');
-            if (!timerEl) return;
-
-            var remaining = parseInt(timerEl.getAttribute('data-remaining'), 10) || 0;
-
-            function updateTimer() {
-                if (remaining <= 0) {
-                    timerEl.textContent = '00:00 (Hết hạn)';
-                    timerEl.classList.remove('text-danger');
-                    timerEl.classList.add('text-muted');
-                    var cancelBtn = document.getElementById('btnCancel');
-                    if (cancelBtn) cancelBtn.disabled = true;
-                    return;
-                }
-
-                var m = Math.floor(remaining / 60);
-                var s = remaining % 60;
-                var mStr = m < 10 ? '0' + m : m;
-                var sStr = s < 10 ? '0' + s : s;
-
-                timerEl.textContent = mStr + ':' + sStr;
-                remaining--;
-                setTimeout(updateTimer, 1000);
-            }
-
-            updateTimer();
-        });
-    </script>
+    <script type="module" src="~/js/modules/hold-countdown.js" asp-append-version="true"></script>
 }

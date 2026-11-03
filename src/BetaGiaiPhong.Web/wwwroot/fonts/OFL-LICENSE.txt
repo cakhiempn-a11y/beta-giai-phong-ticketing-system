@@ -1,0 +1,20 @@
+SIL OPEN FONT LICENSE (OFL-1.1) — LOCAL WEB FONT BUNDLE
+=======================================================
+
+This directory contains web-optimized WOFF2 subsets (vietnamese, latin-ext, latin)
+for offline-first, deterministic rendering in Beta Giai Phong Cinema Ticketing System:
+
+1. Be Vietnam Pro (Weights: 400, 500, 600, 700, 800)
+   Copyright (c) 2018-2022 The Be Vietnam Pro Project Authors
+   (https://github.com/bettergui/BeVietnamPro)
+   License: SIL Open Font License, Version 1.1 (https://openfontlicense.org)
+
+2. JetBrains Mono (Weights: 500, 700)
+   Copyright (c) 2020 JetBrains s.r.o.
+   (https://github.com/JetBrains/JetBrainsMono)
+   License: SIL Open Font License, Version 1.1 (https://openfontlicense.org)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+the Font Software, to use, study, copy, merge, embed, modify, redistribute, and
+sell modified and unmodified copies of the Font Software, subject to the terms
+and conditions of the SIL Open Font License, Version 1.1.

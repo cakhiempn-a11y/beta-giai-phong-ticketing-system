@@ -10,5 +10,21 @@ public sealed record OrderTicketsViewModel(
     string RoomName,
     DateTime StartUtc,
     string FormattedStartUtc,
-    IReadOnlyList<CustomerTicketDto> Tickets
+    IReadOnlyList<CustomerTicketDto> Tickets,
+    long ShowtimeId = 0,
+    long MovieId = 0,
+    string? MovieOriginalTitle = null,
+    int? MovieReleaseYear = null,
+    int MovieDurationMin = 0,
+    string? MovieDirectorNames = null,
+    string MovieAgeLabel = "P",
+    string? MovieAgeLabelMarket = null,
+    MovieRatingDto? MovieRating = null,
+    MovieArtworkDto? MovieArtwork = null,
+    string StartVietnamDateText = "",
+    string StartVietnamTimeOnlyText = "",
+    string EndVietnamTimeOnlyText = "",
+    bool CrossesMidnight = false,
+    string? PaidVietnamText = null,
+    string? FlashMessage = null
 );

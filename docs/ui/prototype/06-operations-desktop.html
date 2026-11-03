@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bàn làm việc Vận hành &amp; Đồng bộ Phim Thật (MANAGER / STAFF) | Beta Giải Phóng</title>
+  <link rel="stylesheet" href="netflix-cinema.css" />
+</head>
+<body>
+  <div class="bgp-ops-shell">
+    <!-- Left High-Density Operations Sidebar (_OperationsLayout) -->
+    <aside class="bgp-ops-sidebar" aria-label="Điều hướng vận hành nội bộ">
+      <div>
+        <div class="bgp-brand" style="padding:0 6px;">
+          <span class="bgp-brand__badge">BETA</span>
+          <div>
+            <div style="font-size:0.95rem;font-weight:800;line-height:1.1;">Console Vận hành</div>
+            <div style="font-size:0.68rem;color:var(--bgp-text-muted);font-weight:600;">Rạp Giải Phóng • Nội bộ</div>
+          </div>
+        </div>
+
+        <nav class="bgp-ops-nav">
+          <a href="#catalog" class="bgp-ops-nav__item bgp-ops-nav__item--active">
+            <span>Danh mục &amp; Nguồn phim</span>
+            <span class="bgp-badge" style="background:rgba(255,255,255,0.12);color:#fff;">11</span>
+          </a>
+          <a href="#showtimes" class="bgp-ops-nav__item">
+            <span>Lịch chiếu &amp; Khung giá</span>
+            <span style="font-size:0.74rem;color:var(--bgp-text-muted);">UTC+7</span>
+          </a>
+          <a href="#rooms" class="bgp-ops-nav__item">
+            <span>Phòng chiếu &amp; Sơ đồ ghế</span>
+          </a>
+          <a href="#gate" class="bgp-ops-nav__item">
+            <span>Cổng Soát vé QR (STAFF)</span>
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--bgp-status-success);"></span>
+          </a>
+          <a href="#reports" class="bgp-ops-nav__item">
+            <span>Báo cáo Doanh thu &amp; Lấp đầy</span>
+          </a>
+        </nav>
+      </div>
+
+      <div style="padding:10px;background:#17171F;border:1px solid var(--bgp-border-subtle);border-radius:8px;font-size:0.75rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <strong style="color:#fff;">Trần Quốc Bảo</strong>
+          <span class="bgp-badge" style="background:var(--bgp-brand-red-soft);color:#FF858B;">MANAGER</span>
+        </div>
+        <div style="color:var(--bgp-text-muted);margin-bottom:8px;">Ca tối • 04/11/2026</div>
+        <a href="01-home-desktop.html" style="color:var(--bgp-text-secondary);text-decoration:underline;">Mở trang Khách hàng &nearr;</a>
+      </div>
+    </aside>
+
+    <!-- Main Operations Workspace -->
+    <main class="bgp-ops-main">
+      <!-- Top Bar: Sync Pipeline Status + Quick Import by External ID -->
+      <header style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--bgp-border-subtle);">
+        <div>
+          <h1 style="margin:0;font-size:1.25rem;font-weight:800;">Quản lý Danh mục Tác phẩm &amp; Đồng bộ Nguồn Xác minh</h1>
+          <p style="margin:2px 0 0;font-size:0.79rem;color:var(--bgp-text-secondary);">
+            Tách biệt <strong>Dữ liệu tác phẩm</strong> (TMDB / Wikidata / IMDb TSV) và <strong>Trạng thái mở bán tại rạp</strong> (<code>DRAFT</code> / <code>PUBLISHED</code> / <code>ARCHIVED</code>).
+          </p>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="bgp-badge" style="background:var(--bgp-status-warning-bg);color:#FCD34D;border:1px solid rgba(245,158,11,0.38);padding:6px 10px;">
+            BGP_TMDB_READ_TOKEN: Chưa cấu hình • Đang dùng Wikidata + IMDb TSV
+          </span>
+          <button type="button" class="bgp-btn bgp-btn--primary bgp-btn--sm">+ Nhập phim theo TMDB / IMDb ID</button>
+        </div>
+      </header>
+
+      <!-- Filter & External Lookup Bar -->
+      <section style="display:grid;grid-template-columns:1.3fr 0.7fr 0.7fr auto;gap:10px;background:#14141A;padding:12px;border-radius:10px;border:1px solid var(--bgp-border-subtle);">
+        <input type="search" value="" placeholder="Lọc theo tên phim, mã tt..., QID, hoặc TMDB ID..." aria-label="Lọc danh mục phim" style="background:#0E0E13;border:1px solid var(--bgp-border-default);border-radius:6px;padding:0 12px;height:38px;color:#fff;font-size:0.82rem;" />
+        <select aria-label="Lọc trạng thái công bố" style="background:#0E0E13;border:1px solid var(--bgp-border-default);border-radius:6px;padding:0 10px;height:38px;color:#fff;font-size:0.82rem;">
+          <option>Trạng thái: Tất cả (11)</option>
+          <option>PUBLISHED (9)</option>
+          <option>DRAFT — Chờ duyệt (2)</option>
+        </select>
+        <select aria-label="Lọc trạng thái Artwork" style="background:#0E0E13;border:1px solid var(--bgp-border-default);border-radius:6px;padding:0 10px;height:38px;color:#fff;font-size:0.82rem;">
+          <option>Artwork: Tất cả nguồn</option>
+          <option>Đã cache cục bộ hợp lệ (9)</option>
+          <option>Chờ khóa TMDB (2)</option>
+        </select>
+        <button type="button" class="bgp-btn bgp-btn--outline bgp-btn--sm" style="height:38px;">Làm mới điểm IMDb TSV</button>
+      </section>
+
+      <!-- Workspace Split: Dense Movie Data Table + Live STAFF Gate Verification Reference -->
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 308px;gap:16px;align-items:start;">
+        <!-- High-Density Movie Table -->
+        <section style="background:#14141A;border:1px solid var(--bgp-border-default);border-radius:10px;overflow:hidden;" aria-label="Bảng dữ liệu tác phẩm và lịch chiếu">
+          <table class="bgp-table">
+            <thead>
+              <tr>
+                <th>Tác phẩm &amp; Năm</th>
+                <th>Định danh nguồn</th>
+                <th>Điểm gốc &amp; Lượt</th>
+                <th>Tuổi VN &amp; Ghi đè</th>
+                <th>Artwork / Cache</th>
+                <th>Suất rạp</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <img src="assets/charade-1963-poster.jpg" alt="" style="width:30px;height:45px;object-fit:cover;border-radius:4px;" />
+                    <div>
+                      <strong>Mê Trong Mê</strong>
+                      <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Charade (1963) • 113p</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-family:var(--bgp-font-mono);font-size:0.74rem;color:var(--bgp-text-secondary);">
+                  Q496266<br />tt0056923 • #4808
+                </td>
+                <td><span class="bgp-badge bgp-badge--imdb">IMDb 7.8 (95,2K)</span></td>
+                <td><span style="font-size:0.75rem;color:var(--bgp-text-muted);">Chưa phân loại VN</span></td>
+                <td><span style="color:#86EFAC;font-size:0.75rem;font-weight:600;">Public Domain • Đủ 2 cỡ</span></td>
+                <td><strong>5 suất</strong></td>
+                <td><span class="bgp-badge" style="background:var(--bgp-status-success-bg);color:#86EFAC;">PUBLISHED</span></td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <img src="assets/charge-2022-poster.jpg" alt="" style="width:30px;height:45px;object-fit:cover;border-radius:4px;" />
+                    <div>
+                      <strong>Charge</strong>
+                      <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Blender Studio (2022) • 4p</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-family:var(--bgp-font-mono);font-size:0.74rem;color:var(--bgp-text-secondary);">
+                  Q115715270<br />tt24787066 • #1062079
+                </td>
+                <td><span class="bgp-badge bgp-badge--imdb">IMDb 7.6 (71)</span></td>
+                <td><span style="font-size:0.75rem;color:var(--bgp-text-muted);">Chưa phân loại VN</span></td>
+                <td><span style="color:#86EFAC;font-size:0.75rem;font-weight:600;">CC BY 4.0 • Poster+Logo</span></td>
+                <td><strong>2 suất</strong></td>
+                <td><span class="bgp-badge" style="background:var(--bgp-status-success-bg);color:#86EFAC;">PUBLISHED</span></td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <img src="assets/notld-1968-poster.jpg" alt="" style="width:30px;height:45px;object-fit:cover;border-radius:4px;" />
+                    <div>
+                      <strong>Night of the Living Dead</strong>
+                      <div style="font-size:0.73rem;color:var(--bgp-text-muted);">George A. Romero (1968) • 96p</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-family:var(--bgp-font-mono);font-size:0.74rem;color:var(--bgp-text-secondary);">
+                  Q623051<br />tt0063350 • #10331
+                </td>
+                <td><span class="bgp-badge bgp-badge--imdb">IMDb 7.8 (153,6K)</span></td>
+                <td><span style="font-size:0.75rem;color:var(--bgp-text-muted);">Chưa phân loại VN</span></td>
+                <td><span style="color:#86EFAC;font-size:0.75rem;font-weight:600;">Public Domain • Đủ 2 cỡ</span></td>
+                <td><strong>2 suất</strong></td>
+                <td><span class="bgp-badge" style="background:var(--bgp-status-success-bg);color:#86EFAC;">PUBLISHED</span></td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:30px;height:45px;border-radius:4px;background:#22222B;border:1px solid var(--bgp-border-default);display:grid;place-items:center;font-size:0.62rem;color:var(--bgp-text-muted);">N/A</div>
+                    <div>
+                      <strong>Mai</strong>
+                      <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Trấn Thành (2024) • 131p</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-family:var(--bgp-font-mono);font-size:0.74rem;color:var(--bgp-text-secondary);">
+                  Q124516759<br />tt31174028 • #1210973
+                </td>
+                <td><span class="bgp-badge bgp-badge--imdb">IMDb 6.9 (1,9K)</span></td>
+                <td>
+                  <span class="bgp-badge bgp-badge--age-vn">T18</span>
+                  <span style="font-size:0.68rem;color:#38BDF8;margin-left:4px;">Khóa thủ công</span>
+                </td>
+                <td><span style="color:#FCD34D;font-size:0.74rem;">Chờ khóa TMDB (Loại khỏi Hero)</span></td>
+                <td><span style="color:var(--bgp-text-muted);">0 suất</span></td>
+                <td><span class="bgp-badge bgp-badge--cinema-none">PUBLISHED</span></td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:30px;height:45px;border-radius:4px;background:#22222B;border:1px solid var(--bgp-border-default);display:grid;place-items:center;font-size:0.62rem;color:var(--bgp-text-muted);">N/A</div>
+                    <div>
+                      <strong>Đào, phở và piano</strong>
+                      <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Phi Tiến Sơn (2024) • 100p</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-family:var(--bgp-font-mono);font-size:0.74rem;color:var(--bgp-text-secondary);">
+                  Q124620657<br />tt31438076 • #1247240
+                </td>
+                <td><span class="bgp-badge bgp-badge--imdb">IMDb 5.6 (248)</span></td>
+                <td>
+                  <span class="bgp-badge bgp-badge--age-t13">T13</span>
+                  <span style="font-size:0.68rem;color:#38BDF8;margin-left:4px;">Khóa thủ công</span>
+                </td>
+                <td><span style="color:#FCD34D;font-size:0.74rem;">Chờ khóa TMDB (Bản nháp)</span></td>
+                <td><span style="color:var(--bgp-text-muted);">0 suất</span></td>
+                <td><span class="bgp-badge" style="background:rgba(245,158,11,0.15);color:#FCD34D;">DRAFT</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Right Quick Operational Card: STAFF QR Check-In Feedback Grammar -->
+        <aside id="gate" style="background:#14141A;border:1px solid var(--bgp-border-default);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;" aria-label="Mẫu phản hồi cổng soát vé QR cho STAFF">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:0.86rem;">Trực Cổng Soát Vé QR (STAFF)</strong>
+            <span class="bgp-badge" style="background:var(--bgp-status-success-bg);color:#86EFAC;">Camera Sẵn sàng</span>
+          </div>
+
+          <div style="background:rgba(34,197,94,0.12);border:1.5px solid rgba(34,197,94,0.5);border-radius:8px;padding:11px;">
+            <div style="font-size:0.74rem;font-weight:800;color:#86EFAC;letter-spacing:0.04em;margin-bottom:4px;">✓ HỢP LỆ — CHO PHÉP VÀO RẠP</div>
+            <div style="font-size:0.86rem;font-weight:700;">Mê Trong Mê • Phòng 01</div>
+            <div style="font-family:var(--bgp-font-mono);font-size:0.76rem;color:var(--bgp-text-primary);margin-top:3px;">
+              Ghế: <strong>C5 (VIP)</strong> • Suất 19:15
+            </div>
+            <div style="font-family:var(--bgp-font-mono);font-size:0.69rem;color:var(--bgp-text-secondary);margin-top:2px;">
+              TKT-9024A8F1E3C7 • Check-in 18:59:12
+            </div>
+          </div>
+
+          <div style="background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.5);border-radius:8px;padding:11px;">
+            <div style="font-size:0.74rem;font-weight:800;color:#FCA5A5;letter-spacing:0.04em;margin-bottom:4px;">✕ TỪ CHỐI — VÉ ĐÃ SỬ DỤNG (USED)</div>
+            <div style="font-size:0.78rem;color:var(--bgp-text-secondary);">
+              Mã <code style="color:#fff;">TKT-4418B102</code> đã được quét lúc <strong>18:54:03</strong> bởi <code>staff1@demo</code>.
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;">
+            <input type="text" placeholder="Nhập mã TKT-... thủ công" aria-label="Nhập mã vé thủ công" style="flex:1;background:#0E0E13;border:1px solid var(--bgp-border-default);border-radius:6px;padding:0 10px;height:36px;color:#fff;font-family:var(--bgp-font-mono);font-size:0.75rem;" />
+            <button type="button" class="bgp-btn bgp-btn--outline bgp-btn--sm">Kiểm tra</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

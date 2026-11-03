@@ -26,4 +26,16 @@ public sealed record SeatMapDto(
     IReadOnlyDictionary<string, long> PriceTiersVnd,
     IReadOnlyList<SeatDto> Seats,
     bool IsOpenForBooking = true,
-    string? IneligibleReason = null);
+    string? IneligibleReason = null,
+    DateTime? EndUtc = null,
+    string? EndVietnamTimeOnlyText = null,
+    bool CrossesMidnight = false,
+    string? ShowtimeStatus = null,
+    short MovieDurationMin = 0,
+    string? MovieGenreText = null,
+    string? MovieAgeLabel = null,
+    string? MovieAgeLabelMarket = null,
+    string? MovieOriginalTitle = null,
+    short? MovieReleaseYear = null,
+    MovieRatingDto? MovieRating = null,
+    MovieArtworkDto? MovieArtwork = null);

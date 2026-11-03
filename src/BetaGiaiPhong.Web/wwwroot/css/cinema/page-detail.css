@@ -1,0 +1,658 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   page-detail.css: Movie Details (/movies/{id}), Atmospheric Backdrop Stage,
+                    2:3 Theatrical Poster, Verified Cast Grid, UTC+7 Date
+                    Tabs & Provenance Verification Dossier (Zero Bootstrap)
+   ========================================================================== */
+
+.bgp-movie-detail {
+  width: 100%;
+  padding-bottom: 60px;
+}
+
+/* --- 1. Atmospheric Movie Stage Hero --- */
+.bgp-detail-hero {
+  position: relative;
+  width: 100%;
+  padding: calc(var(--bgp-header-h) + 24px) 0 42px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--bgp-border-subtle);
+  background: radial-gradient(circle at 78% 22%, #1D1C26 0%, #0E0E13 58%, #0A0A0C 100%);
+}
+
+.bgp-detail-backdrop-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 76% 24%;
+  opacity: 0.34;
+  filter: saturate(1.06);
+  z-index: 0;
+}
+
+.bgp-detail-backdrop-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #0A0A0C 0%, rgba(10, 10, 12, 0.93) 46%, rgba(10, 10, 12, 0.66) 100%),
+    linear-gradient(180deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.28) 46%, #0A0A0C 100%);
+}
+
+.bgp-detail-hero-container {
+  position: relative;
+  z-index: 2;
+}
+
+/* Breadcrumb */
+.bgp-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-breadcrumb a {
+  color: var(--bgp-text-secondary) !important;
+  font-weight: 600;
+}
+
+.bgp-breadcrumb a:hover {
+  color: #FFFFFF !important;
+  text-decoration: underline !important;
+}
+
+.bgp-breadcrumb__sep {
+  opacity: 0.45;
+}
+
+.bgp-breadcrumb__current {
+  color: var(--bgp-text-primary);
+  font-weight: 600;
+  max-width: 340px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 2-Column Stage Grid (2:3 Poster + Metadata) */
+.bgp-detail-stage-grid {
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.bgp-detail-poster-frame {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--bgp-radius-md);
+  overflow: hidden;
+  background: #141418;
+  border: 1px solid var(--bgp-border-strong);
+  box-shadow: var(--bgp-shadow-elevated);
+}
+
+.bgp-detail-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bgp-detail-info-col {
+  min-width: 0;
+}
+
+.bgp-detail-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bgp-detail-badge-live {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-brand-red-soft);
+  border: 1px solid var(--bgp-brand-red-border);
+  color: #FF858B;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bgp-detail-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.85rem, 3.4vw, 2.85rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: #FFFFFF;
+  overflow-wrap: anywhere;
+}
+
+.bgp-detail-identity {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  color: var(--bgp-text-secondary);
+  line-height: 1.5;
+}
+
+.bgp-detail-identity strong {
+  color: #FFFFFF;
+}
+
+.bgp-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 18px;
+  font-size: 0.86rem;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-detail-synopsis-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--bgp-text-muted);
+  margin-bottom: 6px;
+}
+
+.bgp-detail-synopsis {
+  margin: 0 0 18px;
+  max-width: 820px;
+  font-size: 0.96rem;
+  line-height: 1.64;
+  color: rgba(245, 245, 247, 0.94);
+  overflow-wrap: anywhere;
+}
+
+.bgp-detail-credits-line {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-detail-credits-line strong {
+  color: var(--bgp-text-primary);
+}
+
+/* Verified Cast Grid */
+.bgp-cast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 10px;
+  max-width: 820px;
+  margin-bottom: 22px;
+}
+
+.bgp-cast-chip {
+  background: rgba(22, 22, 27, 0.86);
+  border: 1px solid var(--bgp-border-subtle);
+  border-radius: var(--bgp-radius-sm);
+  padding: 8px 11px;
+  min-width: 0;
+}
+
+.bgp-cast-chip__name {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgp-cast-chip__role {
+  font-size: 0.74rem;
+  color: var(--bgp-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.bgp-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 839.98px) {
+  .bgp-detail-stage-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+
+  .bgp-detail-poster-frame {
+    max-width: 210px;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .bgp-detail-poster-frame {
+    max-width: 176px;
+  }
+
+  .bgp-detail-actions {
+    width: 100%;
+  }
+
+  .bgp-detail-actions .bgp-btn {
+    flex: 1 1 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* --- 2. Lower 2-Column Workspace (Showtimes UTC+7 + Provenance Dossier) --- */
+.bgp-detail-workspace {
+  padding-top: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 372px;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 1079.98px) {
+  .bgp-detail-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.bgp-showtimes-section {
+  min-width: 0;
+  scroll-margin-top: calc(var(--bgp-header-h) + 20px);
+}
+
+.bgp-showtimes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.bgp-showtimes-title {
+  margin: 0;
+  font-size: var(--bgp-text-h2);
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-showtimes-sub {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: var(--bgp-text-muted);
+}
+
+/* Accessible UTC+7 Date Tabs */
+.bgp-date-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  margin-bottom: 20px;
+}
+
+.bgp-date-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.bgp-date-tab {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 132px;
+  min-height: 62px;
+  padding: 10px 16px;
+  border-radius: var(--bgp-radius-sm);
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-secondary) !important;
+  text-decoration: none !important;
+  flex-shrink: 0;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-date-tab:hover {
+  background: var(--bgp-bg-surface-2);
+  border-color: var(--bgp-border-strong);
+  color: #FFFFFF !important;
+}
+
+.bgp-date-tab.is-active {
+  background: var(--bgp-brand-red-soft);
+  border-color: var(--bgp-brand-red);
+  color: #FFFFFF !important;
+  box-shadow: inset 0 0 0 1px rgba(229, 9, 20, 0.25);
+}
+
+.bgp-date-tab-dow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-date-tab.is-active .bgp-date-tab-dow {
+  color: #FF9EA3;
+}
+
+.bgp-date-tab-date {
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-date-tab-count {
+  font-size: 0.73rem;
+  color: var(--bgp-text-secondary);
+}
+
+/* Progressive Enhancement: visible without JS; toggled when JS initializes */
+.bgp-showtime-date-group {
+  display: block;
+  margin-bottom: 22px;
+}
+
+.bgp-js-tabs-ready .bgp-showtime-date-group:not(.is-active) {
+  display: none !important;
+}
+
+.bgp-showtime-date-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--bgp-text-primary);
+}
+
+.bgp-showtime-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr));
+  gap: 14px;
+}
+
+.bgp-showtime-card {
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-md);
+  padding: 15px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--bgp-shadow-card);
+  transition: border-color var(--bgp-duration-fast) ease, transform var(--bgp-duration-fast) var(--bgp-ease-out);
+}
+
+.bgp-showtime-card:hover:not(.bgp-showtime-card--soldout) {
+  border-color: var(--bgp-brand-red-border);
+  transform: translateY(-2px);
+}
+
+.bgp-showtime-card--soldout {
+  background: #121217;
+  border-color: var(--bgp-border-subtle);
+  opacity: 0.72;
+}
+
+.bgp-showtime-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bgp-showtime-time-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bgp-showtime-start {
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-showtime-end {
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-showtime-nextday {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-status-warning-bg);
+  border: 1px solid var(--bgp-status-warning-border);
+  color: var(--bgp-status-warning-fg);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.bgp-showtime-room {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-bg-surface-2);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-primary);
+}
+
+.bgp-showtime-meta-row {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bgp-showtime-seats--available {
+  color: var(--bgp-status-success-fg);
+}
+
+.bgp-showtime-seats--low {
+  color: var(--bgp-status-warning-fg);
+}
+
+.bgp-showtime-seats--soldout {
+  color: var(--bgp-text-muted);
+}
+
+.bgp-showtime-cta {
+  width: 100%;
+  margin-top: auto;
+}
+
+/* Empty Showtimes Box & Suggested On-Sale Movies */
+.bgp-discovery-empty {
+  background: var(--bgp-bg-surface-1);
+  border: 1px dashed var(--bgp-border-strong);
+  border-radius: var(--bgp-radius-lg);
+  padding: 36px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.bgp-discovery-empty-icon {
+  color: var(--bgp-text-muted);
+}
+
+.bgp-suggested-block {
+  margin-top: 26px;
+}
+
+.bgp-suggested-title {
+  margin: 0 0 12px;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-suggested-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.bgp-suggested-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-subtle);
+  border-radius: var(--bgp-radius-sm);
+  padding: 8px;
+  color: var(--bgp-text-primary) !important;
+  text-decoration: none !important;
+  transition: border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-suggested-card:hover {
+  border-color: var(--bgp-border-strong);
+}
+
+.bgp-suggested-card__poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--bgp-radius-xs);
+  background: #141418;
+}
+
+.bgp-suggested-card__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgp-suggested-card__sub {
+  font-size: 0.72rem;
+  color: var(--bgp-status-success-fg);
+  font-weight: 600;
+}
+
+/* --- 3. Work Provenance & Source Verification Dossier --- */
+.bgp-provenance-card {
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--bgp-shadow-card);
+}
+
+.bgp-provenance-card__title {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bgp-provenance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.bgp-provenance-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bgp-border-subtle);
+}
+
+.bgp-provenance-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.bgp-provenance-label {
+  color: var(--bgp-text-muted);
+  flex-shrink: 0;
+}
+
+.bgp-provenance-val {
+  color: var(--bgp-text-primary);
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: break-word;
+}
+
+.bgp-provenance-code {
+  display: inline-block;
+  font-family: var(--bgp-font-mono);
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--bgp-radius-xs);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bgp-border-subtle);
+  color: #F5F5F7;
+  white-space: nowrap;
+}
+
+@media (max-width: 479.98px) {
+  .bgp-provenance-code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.bgp-provenance-note {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--bgp-border-subtle);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--bgp-text-muted);
+}

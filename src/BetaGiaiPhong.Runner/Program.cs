@@ -48,6 +48,32 @@ internal static class Program
                     return 0;
                 case "seed-demo":
                     await DemoSeeder.SeedAsync(db); return 0;
+                case "seed-verified-showcase":
+                    await DemoSeeder.SeedVerifiedShowcaseAsync(db); return 0;
+                case "sync-tmdb-movie":
+                    if (args.Length < 2 || !int.TryParse(args[1], out var tmdbId))
+                    {
+                        Console.Error.WriteLine("Usage: sync-tmdb-movie <tmdbId>");
+                        return 2;
+                    }
+                    var tmdbSync = await new MovieContentSyncService(db, new SystemClock()).SyncMovieFromTmdbAsync(tmdbId);
+                    Console.WriteLine($"TMDB_SYNC|{tmdbSync.Outcome}|MovieId={tmdbSync.MovieId?.ToString() ?? "NULL"}|{tmdbSync.Message}");
+                    return tmdbSync.Outcome is "CREATED_DRAFT" or "UPDATED" or "MISSING_API_KEY" ? 0 : 1;
+                case "sync-imdb-ratings":
+                    if (args.Length < 2 || !File.Exists(args[1]))
+                    {
+                        Console.Error.WriteLine("Usage: sync-imdb-ratings <path-to-title.ratings.tsv-or-gz>");
+                        return 2;
+                    }
+                    await using (var rawFile = File.OpenRead(args[1]))
+                    await using (Stream ratingsStream = args[1].EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
+                        ? new System.IO.Compression.GZipStream(rawFile, System.IO.Compression.CompressionMode.Decompress)
+                        : rawFile)
+                    {
+                        var imdbSync = await new MovieContentSyncService(db, new SystemClock()).ApplyImdbRatingsStreamAsync(ratingsStream);
+                        Console.WriteLine($"IMDB_SYNC|Matched={imdbSync.MatchedMovies}|Updated={imdbSync.UpdatedMovies}|SkippedOverrides={imdbSync.SkippedManualOverrides}|RowsScanned={imdbSync.RowsScanned}");
+                    }
+                    return 0;
                 case "seed-checkin-demo":
                     await SeedCheckInDemoAsync(options); return 0;
                 case "smoke":
@@ -381,10 +407,11 @@ internal static class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("Beta Giáº£i PhÃ³ng EF Core data runner (SQL Server, prototype)");
-        Console.WriteLine("Commands: migrate | status | seed-demo | seed-checkin-demo | smoke | race | late | expire | verify");
+        Console.WriteLine("Beta Giải Phóng EF Core data runner (SQL Server, prototype)");
+        Console.WriteLine("Commands: migrate | status | seed-demo | seed-verified-showcase | sync-tmdb-movie <id> | sync-imdb-ratings <tsv> | seed-checkin-demo | smoke | race | late | expire | verify");
         Console.WriteLine("Environment: ConnectionStrings__BetaDb (required for commands)");
-        Console.WriteLine("seed-demo: BGP_ALLOW_DEMO_SEED=true; BGP_DEMO_PASSWORD=... (>=12 chars)");
+        Console.WriteLine("seed-demo / seed-verified-showcase: BGP_ALLOW_DEMO_SEED=true; BGP_DEMO_PASSWORD=... (>=12 chars)");
+        Console.WriteLine("sync-tmdb-movie: optional BGP_TMDB_READ_TOKEN (v4 Bearer)");
         Console.WriteLine("smoke: BGP_MOCK_HMAC_KEY_B64 and BGP_QR_AES_KEY_B64 (32 random bytes each)");
     }
 
@@ -540,6 +567,22 @@ AND NOT EXISTS (SELECT 1 FROM dbo.UserRoles ur WHERE ur.user_id = u.user_id AND 
                 cmd.Parameters.Add(new SqlParameter("@orderId", SqlDbType.BigInt) { Value = orderId });
                 await cmd.ExecuteNonQueryAsync();
                 return 0;
+            case "set-order-remaining-seconds":
+                var remOrderIdStr = Environment.GetEnvironmentVariable("BGP_E2E_ORDER_ID");
+                var remSecondsStr = Environment.GetEnvironmentVariable("BGP_E2E_REMAINING_SECONDS") ?? "4";
+                if (!long.TryParse(remOrderIdStr, out var remOrderId) || !int.TryParse(remSecondsStr, out var remSec) || remSec is < 1 or > 300) return 2;
+                cmd.CommandText = "UPDATE dbo.Orders SET created_utc = DATEADD(MINUTE, -10, SYSUTCDATETIME()), expires_utc = DATEADD(SECOND, @sec, SYSUTCDATETIME()) WHERE order_id = @orderId AND status = 'PENDING_PAYMENT'; UPDATE dbo.ShowtimeSeats SET hold_expires_utc = DATEADD(SECOND, @sec, SYSUTCDATETIME()) WHERE owner_order_id = @orderId AND state = 'HELD';";
+                cmd.Parameters.Add(new SqlParameter("@orderId", SqlDbType.BigInt) { Value = remOrderId });
+                cmd.Parameters.Add(new SqlParameter("@sec", SqlDbType.Int) { Value = remSec });
+                await cmd.ExecuteNonQueryAsync();
+                return 0;
+            case "set-order-needs-review":
+                var revOrderIdStr = Environment.GetEnvironmentVariable("BGP_E2E_ORDER_ID");
+                if (!long.TryParse(revOrderIdStr, out var revOrderId)) return 2;
+                cmd.CommandText = "UPDATE dbo.ShowtimeSeats SET state = 'AVAILABLE', owner_order_id = NULL, hold_expires_utc = NULL WHERE owner_order_id = @orderId AND state = 'HELD'; UPDATE dbo.Orders SET status = 'NEEDS_REVIEW', paid_utc = NULL, created_utc = DATEADD(MINUTE, -10, SYSUTCDATETIME()), expires_utc = DATEADD(MINUTE, -5, SYSUTCDATETIME()) WHERE order_id = @orderId AND status IN ('PENDING_PAYMENT', 'EXPIRED', 'CANCELLED', 'FAILED');";
+                cmd.Parameters.Add(new SqlParameter("@orderId", SqlDbType.BigInt) { Value = revOrderId });
+                await cmd.ExecuteNonQueryAsync();
+                return 0;
             case "get-order-ciphers":
                 var cipherOrderIdStr = Environment.GetEnvironmentVariable("BGP_E2E_ORDER_ID");
                 if (!long.TryParse(cipherOrderIdStr, out var cipherOrderId)) return 2;
@@ -576,6 +619,25 @@ BEGIN
 END";
                 await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine("ADMIN_SEEDED");
+                return 0;
+            case "seed-empty-customer":
+                cmd.CommandText = @"
+DECLARE @custRoleId int;
+SELECT @custRoleId = role_id FROM dbo.Roles WHERE role_code = 'CUSTOMER';
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE normalized_email = 'CUSTOMER3@DEMO.INVALID')
+BEGIN
+    INSERT INTO dbo.Users (email, normalized_email, display_name, status, created_utc, password_hash)
+    SELECT 'customer3@demo.invalid', 'CUSTOMER3@DEMO.INVALID', N'Demo Khách hàng Mới', 'ACTIVE', SYSUTCDATETIME(), password_hash
+    FROM dbo.Users WHERE normalized_email = 'CUSTOMER1@DEMO.INVALID';
+
+    DECLARE @cust3Id bigint = SCOPE_IDENTITY();
+
+    INSERT INTO dbo.UserRoles (user_id, role_id)
+    VALUES (@cust3Id, @custRoleId);
+END";
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("EMPTY_CUSTOMER_SEEDED");
                 return 0;
             case "seed-ui-fixtures":
                 cmd.CommandText = @"
@@ -628,18 +690,6 @@ BEGIN
     DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'ui-fixtures';
 END
 
--- Snapshot original demo movie before modifying
-INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
-SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 0
-FROM dbo.Movies
-WHERE title = 'Phim mo phong - KHONG phai lich Beta';
-
-UPDATE dbo.Movies
-SET age_label = 'T16',
-    synopsis = N'Tác phẩm điện ảnh hồi hộp đặc sắc tại Beta Giải Phóng.',
-    poster_url = '/images/posters/poster-noir.svg'
-WHERE title = 'Phim mo phong - KHONG phai lich Beta';
-
 -- 1. Movie with 0 showtimes, null synopsis, and target broken poster URL for fallback test
 DECLARE @noShowtimeMovieId BIGINT;
 INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
@@ -658,7 +708,7 @@ VALUES (
     'PUBLISHED',
     'T16',
     N'Chiến trường đa vũ trụ rực lửa mở ra cuộc đối đầu định mệnh giữa các nền văn minh cổ đại và hạm đội tuần tra liên ngân hà. Một hành trình nghẹt thở với kỹ xảo điện ảnh hoành tráng và âm thanh sống động tại phòng chiếu tiêu chuẩn.',
-    '/images/posters/poster-scifi.svg'
+    '/media/movies/verified/tears-of-steel-2012-poster-w342.jpg'
 );
 SET @multiMovieId = SCOPE_IDENTITY();
 INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
@@ -675,7 +725,7 @@ SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_lab
 -- 4. Additional movie 4
 DECLARE @m4Id BIGINT;
 INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-VALUES (N'Vu Dieu Bong Dem', 115, N'Kinh Dị', 'PUBLISHED', 'T18', N'Bóng ma ẩn sâu sau bức màn nhung.', '/images/posters/poster-horror.svg');
+VALUES (N'Vu Dieu Bong Dem', 115, N'Kinh Dị', 'PUBLISHED', 'T18', N'Bóng ma ẩn sâu sau bức màn nhung.', '/media/movies/verified/notld-1968-poster-w342.jpg');
 SET @m4Id = SCOPE_IDENTITY();
 INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
 SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @m4Id;
@@ -683,7 +733,7 @@ SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_lab
 -- 5. Additional movie 5
 DECLARE @m5Id BIGINT;
 INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-VALUES (N'Sieu Diep Vien Nhi', 88, N'Hoạt Hình', 'PUBLISHED', 'P', N'Biệt đội thám tử nhí phá án tài ba.', '/images/posters/poster-animation.svg');
+VALUES (N'Sieu Diep Vien Nhi', 88, N'Hoạt Hình', 'PUBLISHED', 'P', N'Biệt đội thám tử nhí phá án tài ba.', '/media/movies/verified/spring-2019-poster-w342.jpg');
 SET @m5Id = SCOPE_IDENTITY();
 INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
 SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @m5Id;
@@ -899,6 +949,11 @@ DECLARE @heroTargetId BIGINT;
 SELECT TOP (1) @heroTargetId = m.movie_id
 FROM dbo.Movies m
 WHERE m.status = 'PUBLISHED'
+  AND m.backdrop_url IS NOT NULL
+  AND m.poster_url IS NOT NULL
+  AND m.poster_url NOT LIKE '%.svg'
+  AND ISNULL(m.artwork_source, '') NOT IN ('NONE', 'PENDING_TMDB_API_KEY')
+  AND m.synopsis IS NOT NULL
 ORDER BY CASE WHEN EXISTS (SELECT 1 FROM dbo.Showtimes st WHERE st.movie_id = m.movie_id AND st.status = 'ON_SALE' AND st.start_utc > SYSUTCDATETIME()) THEN 0 ELSE 1 END, m.title, m.movie_id;
 
 IF @heroTargetId IS NOT NULL

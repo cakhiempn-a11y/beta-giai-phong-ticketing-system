@@ -23,7 +23,16 @@ public sealed record OrderSummaryDto(
     DateTime CreatedUtc,
     DateTime ExpiresUtc,
     bool IsHoldExpired,
-    bool CanCancel
+    bool CanCancel,
+    string CreatedVietnamText = "",
+    string RoomName = "",
+    string SeatCodesSummary = "",
+    long MovieId = 0,
+    string? MovieOriginalTitle = null,
+    int? MovieReleaseYear = null,
+    string MovieAgeLabel = "P",
+    string? MovieAgeLabelMarket = null,
+    MovieArtworkDto? MovieArtwork = null
 );
 
 public sealed record OrderSeatItemDto(
@@ -51,7 +60,28 @@ public sealed record OrderDetailDto(
     DateTime ExpiresUtc,
     int RemainingSeconds,
     bool IsHoldExpired,
-    bool CanCancel
+    bool CanCancel,
+    string CreatedVietnamText = "",
+    string ExpiresVietnamText = "",
+    string ExpiresVietnamTimeOnlyText = "",
+    DateTime? PaidUtc = null,
+    string? PaidVietnamText = null,
+    DateTime? EndUtc = null,
+    string StartVietnamDateText = "",
+    string StartVietnamTimeOnlyText = "",
+    string EndVietnamTimeOnlyText = "",
+    bool CrossesMidnight = false,
+    long MovieId = 0,
+    string? MovieOriginalTitle = null,
+    int? MovieReleaseYear = null,
+    int MovieDurationMin = 0,
+    string? MovieDirectorNames = null,
+    string? MovieGenreText = null,
+    string MovieAgeLabel = "P",
+    string? MovieAgeLabelMarket = null,
+    string? PosterUrl = null,
+    MovieRatingDto? MovieRating = null,
+    MovieArtworkDto? MovieArtwork = null
 );
 
 public sealed record CancelOrderResultDto(

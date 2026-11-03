@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chọn ghế — Mê Trong Mê (19:15 • Phòng 01) | Beta Giải Phóng</title>
+  <link rel="stylesheet" href="netflix-cinema.css" />
+</head>
+<body>
+  <header class="bgp-header bgp-header--solid">
+    <div class="bgp-header__left">
+      <a href="01-home-desktop.html" class="bgp-brand">
+        <span class="bgp-brand__badge">BETA</span>
+        <span class="bgp-brand__text">Giải Phóng</span>
+      </a>
+      <nav class="bgp-nav" aria-label="Điều hướng chính">
+        <a href="01-home-desktop.html" class="bgp-nav__link">Trang chủ</a>
+        <a href="03-catalog-mobile.html" class="bgp-nav__link">Danh mục phim</a>
+        <a href="02-movie-detail-desktop.html" class="bgp-nav__link bgp-nav__link--active">Đặt vé tại rạp</a>
+      </nav>
+    </div>
+    <div class="bgp-header__right">
+      <span class="bgp-sim-notice-pill">Chưa bắt đầu đếm ngược giữ ghế cho tới khi xác nhận</span>
+      <div class="bgp-user-chip">
+        <span class="bgp-user-chip__avatar">KH</span>
+        <span>Nguyễn Minh Anh (CUSTOMER)</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="bgp-booking-layout">
+    <!-- Left Column: Accessible Multi-Cue Auditorium Seat Matrix -->
+    <section aria-labelledby="auditorium-heading">
+      <div class="bgp-stepper" aria-label="Tiến trình đặt vé">
+        <span class="bgp-stepper__step bgp-stepper__step--done">✓ 1. Chọn suất chiếu</span>
+        <span>&rarr;</span>
+        <span class="bgp-stepper__step bgp-stepper__step--active">2. Chọn ghế ngồi (Tối đa 8 ghế)</span>
+        <span>&rarr;</span>
+        <span class="bgp-stepper__step">3. Giữ ghế &amp; Thanh toán</span>
+        <span>&rarr;</span>
+        <span class="bgp-stepper__step">4. Nhận vé QR</span>
+      </div>
+
+      <div class="bgp-auditorium-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--bgp-border-subtle);">
+          <div>
+            <h1 id="auditorium-heading" style="margin:0;font-size:1.22rem;font-weight:800;">
+              Phòng Chiếu 01 — Sơ đồ ghế (50 ghế • Dữ liệu mô phỏng học thuật)
+            </h1>
+            <p style="margin:2px 0 0;font-size:0.8rem;color:var(--bgp-text-secondary);">
+              Hỗ trợ chọn bằng Chuột, Cảm ứng hoặc Bàn phím (<kbd style="font-family:var(--bgp-font-mono);background:#272731;padding:1px 5px;border-radius:4px;">Tab</kbd>, <kbd style="font-family:var(--bgp-font-mono);background:#272731;padding:1px 5px;border-radius:4px;">Phím mũi tên</kbd>, <kbd style="font-family:var(--bgp-font-mono);background:#272731;padding:1px 5px;border-radius:4px;">Space/Enter</kbd>)
+            </p>
+          </div>
+          <div style="display:flex;gap:10px;font-size:0.78rem;">
+            <span class="bgp-badge" style="background:rgba(34,197,94,0.14);color:#86EFAC;border:1px solid rgba(34,197,94,0.3);">42 Ghế trống</span>
+            <span class="bgp-badge" style="background:rgba(245,158,11,0.14);color:#FCD34D;border:1px solid rgba(245,158,11,0.3);">3 Đang giữ</span>
+            <span class="bgp-badge" style="background:rgba(255,255,255,0.06);color:var(--bgp-text-muted);border:1px solid var(--bgp-border-subtle);">5 Đã bán</span>
+          </div>
+        </div>
+
+        <div class="bgp-screen-arc" aria-hidden="true">
+          <div class="bgp-screen-arc__bar"></div>
+          <div class="bgp-screen-arc__label">Màn hình chiếu chính</div>
+        </div>
+
+        <div class="bgp-seat-rows" role="group" aria-label="Ma trận ghế ngồi Phòng Chiếu 01">
+          <!-- Row A: Standard -->
+          <div class="bgp-seat-row">
+            <span class="bgp-seat-row__label">A</span>
+            <button type="button" class="bgp-seat" aria-pressed="false" aria-label="Ghế A1 Thường 70.000 đồng, còn trống"><span>A1</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false" aria-label="Ghế A2 Thường 70.000 đồng, còn trống"><span>A2</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A3</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A4</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A5</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A6</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A7</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A8</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A9</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>A10</span></button>
+            <span class="bgp-seat-row__label">A</span>
+          </div>
+
+          <!-- Row B: Standard -->
+          <div class="bgp-seat-row">
+            <span class="bgp-seat-row__label">B</span>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B1</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B2</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B3</span></button>
+            <button type="button" class="bgp-seat bgp-seat--sold" disabled aria-label="Ghế B4 đã bán"><span>B4</span><span class="bgp-seat__cue">✕</span></button>
+            <button type="button" class="bgp-seat bgp-seat--sold" disabled aria-label="Ghế B5 đã bán"><span>B5</span><span class="bgp-seat__cue">✕</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B6</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B7</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B8</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B9</span></button>
+            <button type="button" class="bgp-seat" aria-pressed="false"><span>B10</span></button>
+            <span class="bgp-seat-row__label">B</span>
+          </div>
+
+          <!-- Row C: VIP Center Prime (Selected C5, C6 + Held C4) -->
+          <div class="bgp-seat-row">
+            <span class="bgp-seat-row__label">C</span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C1</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C2</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C3</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--held" disabled aria-label="Ghế C4 đang tạm giữ bởi khách khác"><span>C4</span><span class="bgp-seat__cue">⏳</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip bgp-seat--selected" aria-pressed="true" aria-label="Ghế C5 VIP 90.000 đồng, đang chọn"><span>C5</span><span class="bgp-seat__cue">✓</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip bgp-seat--selected" aria-pressed="true" aria-label="Ghế C6 VIP 90.000 đồng, đang chọn"><span>C6</span><span class="bgp-seat__cue">✓</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C7</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C8</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C9</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>C10</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-row__label">C</span>
+          </div>
+
+          <!-- Row D: VIP -->
+          <div class="bgp-seat-row">
+            <span class="bgp-seat-row__label">D</span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>D1</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>D2</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat bgp-seat--sold" disabled><span>D3</span><span class="bgp-seat__cue">✕</span></button>
+            <button type="button" class="bgp-seat bgp-seat--sold" disabled><span>D4</span><span class="bgp-seat__cue">✕</span></button>
+            <button type="button" class="bgp-seat bgp-seat--sold" disabled><span>D5</span><span class="bgp-seat__cue">✕</span></button>
+            <button type="button" class="bgp-seat bgp-seat--held" disabled><span>D6</span><span class="bgp-seat__cue">⏳</span></button>
+            <button type="button" class="bgp-seat bgp-seat--held" disabled><span>D7</span><span class="bgp-seat__cue">⏳</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>D8</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>D9</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>D10</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-row__label">D</span>
+          </div>
+
+          <!-- Row E: VIP Back -->
+          <div class="bgp-seat-row">
+            <span class="bgp-seat-row__label">E</span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E1</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E2</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E3</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E4</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E5</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E6</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E7</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E8</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-aisle" aria-hidden="true"></span>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E9</span><span class="bgp-seat__cue">★</span></button>
+            <button type="button" class="bgp-seat bgp-seat--vip" aria-pressed="false"><span>E10</span><span class="bgp-seat__cue">★</span></button>
+            <span class="bgp-seat-row__label">E</span>
+          </div>
+        </div>
+
+        <!-- Multi-Cue Legend (Shape + Border + Symbol + Price) -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding-top:18px;border-top:1px solid var(--bgp-border-subtle);font-size:0.76rem;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bgp-seat" style="width:28px;height:26px;font-size:0.62rem;cursor:default;">A1</span>
+            <div><strong>Ghế Thường</strong><div style="color:var(--bgp-text-muted);">70.000 đ</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bgp-seat bgp-seat--vip" style="width:28px;height:26px;font-size:0.62rem;cursor:default;">★</span>
+            <div><strong>Ghế VIP (★)</strong><div style="color:var(--bgp-accent-gold);">90.000 đ</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bgp-seat bgp-seat--selected" style="width:28px;height:26px;font-size:0.65rem;cursor:default;">✓</span>
+            <div><strong>Đang chọn (✓)</strong><div style="color:#FF858B;">Tối đa 8 ghế</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bgp-seat bgp-seat--held" style="width:28px;height:26px;font-size:0.65rem;">⏳</span>
+            <div><strong>Đang tạm giữ</strong><div style="color:var(--bgp-text-muted);">Khóa 5 phút</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bgp-seat bgp-seat--sold" style="width:28px;height:26px;font-size:0.65rem;">✕</span>
+            <div><strong>Đã bán (✕)</strong><div style="color:var(--bgp-text-muted);">Không thể đặt</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Sticky Booking Summary (No premature timer!) -->
+    <aside class="bgp-summary-panel" aria-label="Tóm tắt lựa chọn ghế">
+      <div style="display:flex;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--bgp-border-subtle);margin-bottom:14px;">
+        <img src="assets/charade-1963-poster.jpg" alt="Poster Mê trong mê (1963)" style="width:62px;height:93px;object-fit:cover;border-radius:6px;border:1px solid var(--bgp-border-default);" />
+        <div>
+          <span class="bgp-badge bgp-badge--imdb" style="margin-bottom:5px;">IMDb 7.8/10</span>
+          <h2 style="margin:0 0 3px;font-size:1.02rem;font-weight:800;">Mê Trong Mê</h2>
+          <div style="font-size:0.77rem;color:var(--bgp-text-secondary);">Charade (1963) • 113 phút</div>
+          <div style="font-size:0.77rem;color:var(--bgp-text-muted);margin-top:4px;">Phòng Chiếu 01 • 2D Phụ đề</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bgp-bg-surface-2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:0.8rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="color:var(--bgp-text-muted);">Suất chiếu (VN):</span>
+          <strong>Thứ Tư 04/11/2026 • 19:15</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--bgp-text-muted);">Giờ kết thúc dự kiến:</span>
+          <span>21:08 (UTC+7)</span>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.8rem;">
+        <strong>Ghế bạn đang chọn</strong>
+        <span style="font-family:var(--bgp-font-mono);color:var(--bgp-text-secondary);">2 / 8 ghế</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bgp-bg-surface-2);padding:8px 11px;border-radius:6px;font-size:0.82rem;">
+          <span><strong style="font-family:var(--bgp-font-mono);">C5</strong> • Hạng VIP ★</span>
+          <strong>90.000 đ</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bgp-bg-surface-2);padding:8px 11px;border-radius:6px;font-size:0.82rem;">
+          <span><strong style="font-family:var(--bgp-font-mono);">C6</strong> • Hạng VIP ★</span>
+          <strong>90.000 đ</strong>
+        </div>
+      </div>
+
+      <div style="padding-top:12px;border-top:1px solid var(--bgp-border-default);margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:0.88rem;color:var(--bgp-text-secondary);">Tạm tính (VND nguyên):</span>
+          <strong style="font-size:1.45rem;font-weight:800;color:#FFFFFF;">180.000 đ</strong>
+        </div>
+      </div>
+
+      <a href="05-checkout-desktop.html" class="bgp-btn bgp-btn--primary" style="width:100%;margin-bottom:10px;">
+        Giữ 2 ghế &amp; Tiếp tục thanh toán &rarr;
+      </a>
+
+      <p style="margin:0;font-size:0.73rem;color:var(--bgp-text-muted);line-height:1.45;text-align:center;">
+        Ghế chỉ bắt đầu được khóa giao dịch và tính thời gian giữ chỗ <strong>05:00</strong> sau khi máy chủ xác nhận ở bước tiếp theo.
+      </p>
+    </aside>
+  </main>
+
+  <script src="prototype.js"></script>
+</body>
+</html>

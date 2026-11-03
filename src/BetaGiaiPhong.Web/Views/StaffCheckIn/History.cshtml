@@ -3,197 +3,201 @@
     ViewData["Title"] = "Lịch sử Soát vé";
 }
 
-<div class="container py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 border-bottom pb-3">
-        <div>
-            <h1 class="h3 fw-bold text-dark mb-1">
-                <span class="badge bg-secondary me-2">STAFF</span>Nhật Ký & Lịch Sử Soát Vé
-            </h1>
-            <p class="text-secondary small mb-0">Theo dõi toàn bộ lịch sử quét mã QR vé xem phim từ TicketScans và AuditLogs</p>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-ops.css" asp-append-version="true" />
+}
+
+<div class="bgp-ops-page">
+    <header class="bgp-ops-header">
+        <div class="bgp-ops-header__main">
+            <div class="bgp-ops-eyebrow">GATE AUDIT TRAIL • TICKETSCANS & AUDITLOGS</div>
+            <h1 class="bgp-ops-title">Nhật Ký & Lịch Sử Soát Vé</h1>
+            <p class="bgp-ops-subtitle">
+                Truy vết toàn bộ lượt quét mã QR tại cổng rạp theo thời gian thực (múi giờ nghiệp vụ UTC+7), không lưu lộ chuỗi token gốc.
+            </p>
         </div>
-        <div>
-            <a asp-action="Index" class="btn btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-qr-code-scan me-1" viewBox="0 0 16 16">
-                    <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5M.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5M4 4h1v1H4z"/>
-                    <path d="M7 2H2v5h5zM3 3h3v3H3zm2 8H4v1h1z"/>
-                    <path d="M7 9H2v5h5zM3 10h3v3H3zm8-8H9v5h5zM10 3h3v3h-3zm1 8h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm-2-2h-1v1h1zm0 2h-1v1h1zm4-2h1v1h-1zm0 2h1v1h-1z"/>
-                    <path d="M14 9h-5v5h5zM10 10h3v3h-3z"/>
-                </svg>
+        <div class="bgp-ops-actions">
+            <a asp-action="Index" class="bgp-btn bgp-btn--primary bgp-btn--sm">
                 Quay lại Màn hình Soát vé
             </a>
         </div>
-    </div>
+    </header>
 
     <!-- Bộ lọc suất chiếu và kết quả -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body py-3">
-            <form method="get" class="row g-3 align-items-center">
-                <div class="col-md-5 col-lg-6">
-                    <label for="filterShowtime" class="form-label small fw-semibold text-secondary mb-1">Lọc theo suất chiếu:</label>
-                    <select id="filterShowtime" name="showtimeId" class="form-select">
-                        <option value="">-- Tất cả các suất chiếu --</option>
-                        @foreach (var st in Model.Showtimes)
-                        {
-                            <option value="@st.ShowtimeId" selected="@(st.ShowtimeId == Model.SelectedShowtimeId)">
-                                @st.DisplayText
-                            </option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-4 col-lg-3">
-                    <label for="filterOutcome" class="form-label small fw-semibold text-secondary mb-1">Kết quả soát vé:</label>
-                    <select id="filterOutcome" name="outcome" class="form-select">
-                        <option value="" selected="@(string.IsNullOrEmpty(Model.SelectedOutcome))">-- Tất cả kết quả --</option>
-                        <option value="ACCEPTED" selected="@(Model.SelectedOutcome == "ACCEPTED")">HỢP LỆ (ACCEPTED)</option>
-                        <option value="ALREADY_USED" selected="@(Model.SelectedOutcome == "ALREADY_USED")">ĐÃ DÙNG (ALREADY_USED)</option>
-                        <option value="WRONG_SHOWTIME" selected="@(Model.SelectedOutcome == "WRONG_SHOWTIME")">SAI SUẤT (WRONG_SHOWTIME)</option>
-                        <option value="OUTSIDE_WINDOW" selected="@(Model.SelectedOutcome == "OUTSIDE_WINDOW")">NGOÀI GIỜ (OUTSIDE_WINDOW)</option>
-                        <option value="NOT_FOUND" selected="@(Model.SelectedOutcome == "NOT_FOUND")">KHÔNG TỒN TẠI (NOT_FOUND)</option>
-                    </select>
-                </div>
-                <div class="col-md-3 col-lg-3 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-outline-primary w-100">Lọc dữ liệu</button>
-                    @if (Model.SelectedShowtimeId.HasValue || !string.IsNullOrEmpty(Model.SelectedOutcome))
+    <div class="bgp-ops-filter-bar">
+        <form method="get" asp-action="History" class="bgp-ops-filter-grid">
+            <div>
+                <label for="filterShowtime" class="bgp-ops-label">Lọc theo suất chiếu</label>
+                <select id="filterShowtime" name="showtimeId" class="bgp-ops-select">
+                    <option value="">-- Tất cả các suất chiếu --</option>
+                    @foreach (var st in Model.Showtimes)
                     {
-                        <a asp-action="History" class="btn btn-outline-secondary">Xóa lọc</a>
+                        <option value="@st.ShowtimeId" selected="@(st.ShowtimeId == Model.SelectedShowtimeId)">
+                            @st.DisplayText
+                        </option>
                     }
-                </div>
-            </form>
-        </div>
+                </select>
+            </div>
+            <div>
+                <label for="filterOutcome" class="bgp-ops-label">Kết quả soát vé</label>
+                <select id="filterOutcome" name="outcome" class="bgp-ops-select">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.SelectedOutcome))">-- Tất cả kết quả --</option>
+                    <option value="ACCEPTED" selected="@(Model.SelectedOutcome == "ACCEPTED")">HỢP LỆ (ACCEPTED)</option>
+                    <option value="ALREADY_USED" selected="@(Model.SelectedOutcome == "ALREADY_USED")">ĐÃ DÙNG (ALREADY_USED)</option>
+                    <option value="WRONG_SHOWTIME" selected="@(Model.SelectedOutcome == "WRONG_SHOWTIME")">SAI SUẤT (WRONG_SHOWTIME)</option>
+                    <option value="OUTSIDE_WINDOW" selected="@(Model.SelectedOutcome == "OUTSIDE_WINDOW")">NGOÀI GIỜ (OUTSIDE_WINDOW)</option>
+                    <option value="NOT_FOUND" selected="@(Model.SelectedOutcome == "NOT_FOUND")">KHÔNG TỒN TẠI (NOT_FOUND)</option>
+                </select>
+            </div>
+            <div class="bgp-ops-filter-actions">
+                <button type="submit" class="bgp-btn bgp-btn--primary bgp-btn--sm">Lọc dữ liệu</button>
+                @if (Model.SelectedShowtimeId.HasValue || !string.IsNullOrEmpty(Model.SelectedOutcome))
+                {
+                    <a asp-action="History" class="bgp-btn bgp-btn--outline bgp-btn--sm">Xóa lọc</a>
+                }
+            </div>
+        </form>
     </div>
 
     <!-- Bảng dữ liệu lịch sử quét -->
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="card-title fw-bold mb-0">Danh Sách Lượt Soát Vé (@Model.TotalCount lượt ghi nhận)</h5>
-            <span class="badge bg-light text-dark border">Trang @Model.CurrentPage / @Model.TotalPages</span>
+    <section class="bgp-ops-card">
+        <div class="bgp-ops-card__header">
+            <h2 class="bgp-ops-card__title">Danh Sách Lượt Soát Vé (@Model.TotalCount lượt ghi nhận)</h2>
+            <span class="badge bgp-ops-badge bgp-ops-badge--slate">Trang @Model.CurrentPage / @Model.TotalPages</span>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col" style="width: 170px;">Thời gian (UTC+7)</th>
-                        <th scope="col">Kết quả</th>
-                        <th scope="col">Mã vé</th>
-                        <th scope="col">Phim / Phòng</th>
-                        <th scope="col">Ghế</th>
-                        <th scope="col">Nhân viên soát</th>
-                        <th scope="col">Ghi chú</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.Items.Any())
-                    {
+        <div class="bgp-ops-card__body bgp-ops-card__body--flush">
+            <div class="bgp-ops-table-wrap">
+                <table class="bgp-ops-table">
+                    <thead>
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <em>Chưa có dữ liệu soát vé nào phù hợp với điều kiện tìm kiếm.</em>
-                            </td>
+                            <th scope="col">Thời gian (UTC+7)</th>
+                            <th scope="col">Kết quả</th>
+                            <th scope="col">Mã vé</th>
+                            <th scope="col">Phim / Phòng</th>
+                            <th scope="col">Ghế</th>
+                            <th scope="col">Nhân viên soát</th>
+                            <th scope="col">Ghi chú</th>
                         </tr>
-                    }
-                    else
-                    {
-                        @foreach (var item in Model.Items)
+                    </thead>
+                    <tbody>
+                        @if (!Model.Items.Any())
                         {
                             <tr>
-                                <td class="small font-monospace">@item.FormattedScannedTime</td>
-                                <td>
-                                    @switch (item.Outcome)
-                                    {
-                                        case "ACCEPTED":
-                                            <span class="badge bg-success">HỢP LỆ (ACCEPTED)</span>
-                                            break;
-                                        case "ALREADY_USED":
-                                            <span class="badge bg-warning text-dark">ĐÃ DÙNG (ALREADY_USED)</span>
-                                            break;
-                                        case "WRONG_SHOWTIME":
-                                            <span class="badge bg-warning text-dark">SAI SUẤT (WRONG_SHOWTIME)</span>
-                                            break;
-                                        case "OUTSIDE_WINDOW":
-                                            <span class="badge bg-secondary">NGOÀI GIỜ (OUTSIDE_WINDOW)</span>
-                                            break;
-                                        case "NOT_FOUND":
-                                            <span class="badge bg-danger">KHÔNG TỒN TẠI (NOT_FOUND)</span>
-                                            break;
-                                        case "REJECTED":
-                                        default:
-                                            <span class="badge bg-danger">TỪ CHỐI (@item.Outcome)</span>
-                                            break;
-                                    }
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(item.TicketCode))
-                                    {
-                                        <code class="fw-bold text-dark">@item.TicketCode</code>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted small">N/A</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(item.MovieTitle))
-                                    {
-                                        <div class="fw-semibold">@item.MovieTitle</div>
-                                        <div class="text-muted small">@item.RoomName</div>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted small">Không xác định</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(item.SeatLabel))
-                                    {
-                                        <span class="badge bg-primary">@item.SeatLabel</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted small">-</span>
-                                    }
-                                </td>
-                                <td>
-                                    <span class="small fw-semibold">@item.StaffName</span>
-                                </td>
-                                <td>
-                                    <span class="text-secondary small">@item.Details</span>
+                                <td colspan="7" class="is-center" style="padding: 36px 16px; color: var(--bgp-text-muted);">
+                                    Chưa có dữ liệu soát vé nào phù hợp với điều kiện tìm kiếm.
                                 </td>
                             </tr>
                         }
-                    }
-                </tbody>
-            </table>
+                        else
+                        {
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td class="bgp-ops-mono" style="white-space: nowrap;">@item.FormattedScannedTime</td>
+                                    <td>
+                                        @switch (item.Outcome)
+                                        {
+                                            case "ACCEPTED":
+                                                <span class="badge bgp-ops-badge bgp-ops-badge--emerald">HỢP LỆ (ACCEPTED)</span>
+                                                break;
+                                            case "ALREADY_USED":
+                                                <span class="badge bgp-ops-badge bgp-ops-badge--amber">ĐÃ DÙNG (ALREADY_USED)</span>
+                                                break;
+                                            case "WRONG_SHOWTIME":
+                                                <span class="badge bgp-ops-badge bgp-ops-badge--amber">SAI SUẤT (WRONG_SHOWTIME)</span>
+                                                break;
+                                            case "OUTSIDE_WINDOW":
+                                                <span class="badge bgp-ops-badge bgp-ops-badge--slate">NGOÀI GIỜ (OUTSIDE_WINDOW)</span>
+                                                break;
+                                            case "NOT_FOUND":
+                                                <span class="badge bgp-ops-badge bgp-ops-badge--danger">KHÔNG TỒN TẠI (NOT_FOUND)</span>
+                                                break;
+                                            case "REJECTED":
+                                            default:
+                                                <span class="badge bgp-ops-badge bgp-ops-badge--danger">TỪ CHỐI (@item.Outcome)</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.TicketCode))
+                                        {
+                                            <code class="bgp-inline-code">@item.TicketCode</code>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: var(--bgp-text-muted);">N/A</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.MovieTitle))
+                                        {
+                                            <div style="font-weight: 700; color: #FFFFFF;">@item.MovieTitle</div>
+                                            <div class="bgp-ops-movie-sub">@item.RoomName</div>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: var(--bgp-text-muted);">Không xác định</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.SeatLabel))
+                                        {
+                                            <span class="badge bgp-ops-badge bgp-ops-badge--info bgp-ops-mono">@item.SeatLabel</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: var(--bgp-text-muted);">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span style="font-weight: 600; color: var(--bgp-text-primary);">@item.StaffName</span>
+                                    </td>
+                                    <td>
+                                        <span>@item.Details</span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Phân trang -->
         @if (Model.TotalPages > 1)
         {
-            <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
-                <span class="small text-muted">
+            <div class="bgp-ops-card__footer">
+                <span class="bgp-ops-hint" style="margin:0;">
                     Hiển thị trang @Model.CurrentPage / @Model.TotalPages
                 </span>
-                <nav aria-label="Page navigation">
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
-                            <a class="page-link" asp-action="History" asp-route-page="@(Model.CurrentPage - 1)" asp-route-showtimeId="@Model.SelectedShowtimeId">
-                                &laquo; Trước
-                            </a>
+                <nav aria-label="Phân trang lịch sử soát vé">
+                    <ul class="bgp-ops-pagination">
+                        <li>
+                            <a class="bgp-ops-page-link @(Model.CurrentPage <= 1 ? "is-disabled" : "")"
+                               asp-action="History"
+                               asp-route-page="@(Model.CurrentPage - 1)"
+                               asp-route-showtimeId="@Model.SelectedShowtimeId"
+                               asp-route-outcome="@Model.SelectedOutcome">&laquo; Trước</a>
                         </li>
                         @for (int p = 1; p <= Model.TotalPages; p++)
                         {
-                            <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
-                                <a class="page-link" asp-action="History" asp-route-page="@p" asp-route-showtimeId="@Model.SelectedShowtimeId">
-                                    @p
-                                </a>
+                            <li>
+                                <a class="bgp-ops-page-link @(p == Model.CurrentPage ? "is-active" : "")"
+                                   asp-action="History"
+                                   asp-route-page="@p"
+                                   asp-route-showtimeId="@Model.SelectedShowtimeId"
+                                   asp-route-outcome="@Model.SelectedOutcome">@p</a>
                             </li>
                         }
-                        <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
-                            <a class="page-link" asp-action="History" asp-route-page="@(Model.CurrentPage + 1)" asp-route-showtimeId="@Model.SelectedShowtimeId">
-                                Sau &raquo;
-                            </a>
+                        <li>
+                            <a class="bgp-ops-page-link @(Model.CurrentPage >= Model.TotalPages ? "is-disabled" : "")"
+                               asp-action="History"
+                               asp-route-page="@(Model.CurrentPage + 1)"
+                               asp-route-showtimeId="@Model.SelectedShowtimeId"
+                               asp-route-outcome="@Model.SelectedOutcome">Sau &raquo;</a>
                         </li>
                     </ul>
                 </nav>
             </div>
         }
-    </div>
+    </section>
 </div>

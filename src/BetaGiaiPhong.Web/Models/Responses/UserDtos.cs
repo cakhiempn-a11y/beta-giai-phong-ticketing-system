@@ -5,4 +5,8 @@ public sealed record UserProfileDto(
     string Email,
     string? DisplayName,
     string Status,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    string? CreatedVietnamText = null,
+    int TotalOrdersCount = 0,
+    int PaidOrdersCount = 0
+);

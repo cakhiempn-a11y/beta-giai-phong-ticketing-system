@@ -1,45 +1,114 @@
+@using BetaGiaiPhong.Web.Models.Responses
 @model BetaGiaiPhong.Web.Models.ViewModels.MovieDetailViewModel
 @{
     ViewData["Title"] = Model.Movie.Title;
-    var hasShowtimes = Model.DateGroups.Count > 0;
+    ViewData["HeaderOverlay"] = true;
+
+    var movie = Model.Movie;
+    bool hasShowtimes = Model.DateGroups.Count > 0;
+    bool hasVerifiedBackdrop = movie.Artwork?.HasVerifiedBackdrop == true && !string.IsNullOrWhiteSpace(movie.Artwork.BackdropUrl);
+
+    string? backdropSrcSet = hasVerifiedBackdrop && !string.IsNullOrWhiteSpace(movie.Artwork!.BackdropW780Url)
+        ? $"{movie.Artwork.BackdropW780Url} 780w, {movie.Artwork.BackdropUrl} 1280w"
+        : null;
+
+    string posterSrc = string.IsNullOrWhiteSpace(movie.PosterUrl)
+        ? "/images/poster-fallback.svg"
+        : movie.PosterUrl;
+
+    string? posterSrcSet = movie.Artwork?.HasVerifiedPoster == true
+        && !string.IsNullOrWhiteSpace(movie.Artwork.PosterW342Url)
+        && !string.IsNullOrWhiteSpace(movie.Artwork.PosterUrl)
+        ? $"{movie.Artwork.PosterW342Url} 342w, {movie.Artwork.PosterUrl} 780w"
+        : null;
+
+    var identityParts = new List<string>();
+    if (!string.IsNullOrWhiteSpace(movie.OriginalTitle)
+        && !string.Equals(movie.OriginalTitle, movie.Title, StringComparison.OrdinalIgnoreCase))
+    {
+        identityParts.Add($"Tên gốc: {movie.OriginalTitle}");
+    }
+    if (movie.ReleaseYear.HasValue)
+    {
+        identityParts.Add($"Năm phát hành: {movie.ReleaseYear.Value}");
+    }
+    if (!string.IsNullOrWhiteSpace(movie.OriginCountry))
+    {
+        identityParts.Add($"Quốc gia: {movie.OriginCountry}");
+    }
+    if (!string.IsNullOrWhiteSpace(movie.OriginalLanguage))
+    {
+        identityParts.Add($"Ngôn ngữ gốc: {movie.OriginalLanguage.ToUpperInvariant()}");
+    }
+}
+
+@functions {
+    private static string GetAgeBadgeClass(string? ageLabel)
+    {
+        if (string.IsNullOrWhiteSpace(ageLabel)) return "bgp-age-badge";
+        return ageLabel.Trim().ToUpperInvariant() switch
+        {
+            "P" => "bgp-age-badge bgp-age-badge--p",
+            "K" => "bgp-age-badge bgp-age-badge--k",
+            "T13" or "C13" => "bgp-age-badge bgp-age-badge--t13",
+            "T16" or "C16" => "bgp-age-badge bgp-age-badge--t16",
+            "T18" or "C18" => "bgp-age-badge bgp-age-badge--t18",
+            _ => "bgp-age-badge bgp-age-badge--t13"
+        };
+    }
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/movie-discovery.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/page-detail.css" asp-append-version="true" />
 }
 
 <div class="bgp-movie-detail">
-    <!-- 1. Hero Chi Tiết Phim (Cinematic Movie Detail Hero) -->
+    <!-- 1. Atmospheric Movie Stage Hero -->
     <section class="bgp-detail-hero" aria-labelledby="movie-detail-title">
-        <div class="bgp-detail-backdrop" style="background-image: url('/images/hero-cinema-backdrop.svg');">
-            <div class="bgp-detail-backdrop-overlay"></div>
-        </div>
+        @if (hasVerifiedBackdrop)
+        {
+            <img src="@movie.Artwork!.BackdropUrl"
+                 srcset="@backdropSrcSet"
+                 sizes="100vw"
+                 alt=""
+                 aria-hidden="true"
+                 class="bgp-detail-backdrop-img"
+                 data-testid="detail-backdrop-img"
+                 fetchpriority="high"
+                 loading="eager"
+                 decoding="async"
+                 onerror="this.onerror=null;this.removeAttribute('srcset');this.style.display='none';" />
+        }
+        <div class="bgp-detail-backdrop-scrim" aria-hidden="true"></div>
 
-        <div class="container bgp-detail-hero-container">
+        <div class="bgp-container bgp-detail-hero-container">
             <!-- Breadcrumb -->
-            <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
-                    <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Index">Khám phá phim</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">@Model.Movie.Title</li>
+            <nav aria-label="Đường dẫn trang">
+                <ol class="bgp-breadcrumb">
+                    <li><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                    <li class="bgp-breadcrumb__sep" aria-hidden="true">/</li>
+                    <li><a asp-controller="Movies" asp-action="Index">Khám phá phim</a></li>
+                    <li class="bgp-breadcrumb__sep" aria-hidden="true">/</li>
+                    <li class="bgp-breadcrumb__current" aria-current="page">@movie.Title</li>
                 </ol>
             </nav>
 
-            <div class="row align-items-start g-4 pt-2">
-                <!-- 2:3 Portrait Poster Frame (never stretched as horizontal banner) -->
-                <div class="col-12 col-md-4 col-lg-3 bgp-detail-poster-col">
-                    <div class="bgp-detail-poster-frame">
-                        <img src="@(string.IsNullOrWhiteSpace(Model.Movie.PosterUrl) ? "/images/poster-fallback.svg" : Model.Movie.PosterUrl)"
-                             alt="Poster phim @Model.Movie.Title"
-                             class="bgp-detail-poster-img"
-                             loading="eager"
-                             data-testid="detail-poster-img"
-                             onerror="this.onerror=null;this.src='/images/poster-fallback.svg';" />
-                    </div>
+            <div class="bgp-detail-stage-grid">
+                <!-- 2:3 Portrait Poster Frame (never stretched horizontally) -->
+                <div class="bgp-detail-poster-frame">
+                    <img src="@posterSrc"
+                         srcset="@posterSrcSet"
+                         sizes="(max-width: 839px) 210px, 244px"
+                         alt="Poster phim @movie.Title"
+                         class="bgp-detail-poster-img"
+                         loading="eager"
+                         decoding="async"
+                         data-testid="detail-poster-img"
+                         onerror="this.onerror=null;if(!this.src.endsWith('/images/poster-fallback.svg')){this.removeAttribute('srcset');this.src='/images/poster-fallback.svg';}" />
                 </div>
 
-                <!-- Movie Metadata & Synopsis -->
-                <div class="col-12 col-md-8 col-lg-9">
+                <!-- Grounded Movie Metadata, Synopsis, Credits & Primary Actions -->
+                <div class="bgp-detail-info-col">
                     <div class="bgp-detail-eyebrow">
                         @if (hasShowtimes)
                         {
@@ -47,40 +116,60 @@
                         }
                         else
                         {
-                            <span class="badge bg-secondary" data-testid="detail-status-badge">CHƯA CÓ LỊCH CHIẾU SẮP TỚI</span>
+                            <span class="bgp-badge" data-testid="detail-status-badge">CHƯA CÓ LỊCH CHIẾU SẮP TỚI</span>
                         }
-                        <span class="text-secondary small fw-semibold">BETA GIẢI PHÓNG</span>
+
+                        @if (movie.Rating != null)
+                        {
+                            <span class="bgp-badge bgp-badge--imdb-solid" data-testid="detail-rating-badge">
+                                @movie.Rating.DisplayText
+                            </span>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(movie.AgeLabel))
+                        {
+                            <span class="@GetAgeBadgeClass(movie.AgeLabel)" data-testid="detail-age-label">@movie.AgeLabel</span>
+                        }
+                        else
+                        {
+                            <span class="bgp-badge" data-testid="detail-age-unclassified">Chưa có phân loại tại VN</span>
+                        }
                     </div>
 
-                    <h1 id="movie-detail-title" class="bgp-detail-title">@Model.Movie.Title</h1>
+                    <h1 id="movie-detail-title" class="bgp-detail-title">@movie.Title</h1>
+
+                    @if (identityParts.Count > 0)
+                    {
+                        <p class="bgp-detail-identity" data-testid="detail-identity">
+                            @string.Join(" • ", identityParts)
+                        </p>
+                    }
 
                     <div class="bgp-detail-meta">
-                        @if (!string.IsNullOrWhiteSpace(Model.Movie.AgeLabel))
-                        {
-                            <span class="badge bg-warning text-dark fw-bold" data-testid="detail-age-label">@Model.Movie.AgeLabel</span>
-                        }
-                        <span data-testid="detail-duration">@Model.Movie.DurationMin phút</span>
-                        @if (!string.IsNullOrWhiteSpace(Model.Movie.GenreText))
+                        <span data-testid="detail-duration">@movie.DurationMin phút</span>
+                        @if (!string.IsNullOrWhiteSpace(movie.GenreText))
                         {
                             <span>•</span>
-                            <span data-testid="detail-genre">@Model.Movie.GenreText</span>
+                            <span data-testid="detail-genre">@movie.GenreText</span>
                         }
                         <span>•</span>
                         @if (hasShowtimes)
                         {
-                            <span class="badge bg-success" data-testid="detail-showtime-count">@Model.Movie.UpcomingShowtimes.Count suất chiếu sắp tới</span>
+                            <span class="bgp-badge bgp-badge--success" data-testid="detail-showtime-count">
+                                @movie.UpcomingShowtimes.Count suất chiếu sắp tới
+                            </span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary" data-testid="detail-showtime-count">Chưa có suất chiếu</span>
+                            <span class="bgp-badge" data-testid="detail-showtime-count">Chưa có suất chiếu</span>
                         }
                     </div>
 
-                    <div class="bgp-detail-synopsis-label">Nội dung phim</div>
+                    <div class="bgp-detail-synopsis-label">Nội dung tác phẩm</div>
                     <p class="bgp-detail-synopsis" data-testid="detail-synopsis">
-                        @if (!string.IsNullOrWhiteSpace(Model.Movie.Synopsis))
+                        @if (!string.IsNullOrWhiteSpace(movie.Synopsis))
                         {
-                            @Model.Movie.Synopsis
+                            @movie.Synopsis
                         }
                         else
                         {
@@ -88,17 +177,59 @@
                         }
                     </p>
 
+                    @if (!string.IsNullOrWhiteSpace(movie.DirectorNames))
+                    {
+                        <p class="bgp-detail-credits-line" data-testid="detail-director">
+                            Đạo diễn: <strong>@movie.DirectorNames</strong>
+                        </p>
+                    }
+
+                    @if (movie.Cast != null && movie.Cast.Count > 0)
+                    {
+                        <div class="bgp-detail-synopsis-label">Diễn viên tham gia</div>
+                        <div class="bgp-cast-grid" data-testid="detail-cast-grid">
+                            @foreach (var member in movie.Cast.Take(8))
+                            {
+                                <div class="bgp-cast-chip" data-testid="detail-cast-chip">
+                                    <div class="bgp-cast-chip__name">@member.Name</div>
+                                    @if (!string.IsNullOrWhiteSpace(member.Character))
+                                    {
+                                        <div class="bgp-cast-chip__role">@member.Character</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
                     <div class="bgp-detail-actions">
                         @if (hasShowtimes)
                         {
                             <a href="#showtimes-section"
-                               class="btn btn-primary btn-lg px-4"
+                               class="bgp-btn bgp-btn--primary bgp-btn--lg"
                                data-testid="detail-cta-scroll-showtimes">
                                 Chọn suất chiếu
                             </a>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(movie.OfficialTrailerYoutubeId))
+                        {
+                            <button type="button"
+                                    class="bgp-btn bgp-btn--glass bgp-btn--lg"
+                                    data-testid="detail-trailer-btn"
+                                    data-trailer-open="@movie.OfficialTrailerYoutubeId"
+                                    data-trailer-title="@movie.Title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                <span>Xem trailer chính thức</span>
+                            </button>
+                        }
+
+                        @if (hasShowtimes)
+                        {
                             <a asp-controller="Movies"
                                asp-action="Index"
-                               class="btn btn-outline-light btn-lg px-4">
+                               class="bgp-btn bgp-btn--outline bgp-btn--lg">
                                 Khám phá phim khác
                             </a>
                         }
@@ -106,7 +237,7 @@
                         {
                             <a asp-controller="Movies"
                                asp-action="Index"
-                               class="btn btn-outline-light btn-lg px-4"
+                               class="bgp-btn bgp-btn--outline bgp-btn--lg"
                                data-testid="detail-cta-back-catalog">
                                 &larr; Quay lại danh mục phim
                             </a>
@@ -117,14 +248,14 @@
         </div>
     </section>
 
-    <!-- 2. Lịch Chiếu & Chọn Suất Chiếu Theo Ngày (Showtime Selector by Date in UTC+7) -->
-    <div class="container">
+    <!-- 2. Lower 2-Column Workspace: UTC+7 Showtime Picker (Left) + Provenance Dossier (Right) -->
+    <div class="bgp-container bgp-detail-workspace">
         <section id="showtimes-section" class="bgp-showtimes-section" aria-labelledby="showtimes-heading">
             <div class="bgp-showtimes-header">
                 <div>
-                    <h2 id="showtimes-heading" class="h4 fw-bold mb-1">Lịch Chiếu Tại Beta Giải Phóng</h2>
-                    <p class="text-secondary small mb-0">
-                        Chọn ngày và khung giờ chiếu phù hợp (Giờ Việt Nam UTC+7) để chuyển sang sơ đồ chọn ghế
+                    <h2 id="showtimes-heading" class="bgp-showtimes-title">Lịch Chiếu Tại Beta Giải Phóng</h2>
+                    <p class="bgp-showtimes-sub">
+                        Chọn ngày và khung giờ chiếu phù hợp (Giờ Việt Nam UTC+7) để chuyển sang sơ đồ chọn ghế trực tuyến
                     </p>
                 </div>
             </div>
@@ -133,34 +264,62 @@
             {
                 <div class="bgp-discovery-empty" data-testid="detail-no-showtimes">
                     <div class="bgp-discovery-empty-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     </div>
-                    <h3 class="h5 fw-bold text-light mb-2">Hiện chưa có suất chiếu sắp tới</h3>
-                    <p class="text-secondary small mb-3">
-                        Bộ phim này hiện chưa có lịch chiếu mở bán trong thời gian tới. Mời bạn xem các bộ phim khác đang có suất chiếu tại rạp.
+                    <h3 class="bgp-showtimes-title" style="font-size: 1.15rem;">Hiện chưa có suất chiếu sắp tới</h3>
+                    <p class="bgp-showtimes-sub" style="max-width: 480px;">
+                        Bộ phim này hiện chưa mở lịch chiếu trong thời gian tới. Mời bạn tham khảo các tác phẩm đang mở bán vé tại rạp bên dưới.
                     </p>
                     <a asp-controller="Movies"
                        asp-action="Index"
                        asp-route-filter="has-showtimes"
-                       class="btn btn-primary btn-sm px-4"
+                       class="bgp-btn bgp-btn--primary bgp-btn--sm"
                        data-testid="detail-no-showtimes-browse-btn">
                         Xem các phim có lịch chiếu
                     </a>
                 </div>
+
+                @if (Model.SuggestedOnSaleMovies.Count > 0)
+                {
+                    <div class="bgp-suggested-block" data-testid="detail-suggested-movies">
+                        <h3 class="bgp-suggested-title">Các phim đang mở bán vé tại rạp</h3>
+                        <div class="bgp-suggested-grid">
+                            @foreach (var sug in Model.SuggestedOnSaleMovies)
+                            {
+                                string sugPoster = string.IsNullOrWhiteSpace(sug.PosterUrl)
+                                    ? "/images/poster-fallback.svg"
+                                    : sug.PosterUrl;
+
+                                <a class="bgp-suggested-card"
+                                   asp-controller="Movies"
+                                   asp-action="Details"
+                                   asp-route-id="@sug.MovieId">
+                                    <img src="@sugPoster"
+                                         alt="Poster phim @sug.Title"
+                                         class="bgp-suggested-card__poster"
+                                         loading="lazy"
+                                         onerror="this.onerror=null;if(!this.src.endsWith('/images/poster-fallback.svg')){this.src='/images/poster-fallback.svg';}" />
+                                    <div class="bgp-suggested-card__title">@sug.Title</div>
+                                    <div class="bgp-suggested-card__sub">@sug.UpcomingShowtimesCount suất sắp tới</div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
             }
             else
             {
-                <!-- Date Selector Tabs -->
+                <!-- Accessible UTC+7 Date Selector Tabs -->
                 <div class="bgp-date-tabs" role="tablist" aria-label="Chọn ngày chiếu">
                     @foreach (var group in Model.DateGroups)
                     {
                         var isSelected = string.Equals(group.DateKey, Model.SelectedDateKey, StringComparison.OrdinalIgnoreCase);
-                        <a href="@Url.Action("Details", "Movies", new { id = Model.Movie.MovieId, date = group.DateKey })#showtimes-section"
+                        <a href="@Url.Action("Details", "Movies", new { id = movie.MovieId, date = group.DateKey })#showtimes-section"
                            role="tab"
                            id="tab-date-@group.DateKey"
                            aria-selected="@(isSelected ? "true" : "false")"
@@ -175,7 +334,7 @@
                     }
                 </div>
 
-                <!-- Showtimes Grouped by Date -->
+                <!-- Showtimes Grouped by Date (UTC+7) -->
                 @foreach (var group in Model.DateGroups)
                 {
                     var isSelected = string.Equals(group.DateKey, Model.SelectedDateKey, StringComparison.OrdinalIgnoreCase);
@@ -187,13 +346,17 @@
                          class="bgp-showtime-date-group @(isSelected ? "is-active" : "")">
                         <h3 class="bgp-showtime-date-heading">
                             <span>Ngày chiếu: @group.DayOfWeekLabel, @group.DateDisplayText</span>
-                            <span class="badge bg-dark">@group.Showtimes.Count suất</span>
+                            <span class="bgp-badge">@group.Showtimes.Count suất</span>
                         </h3>
 
                         <div class="bgp-showtime-grid">
                             @foreach (var item in group.Showtimes)
                             {
                                 var st = item.Showtime;
+                                string seatStatusClass = item.IsSoldOut
+                                    ? "bgp-showtime-seats--soldout"
+                                    : (item.IsLowAvailability ? "bgp-showtime-seats--low" : "bgp-showtime-seats--available");
+
                                 <div class="bgp-showtime-card @(item.IsSoldOut ? "bgp-showtime-card--soldout" : "")"
                                      data-testid="showtime-card"
                                      data-showtime-id="@st.ShowtimeId"
@@ -217,8 +380,8 @@
                                     <div class="bgp-showtime-meta-row">
                                         @if (!item.IsSoldOut)
                                         {
-                                            <span class="bgp-showtime-seats bgp-showtime-seats--available" data-testid="showtime-seats">
-                                                Còn @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
+                                            <span class="bgp-showtime-seats @seatStatusClass" data-testid="showtime-seats">
+                                                Còn @st.AvailableSeatsCount / @st.SellableCapacity ghế trống@(item.IsLowAvailability ? " • Sắp hết" : "")
                                             </span>
                                         }
                                         else
@@ -231,7 +394,7 @@
 
                                     @if (!item.IsSoldOut)
                                     {
-                                        <a class="btn btn-primary btn-sm bgp-showtime-cta"
+                                        <a class="bgp-btn bgp-btn--primary bgp-btn--sm bgp-showtime-cta"
                                            data-testid="showtime-cta"
                                            asp-controller="Showtimes"
                                            asp-action="Seats"
@@ -241,7 +404,7 @@
                                     }
                                     else
                                     {
-                                        <a class="btn btn-outline-secondary btn-sm bgp-showtime-cta bgp-showtime-cta--soldout"
+                                        <a class="bgp-btn bgp-btn--outline bgp-btn--sm bgp-showtime-cta"
                                            data-testid="showtime-cta"
                                            asp-controller="Showtimes"
                                            asp-action="Seats"
@@ -256,9 +419,131 @@
                 }
             }
         </section>
+
+        <!-- 3. Grounded Work Provenance & Source Verification Dossier -->
+        <aside class="bgp-provenance-card"
+               data-testid="detail-provenance-card"
+               aria-label="Hồ sơ nguồn dữ liệu tác phẩm">
+            <h2 class="bgp-provenance-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Hồ sơ Nguồn Dữ liệu Tác phẩm</span>
+            </h2>
+
+            <ul class="bgp-provenance-list">
+                <li class="bgp-provenance-row">
+                    <span class="bgp-provenance-label">Nguồn siêu dữ liệu</span>
+                    <span class="bgp-provenance-val">
+                        <span class="bgp-provenance-code">@(string.IsNullOrWhiteSpace(movie.Provenance?.MetadataSource) ? "INTERNAL_CATALOG" : movie.Provenance!.MetadataSource)</span>
+                    </span>
+                </li>
+
+                @if (!string.IsNullOrWhiteSpace(movie.Provenance?.WikidataQid))
+                {
+                    <li class="bgp-provenance-row">
+                        <span class="bgp-provenance-label">Mã Wikidata</span>
+                        <span class="bgp-provenance-val"><span class="bgp-provenance-code">@movie.Provenance.WikidataQid</span></span>
+                    </li>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(movie.Provenance?.ImdbId))
+                {
+                    <li class="bgp-provenance-row">
+                        <span class="bgp-provenance-label">Mã IMDb</span>
+                        <span class="bgp-provenance-val"><span class="bgp-provenance-code">@movie.Provenance.ImdbId</span></span>
+                    </li>
+                }
+
+                <li class="bgp-provenance-row">
+                    <span class="bgp-provenance-label">Điểm đánh giá</span>
+                    <span class="bgp-provenance-val">
+                        @(movie.Rating?.DisplayText ?? "Chưa tích hợp điểm công khai")
+                    </span>
+                </li>
+
+                <li class="bgp-provenance-row">
+                    <span class="bgp-provenance-label">Phân loại độ tuổi</span>
+                    <span class="bgp-provenance-val">
+                        @if (!string.IsNullOrWhiteSpace(movie.AgeLabel))
+                        {
+                            @($"{movie.AgeLabel} ({movie.Provenance?.AgeLabelMarket ?? "VN"})")
+                        }
+                        else
+                        {
+                            @:Chưa có phân loại tại VN
+                        }
+                    </span>
+                </li>
+
+                <li class="bgp-provenance-row">
+                    <span class="bgp-provenance-label">Nguồn hình ảnh</span>
+                    <span class="bgp-provenance-val">
+                        <span class="bgp-provenance-code">@(movie.Artwork?.Source ?? "PLACEHOLDER")</span>
+                    </span>
+                </li>
+
+                @if (!string.IsNullOrWhiteSpace(movie.Artwork?.LicenseText))
+                {
+                    <li class="bgp-provenance-row">
+                        <span class="bgp-provenance-label">Giấy phép ảnh</span>
+                        <span class="bgp-provenance-val">@movie.Artwork.LicenseText</span>
+                    </li>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(movie.Artwork?.AttributionText))
+                {
+                    <li class="bgp-provenance-row">
+                        <span class="bgp-provenance-label">Ghi công tác giả</span>
+                        <span class="bgp-provenance-val">@movie.Artwork.AttributionText</span>
+                    </li>
+                }
+            </ul>
+
+            <p class="bgp-provenance-note">
+                Thông tin tác phẩm điện ảnh được đối chiếu từ nguồn mở xác minh. Lịch chiếu (UTC+7), phòng chiếu và sơ đồ ghế là dữ liệu vận hành độc lập phục vụ đồ án học thuật MIS.
+            </p>
+        </aside>
     </div>
 </div>
 
+<!-- Click-to-Load Official YouTube Trailer Modal (<dialog>) -->
+<dialog id="bgp-trailer-dialog"
+        class="bgp-trailer-dialog"
+        data-testid="trailer-dialog"
+        aria-labelledby="bgp-trailer-dialog-title">
+    <div class="bgp-trailer-dialog__header">
+        <div class="bgp-trailer-dialog__title-group">
+            <div class="bgp-trailer-dialog__eyebrow">Official Trailer</div>
+            <h2 id="bgp-trailer-dialog-title" class="bgp-trailer-dialog__title" data-trailer-dialog-title>
+                Trailer chính thức — @movie.Title
+            </h2>
+        </div>
+        <button type="button"
+                class="bgp-icon-btn"
+                data-trailer-close
+                data-testid="trailer-dialog-close"
+                aria-label="Đóng cửa sổ trailer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+    <div class="bgp-trailer-dialog__stage" data-trailer-stage></div>
+    <div class="bgp-trailer-dialog__footer">
+        <span>Trình phát bảo vệ quyền riêng tư (youtube-nocookie.com) — chỉ tải khi người dùng yêu cầu</span>
+        <a href="https://www.youtube.com"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="bgp-cinema-footer__link"
+           data-trailer-external-link>
+            Mở trên YouTube &nearr;
+        </a>
+    </div>
+</dialog>
+
 @section Scripts {
-    <script src="~/js/movie-discovery.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/modules/showtime-picker.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/modules/trailer-dialog.js" asp-append-version="true"></script>
 }

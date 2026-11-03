@@ -1,0 +1,811 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   04-components.css: Shared Atomic Primitives (.bgp-*) & Upgraded Static
+                      Shell Views (Privacy, AccessDenied, Error)
+   Zero Bootstrap Dependencies
+   ========================================================================== */
+
+/* --- 1. Buttons (.bgp-btn) --- */
+.bgp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--bgp-target-min);
+  padding: 0 22px;
+  border-radius: var(--bgp-radius-sm);
+  font-family: var(--bgp-font-sans);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition:
+    background-color var(--bgp-duration-fast) ease,
+    border-color var(--bgp-duration-fast) ease,
+    color var(--bgp-duration-fast) ease,
+    transform var(--bgp-duration-fast) var(--bgp-ease-out);
+}
+
+.bgp-btn:disabled,
+.bgp-btn[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.bgp-btn--primary {
+  background: var(--bgp-brand-red);
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 20px rgba(229, 9, 20, 0.34);
+}
+
+.bgp-btn--primary:hover {
+  background: var(--bgp-brand-red-hover);
+  color: #FFFFFF !important;
+}
+
+.bgp-btn--glass {
+  background: rgba(109, 109, 118, 0.36);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF !important;
+  backdrop-filter: blur(8px);
+}
+
+.bgp-btn--glass:hover {
+  background: rgba(109, 109, 118, 0.52);
+}
+
+.bgp-btn--outline {
+  background: var(--bgp-bg-surface-1);
+  border-color: var(--bgp-border-strong);
+  color: var(--bgp-text-primary) !important;
+}
+
+.bgp-btn--outline:hover {
+  background: var(--bgp-bg-surface-2);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.bgp-btn--danger {
+  background: var(--bgp-status-danger-bg);
+  border-color: var(--bgp-status-danger-border);
+  color: var(--bgp-status-danger-fg) !important;
+}
+
+.bgp-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.26);
+  color: #FFFFFF !important;
+}
+
+.bgp-btn--sm {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.82rem;
+}
+
+.bgp-icon-btn {
+  width: var(--bgp-target-min);
+  height: var(--bgp-target-min);
+  min-width: var(--bgp-target-min);
+  min-height: var(--bgp-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 22, 27, 0.88);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-sm);
+  color: var(--bgp-text-primary);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-icon-btn:hover {
+  background: var(--bgp-bg-surface-2);
+  border-color: var(--bgp-border-strong);
+  color: #FFFFFF;
+}
+
+@media (max-width: 420px) {
+  .bgp-btn--responsive {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* --- 2. Semantic Badges (.bgp-badge) --- */
+.bgp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--bgp-radius-xs);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.bgp-badge--brand {
+  background: var(--bgp-brand-red-soft);
+  border: 1px solid var(--bgp-brand-red-border);
+  color: #FF8086;
+}
+
+.bgp-badge--gold {
+  background: var(--bgp-accent-gold-soft);
+  border: 1px solid var(--bgp-accent-gold-border);
+  color: var(--bgp-accent-gold);
+}
+
+.bgp-badge--neutral {
+  background: var(--bgp-bg-surface-2);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-badge--success {
+  background: var(--bgp-status-success-bg);
+  border: 1px solid var(--bgp-status-success-border);
+  color: var(--bgp-status-success-fg);
+}
+
+.bgp-badge--warning {
+  background: var(--bgp-status-warning-bg);
+  border: 1px solid var(--bgp-status-warning-border);
+  color: var(--bgp-status-warning-fg);
+}
+
+.bgp-badge--danger {
+  background: var(--bgp-status-danger-bg);
+  border: 1px solid var(--bgp-status-danger-border);
+  color: var(--bgp-status-danger-fg);
+}
+
+/* --- 3. Form Inputs (.bgp-input, .bgp-select) --- */
+.bgp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bgp-field__label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-input,
+.bgp-select,
+.bgp-textarea {
+  width: 100%;
+  min-height: var(--bgp-target-min);
+  padding: 10px 14px;
+  border-radius: var(--bgp-radius-sm);
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-control);
+  color: var(--bgp-text-primary);
+  font-size: 0.94rem;
+  transition: border-color var(--bgp-duration-fast) ease, background-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-input::placeholder,
+.bgp-textarea::placeholder {
+  color: var(--bgp-text-muted);
+}
+
+.bgp-input:focus,
+.bgp-select:focus,
+.bgp-textarea:focus {
+  background: var(--bgp-bg-surface-2);
+  border-color: var(--bgp-text-primary);
+}
+
+/* --- 4. Cards, Panels, Alerts & Code Callouts --- */
+.bgp-card,
+.bgp-panel {
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-lg);
+  padding: clamp(20px, 3.5vw, 36px);
+  box-shadow: var(--bgp-shadow-card);
+}
+
+.bgp-panel--elevated {
+  background: linear-gradient(180deg, #191920 0%, #131318 100%);
+  border-color: var(--bgp-border-default);
+}
+
+.bgp-alert {
+  padding: 16px 18px;
+  border-radius: var(--bgp-radius-md);
+  border: 1px solid var(--bgp-border-default);
+  background: var(--bgp-bg-surface-2);
+  color: var(--bgp-text-primary);
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.bgp-alert--warning {
+  background: var(--bgp-status-warning-bg);
+  border-color: var(--bgp-status-warning-border);
+}
+
+.bgp-alert--danger {
+  background: var(--bgp-status-danger-bg);
+  border-color: var(--bgp-status-danger-border);
+}
+
+.bgp-alert--info {
+  background: var(--bgp-status-info-bg);
+  border-color: var(--bgp-status-info-border);
+}
+
+.bgp-alert__title {
+  margin: 0 0 6px;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+/* --- 5. Tables, Skeletons, Empty States, Dialogs & Toasts --- */
+.bgp-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--bgp-radius-md);
+  border: 1px solid var(--bgp-border-default);
+}
+
+.bgp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.bgp-table th {
+  text-align: left;
+  padding: 11px 14px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bgp-text-muted);
+  background: #121217;
+  border-bottom: 1px solid var(--bgp-border-default);
+}
+
+.bgp-table td {
+  padding: 11px 14px;
+  color: var(--bgp-text-secondary);
+  border-bottom: 1px solid var(--bgp-border-subtle);
+  vertical-align: middle;
+}
+
+.bgp-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bgp-bg-surface-1) 0%,
+    var(--bgp-bg-surface-3) 50%,
+    var(--bgp-bg-surface-1) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--bgp-radius-sm);
+  animation: bgp-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes bgp-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.bgp-empty-box {
+  background: var(--bgp-bg-surface-1);
+  border: 1px dashed var(--bgp-border-strong);
+  border-radius: var(--bgp-radius-lg);
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.bgp-dialog {
+  background: var(--bgp-bg-popover);
+  color: var(--bgp-text-primary);
+  border: 1px solid var(--bgp-border-strong);
+  border-radius: var(--bgp-radius-lg);
+  padding: 24px;
+  max-width: min(520px, 92vw);
+  box-shadow: var(--bgp-shadow-popover);
+}
+
+.bgp-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.bgp-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1080;
+  background: var(--bgp-bg-popover);
+  border: 1px solid var(--bgp-border-strong);
+  border-left: 4px solid var(--bgp-brand-red);
+  border-radius: var(--bgp-radius-md);
+  padding: 12px 16px;
+  color: var(--bgp-text-primary);
+  font-size: 0.88rem;
+  box-shadow: var(--bgp-shadow-elevated);
+}
+
+/* --- 6. Upgraded Static Shell Views (Privacy, AccessDenied, Error) --- */
+.bgp-static-page {
+  padding-block: clamp(28px, 5vw, 56px);
+}
+
+.bgp-doc-header {
+  margin-bottom: 28px;
+}
+
+.bgp-doc-title {
+  margin: 12px 0 10px;
+  font-size: var(--bgp-text-h1);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.16;
+  color: #FFFFFF;
+}
+
+.bgp-doc-lead {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.62;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+@media (max-width: 767.98px) {
+  .bgp-doc-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.bgp-doc-section {
+  background: var(--bgp-bg-surface-2);
+  border: 1px solid var(--bgp-border-subtle);
+  border-radius: var(--bgp-radius-md);
+  padding: 20px;
+}
+
+.bgp-doc-section__title {
+  margin: 0 0 10px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.bgp-doc-section p,
+.bgp-doc-section li {
+  color: var(--bgp-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.62;
+}
+
+.bgp-doc-section ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bgp-doc-section code,
+.bgp-inline-code {
+  font-family: var(--bgp-font-mono);
+  font-size: 0.82em;
+  padding: 2px 6px;
+  border-radius: var(--bgp-radius-xs);
+  background: rgba(255, 255, 255, 0.08);
+  color: #F5F5F7;
+  overflow-wrap: anywhere;
+}
+
+/* Status / Error Hero Panel (403, 404, 500) */
+.bgp-status-panel {
+  text-align: center;
+  padding: clamp(28px, 6vw, 52px) clamp(18px, 4vw, 40px);
+}
+
+.bgp-status-panel__code {
+  font-family: var(--bgp-font-mono);
+  font-size: clamp(3.2rem, 8vw, 5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin-bottom: 12px;
+}
+
+.bgp-status-panel__code--danger {
+  color: var(--bgp-brand-red);
+}
+
+.bgp-status-panel__code--warning {
+  color: var(--bgp-accent-gold);
+}
+
+.bgp-status-panel__title {
+  margin: 0 0 12px;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-status-panel__message {
+  margin: 0 auto 24px;
+  max-width: 520px;
+  color: var(--bgp-text-secondary);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.bgp-trace-box {
+  margin: 0 auto 24px;
+  max-width: 540px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: var(--bgp-radius-md);
+  background: #101015;
+  border: 1px solid var(--bgp-border-default);
+  font-family: var(--bgp-font-mono);
+  font-size: 0.8rem;
+  color: var(--bgp-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.bgp-status-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* --- 7.VN Age Classification Badges, Quick-Preview Popover & Trailer Dialog --- */
+.bgp-age-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: var(--bgp-radius-xs);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  background: #F59E0B;
+  color: #0A0A0C;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.bgp-age-badge--p {
+  background: #4ADE80;
+  color: #052E16;
+}
+
+.bgp-age-badge--k {
+  background: #38BDF8;
+  color: #082F49;
+}
+
+.bgp-age-badge--t13 {
+  background: #F59E0B;
+  color: #0A0A0C;
+}
+
+.bgp-age-badge--t16 {
+  background: #FB923C;
+  color: #0A0A0C;
+}
+
+.bgp-age-badge--t18 {
+  background: #E50914;
+  color: #FFFFFF;
+}
+
+.bgp-badge--imdb-solid {
+  background: var(--bgp-accent-gold);
+  color: #0A0A0C;
+  font-weight: 800;
+  border: 1px solid rgba(245, 197, 24, 0.9);
+}
+
+.bgp-time-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bgp-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 3px 9px;
+  border-radius: var(--bgp-radius-xs);
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: var(--bgp-bg-surface-2);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-primary) !important;
+  text-decoration: none !important;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease, color var(--bgp-duration-fast) ease;
+}
+
+.bgp-time-pill:hover {
+  background: var(--bgp-brand-red);
+  border-color: var(--bgp-brand-red);
+  color: #FFFFFF !important;
+}
+
+.bgp-time-pill--highlight {
+  background: var(--bgp-brand-red-soft);
+  border-color: var(--bgp-brand-red-border);
+  color: #FF8C92 !important;
+}
+
+.bgp-time-pill--highlight:hover {
+  background: var(--bgp-brand-red);
+  border-color: var(--bgp-brand-red);
+  color: #FFFFFF !important;
+}
+
+/* Netflix-Caliber Floating Quick-Preview Popover */
+.bgp-preview-popover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 344px;
+  max-width: calc(100vw - 24px);
+  z-index: 1060;
+  background: var(--bgp-bg-popover);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--bgp-radius-md);
+  box-shadow: var(--bgp-shadow-popover);
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.95) translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 180ms var(--bgp-ease-out),
+    transform 180ms var(--bgp-ease-out);
+}
+
+.bgp-preview-popover.is-open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+.bgp-preview-popover[hidden] {
+  display: none !important;
+}
+
+.bgp-preview-popover__media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #0E0E13;
+  overflow: hidden;
+}
+
+.bgp-preview-popover__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bgp-preview-popover__media--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  text-align: center;
+  color: var(--bgp-text-muted);
+  font-size: 0.78rem;
+  background: linear-gradient(145deg, #17171E 0%, #0E0E12 100%);
+}
+
+.bgp-preview-popover__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 10, 12, 0.12) 35%, rgba(24, 24, 31, 0.96) 100%);
+  pointer-events: none;
+}
+
+.bgp-preview-popover__top-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+}
+
+.bgp-preview-popover__close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(10, 10, 12, 0.78);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.bgp-preview-popover__close:hover {
+  background: var(--bgp-bg-surface-3);
+}
+
+.bgp-preview-popover__headline {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 10px;
+  z-index: 2;
+}
+
+.bgp-preview-popover__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.24;
+  color: #FFFFFF;
+}
+
+.bgp-preview-popover__orig {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-preview-popover__body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bgp-preview-popover__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-preview-popover__synopsis {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.48;
+  color: var(--bgp-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bgp-preview-popover__director {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-preview-popover__director strong {
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-preview-popover__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--bgp-border-subtle);
+}
+
+/* Official Click-to-Load YouTube Trailer <dialog> */
+.bgp-trailer-dialog {
+  width: min(920px, 94vw);
+  max-width: min(920px, 94vw);
+  margin: auto;
+  padding: 0;
+  background: #0E0E13;
+  color: var(--bgp-text-primary);
+  border: 1px solid var(--bgp-border-strong);
+  border-radius: var(--bgp-radius-lg);
+  box-shadow: var(--bgp-shadow-popover);
+  overflow: hidden;
+}
+
+.bgp-trailer-dialog::backdrop {
+  background: rgba(4, 4, 7, 0.86);
+  backdrop-filter: blur(6px);
+}
+
+.bgp-trailer-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #14141B;
+  border-bottom: 1px solid var(--bgp-border-subtle);
+}
+
+.bgp-trailer-dialog__title-group {
+  min-width: 0;
+}
+
+.bgp-trailer-dialog__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bgp-brand-red);
+}
+
+.bgp-trailer-dialog__title {
+  margin: 2px 0 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgp-trailer-dialog__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000000;
+}
+
+.bgp-trailer-dialog__stage iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.bgp-trailer-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #121218;
+  border-top: 1px solid var(--bgp-border-subtle);
+  font-size: 0.78rem;
+  color: var(--bgp-text-muted);
+}
