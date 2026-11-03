@@ -9,7 +9,7 @@ using BetaGiaiPhong.Web.Services;
 namespace BetaGiaiPhong.Web.Controllers;
 
 [Route("account")]
-public sealed class AccountController(IAuthService authService) : Controller
+public sealed class AccountController(IAuthService authService, IWebHostEnvironment env) : Controller
 {
     [HttpGet("login")]
     public IActionResult Login(string? returnUrl = null)
@@ -25,7 +25,8 @@ public sealed class AccountController(IAuthService authService) : Controller
 
         var vm = new LoginViewModel
         {
-            Request = new LoginRequest { ReturnUrl = returnUrl }
+            Request = new LoginRequest { ReturnUrl = returnUrl },
+            IsDevelopment = env.IsDevelopment()
         };
 
         return View(vm);
@@ -36,6 +37,8 @@ public sealed class AccountController(IAuthService authService) : Controller
     [EnableRateLimiting("LoginRateLimit")]
     public async Task<IActionResult> Login(LoginViewModel model, CancellationToken ct)
     {
+        model.IsDevelopment = env.IsDevelopment();
+
         if (!ModelState.IsValid)
         {
             return View(model);

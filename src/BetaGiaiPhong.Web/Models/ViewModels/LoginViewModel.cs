@@ -6,4 +6,5 @@ public sealed class LoginViewModel
 {
     public LoginRequest Request { get; set; } = new();
     public string? ErrorMessage { get; set; }
+    public bool IsDevelopment { get; set; }
 }

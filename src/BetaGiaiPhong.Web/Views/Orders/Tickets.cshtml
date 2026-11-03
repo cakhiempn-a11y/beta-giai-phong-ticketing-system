@@ -1,125 +1,352 @@
 @model BetaGiaiPhong.Web.Models.ViewModels.OrderTicketsViewModel
 @{
+    Layout = "_CinemaLayout";
+    ViewData["HeaderOverlay"] = false;
     ViewData["Title"] = $"Vé điện tử đơn hàng #{Model.OrderCode}";
+
+    var art = Model.MovieArtwork;
+    bool hasVerifiedPoster = art?.HasVerifiedPoster == true && !string.IsNullOrWhiteSpace(art.PosterUrl);
+    string posterSrc = hasVerifiedPoster
+        ? (art!.PosterW342Url ?? art.PosterUrl!)
+        : "/images/poster-fallback.svg";
+    string? posterSrcSet = hasVerifiedPoster && !string.IsNullOrWhiteSpace(art!.PosterW342Url) && !string.IsNullOrWhiteSpace(art.PosterUrl)
+        ? $"{art.PosterW342Url} 342w, {art.PosterUrl} 780w"
+        : null;
+
+    bool hasVnClassification = !string.IsNullOrWhiteSpace(Model.MovieAgeLabel) &&
+        string.Equals(Model.MovieAgeLabelMarket, "VN", StringComparison.OrdinalIgnoreCase);
+    string ageCodeLower = (Model.MovieAgeLabel ?? "P").Trim().ToLowerInvariant();
+
+    int issuedCount = Model.Tickets.Count(t => string.Equals(t.Status, "ISSUED", StringComparison.OrdinalIgnoreCase));
+    int usedCount = Model.Tickets.Count(t => string.Equals(t.Status, "USED", StringComparison.OrdinalIgnoreCase));
 }
 
-<div class="container mt-4 mb-5">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
-            <li class="breadcrumb-item"><a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId">@Model.OrderCode</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Vé điện tử</li>
-        </ol>
-    </nav>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-tickets.css" asp-append-version="true" />
+}
 
-    <!-- Page Header -->
-    <div class="card shadow-sm border-0 mb-4 bg-dark text-white">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div>
-                <span class="badge bg-warning text-dark font-monospace mb-2">BETA CINEMAS GIẢI PHÓNG</span>
-                <h1 class="h3 fw-bold mb-1">🎟️ Vé Điện Tử Chính Thức</h1>
-                <p class="mb-0 opacity-75">
-                    Mã đơn hàng: <span class="font-monospace fw-bold text-info">@Model.OrderCode</span> |
-                    Trạng thái: <span class="badge bg-success">Đã thanh toán (PAID)</span>
-                </p>
+<div class="bgp-tickets-page" data-testid="order-tickets-page">
+    <!-- 1. Top Breadcrumb & 4-Step Booking Stepper (Step 4 Complete) -->
+    <div class="bgp-tk-topbar">
+        <nav aria-label="Đường dẫn điều hướng">
+            <ol class="bgp-tk-breadcrumb">
+                <li><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="bgp-tk-breadcrumb__sep" aria-hidden="true">/</li>
+                <li><a asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
+                <li class="bgp-tk-breadcrumb__sep" aria-hidden="true">/</li>
+                <li><a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId">@Model.OrderCode</a></li>
+                <li class="bgp-tk-breadcrumb__sep" aria-hidden="true">/</li>
+                <li class="bgp-tk-breadcrumb__current" aria-current="page">Vé điện tử QR</li>
+            </ol>
+        </nav>
+
+        <ol class="bgp-tk-stepper" aria-label="Tiến trình đặt vé">
+            <li class="bgp-tk-stepper__item">
+                <span class="bgp-tk-stepper__pill bgp-tk-stepper__pill--done">
+                    <span aria-hidden="true">&#10003;</span>
+                    <span>1. Chọn suất chiếu</span>
+                </span>
+                <span class="bgp-tk-stepper__arrow" aria-hidden="true">&rarr;</span>
+            </li>
+            <li class="bgp-tk-stepper__item">
+                <span class="bgp-tk-stepper__pill bgp-tk-stepper__pill--done">
+                    <span aria-hidden="true">&#10003;</span>
+                    <span>2. Chọn ghế ngồi</span>
+                </span>
+                <span class="bgp-tk-stepper__arrow" aria-hidden="true">&rarr;</span>
+            </li>
+            <li class="bgp-tk-stepper__item">
+                <span class="bgp-tk-stepper__pill bgp-tk-stepper__pill--done">
+                    <span aria-hidden="true">&#10003;</span>
+                    <span>3. Giữ chỗ &amp; Thanh toán</span>
+                </span>
+                <span class="bgp-tk-stepper__arrow" aria-hidden="true">&rarr;</span>
+            </li>
+            <li class="bgp-tk-stepper__item">
+                <span class="bgp-tk-stepper__pill bgp-tk-stepper__pill--active" aria-current="step">
+                    <span aria-hidden="true">&#10003;</span>
+                    <span>4. Nhận vé QR (@Model.Tickets.Count vé)</span>
+                </span>
+            </li>
+        </ol>
+    </div>
+
+    <!-- Flash Success Message (when arriving right after DemoPay) -->
+    @if (!string.IsNullOrWhiteSpace(Model.FlashMessage))
+    {
+        <div class="bgp-tk-alert bgp-tk-alert--success" role="status" data-testid="tickets-flash-success">
+            <div class="bgp-tk-alert__body">
+                <span aria-hidden="true" style="color: #86EFAC; font-weight: 800;">&#10003;</span>
+                <div>
+                    <span class="bgp-tk-alert__title">Phát hành vé điện tử thành công</span>
+                    <span>@Model.FlashMessage</span>
+                </div>
             </div>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-light" onclick="window.print()">
-                    🖨️ In vé
+            <button type="button" class="bgp-tk-alert__close" data-dismiss-alert aria-label="Đóng thông báo">&times;</button>
+        </div>
+    }
+
+    <!-- 2. Screening & Order Dossier Header -->
+    <section class="bgp-tk-dossier" aria-labelledby="tickets-dossier-heading" data-testid="tickets-dossier-header">
+        <div class="bgp-tk-dossier__film">
+            <div class="bgp-tk-dossier__poster-wrap">
+                <img src="@posterSrc"
+                     srcset="@posterSrcSet"
+                     sizes="86px"
+                     alt="Poster phim @Model.MovieTitle"
+                     class="bgp-tk-dossier__poster"
+                     width="86"
+                     height="129"
+                     loading="eager"
+                     onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/images/poster-fallback.svg';" />
+            </div>
+
+            <div class="bgp-tk-dossier__info">
+                <div class="bgp-tk-dossier__badges">
+                    <span class="bgp-tk-paid-pill">Đã thanh toán &bull; PAID</span>
+                    <span class="bgp-tk-room-pill">@Model.RoomName</span>
+
+                    @if (hasVnClassification)
+                    {
+                        <span class="bgp-age-badge bgp-age-badge--@ageCodeLower">@Model.MovieAgeLabel</span>
+                    }
+                    else
+                    {
+                        <span class="bgp-badge bgp-badge--neutral">Chưa có phân loại tại VN</span>
+                    }
+
+                    @if (Model.MovieRating is not null)
+                    {
+                        <span class="bgp-badge bgp-badge--imdb-solid" data-testid="tickets-movie-rating">
+                            @Model.MovieRating.DisplayText
+                        </span>
+                    }
+                </div>
+
+                <h1 id="tickets-dossier-heading" class="bgp-tk-dossier__title">@Model.MovieTitle</h1>
+
+                <div class="bgp-tk-dossier__sub">
+                    @if (!string.IsNullOrWhiteSpace(Model.MovieOriginalTitle) &&
+                         !string.Equals(Model.MovieOriginalTitle, Model.MovieTitle, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span>@Model.MovieOriginalTitle@(Model.MovieReleaseYear.HasValue ? $" ({Model.MovieReleaseYear})" : "") &bull; </span>
+                    }
+                    else if (Model.MovieReleaseYear.HasValue)
+                    {
+                        <span>Năm @Model.MovieReleaseYear &bull; </span>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.MovieDirectorNames))
+                    {
+                        <span>Đạo diễn @Model.MovieDirectorNames &bull; </span>
+                    }
+
+                    @if (Model.MovieDurationMin > 0)
+                    {
+                        <span>@Model.MovieDurationMin phút</span>
+                    }
+                </div>
+
+                <div class="bgp-tk-dossier__meta">
+                    <span>
+                        Mã đơn: <strong class="bgp-tk-mono">#@Model.OrderCode</strong>
+                    </span>
+                    <span>
+                        Ngày chiếu: <strong>@(string.IsNullOrWhiteSpace(Model.StartVietnamDateText) ? Model.FormattedStartUtc : Model.StartVietnamDateText)</strong>
+                    </span>
+                    <span>
+                        Khung giờ (UTC+7):
+                        <strong class="bgp-tk-mono">
+                            @if (!string.IsNullOrWhiteSpace(Model.StartVietnamTimeOnlyText) && !string.IsNullOrWhiteSpace(Model.EndVietnamTimeOnlyText))
+                            {
+                                @:@Model.StartVietnamTimeOnlyText &rarr; @Model.EndVietnamTimeOnlyText
+                            }
+                            else
+                            {
+                                @Model.FormattedStartUtc
+                            }
+                        </strong>
+                        @if (Model.CrossesMidnight)
+                        {
+                            <span class="bgp-tk-midnight-pill">+1 ngày</span>
+                        }
+                    </span>
+                    <span>
+                        Tổng số vé: <strong>@Model.Tickets.Count vé</strong> (@issuedCount chưa soát, @usedCount đã soát)
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(Model.PaidVietnamText))
+                    {
+                        <span>
+                            Xác nhận lúc: <strong class="bgp-tk-mono">@Model.PaidVietnamText (UTC+7)</strong>
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="bgp-tk-dossier__actions">
+            <div class="bgp-tk-dossier__btn-row">
+                <button type="button"
+                        class="bgp-btn bgp-btn--primary"
+                        data-print-tickets
+                        data-testid="print-tickets-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    <span>In vé / Lưu PDF</span>
                 </button>
-                <a class="btn btn-light" asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId">
+                <a class="bgp-btn bgp-btn--outline"
+                   asp-controller="Orders"
+                   asp-action="Details"
+                   asp-route-id="@Model.OrderId">
                     Chi tiết đơn hàng
                 </a>
             </div>
         </div>
+    </section>
+
+    <!-- Optical Scanning Instruction Banner -->
+    <div class="bgp-tk-scan-guide" role="note" data-testid="qr-optical-quiet-zone-note">
+        <span>
+            <strong>Chuẩn quang học cổng soát vé Beta Giải Phóng:</strong> Mỗi ghế có một mã QR độc lập được khóa cứng trên nền trắng tinh <strong>#FFFFFF</strong> kèm viền tĩnh &ge; <code>12px</code> (không áp bộ lọc tối) để máy quét đọc tức thì ở mọi độ sáng màn hình.
+        </span>
+        <span class="bgp-tk-mono">Múi giờ hiển thị: UTC+7</span>
     </div>
 
-    <!-- Movie & Showtime Info Bar -->
-    <div class="card shadow-sm border-0 mb-4 bg-light">
-        <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-            <div>
-                <h2 class="h5 fw-bold mb-0 text-dark">🎬 @Model.MovieTitle</h2>
-            </div>
-            <div class="d-flex gap-3 text-muted small flex-wrap">
-                <span>🏛️ Phòng chiếu: <strong class="text-dark">@Model.RoomName</strong></span>
-                <span>🕒 Suất chiếu: <strong class="text-dark">@Model.FormattedStartUtc</strong></span>
-                <span>🎫 Số lượng: <strong class="text-dark">@Model.Tickets.Count vé</strong></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tickets Grid (Boarding Pass Cards) -->
-    <div class="row g-4 mb-4">
+    <!-- 3. Perforated Cinema Boarding Pass Grid -->
+    <div class="bgp-tickets-grid" data-testid="tickets-grid">
         @foreach (var ticket in Model.Tickets)
         {
-            <div class="col-md-6 col-lg-6">
-                <div class="card shadow-sm border-0 h-100 position-relative overflow-hidden ticket-card">
-                    <!-- Ticket Header Banner -->
-                    <div class="p-3 bg-primary text-white d-flex justify-content-between align-items-center">
-                        <span class="small text-uppercase fw-bold opacity-75">VÉ XEM PHIM ĐIỆN TỬ</span>
-                        <span class="badge @(ticket.Status == "ISSUED" ? "bg-success" : "bg-secondary")">
-                            @(ticket.Status == "ISSUED" ? "HỢP LỆ / CHƯA SOÁT" : "ĐÃ SOÁT VÉ (USED)")
+            bool isUsed = string.Equals(ticket.Status, "USED", StringComparison.OrdinalIgnoreCase);
+            bool isVip = string.Equals(ticket.SeatType, "VIP", StringComparison.OrdinalIgnoreCase);
+            string issuedDisplay = !string.IsNullOrWhiteSpace(ticket.IssuedVietnamText)
+                ? $"{ticket.IssuedVietnamText} (UTC+7)"
+                : $"{ticket.IssuedUtc:dd/MM/yyyy HH:mm} UTC";
+
+            <article class="ticket-card @(isUsed ? "ticket-card--used" : "ticket-card--issued")"
+                     data-ticket-status="@ticket.Status"
+                     data-ticket-code="@ticket.TicketCode"
+                     aria-label="Thẻ vé điện tử ghế @ticket.SeatCode — mã @ticket.TicketCode">
+                <!-- Boarding Pass Top Bar -->
+                <div class="bgp-ticket-head">
+                    <span class="bgp-ticket-head__brand">
+                        <span class="bgp-ticket-head__dot" aria-hidden="true"></span>
+                        <span>THẺ LÊN RẠP &bull; BETA GIẢI PHÓNG</span>
+                    </span>
+
+                    @if (isUsed)
+                    {
+                        <span class="bgp-ticket-status-badge bgp-ticket-status-badge--used" data-testid="ticket-status-used">
+                            ĐÃ SOÁT VÉ (USED)
                         </span>
-                    </div>
+                    }
+                    else
+                    {
+                        <span class="bgp-ticket-status-badge bgp-ticket-status-badge--issued" data-testid="ticket-status-issued">
+                            HỢP LỆ / CHƯA SOÁT &bull; ISSUED
+                        </span>
+                    }
+                </div>
 
-                    <div class="card-body p-4 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-4">
-                        <!-- Left Details -->
-                        <div class="flex-grow-1">
-                            <div class="mb-3">
-                                <span class="small text-muted d-block">Mã vé (Ticket Code)</span>
-                                <span class="font-monospace fw-bold text-dark fs-6">@ticket.TicketCode</span>
+                <!-- Boarding Pass Perforated Body -->
+                <div class="bgp-ticket-body">
+                    <div class="bgp-ticket-main">
+                        <div class="bgp-ticket-seat-row">
+                            <div class="bgp-ticket-seat-box">
+                                <span class="bgp-ticket-seat-box__label">Ghế ngồi</span>
+                                <span class="bgp-ticket-seat-box__code">@ticket.SeatCode</span>
                             </div>
 
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <span class="small text-muted d-block">Ghế ngồi</span>
-                                    <span class="badge bg-dark font-monospace fs-4 px-3 py-1">@ticket.SeatCode</span>
-                                </div>
-                                <div class="col-6">
-                                    <span class="small text-muted d-block">Loại ghế</span>
-                                    @if (ticket.SeatType == "VIP")
-                                    {
-                                        <span class="badge bg-danger fs-6 px-2 py-1">VIP</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-primary fs-6 px-2 py-1">Thường</span>
-                                    }
-                                </div>
+                            <div class="bgp-ticket-tier-price">
+                                @if (isVip)
+                                {
+                                    <span class="bgp-ticket-tier-pill bgp-ticket-tier-pill--vip">
+                                        <span aria-hidden="true">&#9733;</span>
+                                        <span>Ghế VIP</span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="bgp-ticket-tier-pill bgp-ticket-tier-pill--std">
+                                        <span aria-hidden="true">&bull;</span>
+                                        <span>Ghế Thường</span>
+                                    </span>
+                                }
+                                <span class="bgp-ticket-price">@ticket.PriceVnd.ToString("N0") đ</span>
                             </div>
-
-                            <div class="mb-2">
-                                <span class="small text-muted d-block">Giá vé</span>
-                                <span class="fw-bold text-primary fs-5">@ticket.PriceVnd.ToString("N0") đ</span>
-                            </div>
-
-                            <p class="small text-muted mb-0">
-                                Phát hành: <strong>@ticket.IssuedUtc.ToString("dd/MM/yyyy HH:mm")</strong>
-                            </p>
                         </div>
 
-                        <!-- Right QR Code Box -->
-                        <div class="text-center p-2 bg-light rounded border flex-shrink-0">
-                            <img src="@ticket.QrCodeUrl" alt="Mã QR soát vé @ticket.TicketCode" class="img-fluid bg-white p-1 rounded" style="width: 140px; height: 140px; display: block;" />
-                            <span class="d-block small text-muted font-monospace mt-1" style="font-size: 0.7rem;">MÃ SOÁT VÉ QR</span>
+                        <div class="bgp-ticket-kv-list">
+                            <div class="bgp-ticket-kv">
+                                <span class="bgp-ticket-kv__label">Mã vé định danh (Ticket Code)</span>
+                                <span class="bgp-ticket-kv__val bgp-tk-mono">@ticket.TicketCode</span>
+                            </div>
+                            <div class="bgp-ticket-kv">
+                                <span class="bgp-ticket-kv__label">Suất chiếu &amp; Khán phòng</span>
+                                <span class="bgp-ticket-kv__val">@ticket.RoomName &bull; @ticket.FormattedStartUtc (UTC+7)</span>
+                            </div>
+                            <div class="bgp-ticket-kv">
+                                <span class="bgp-ticket-kv__label">Thời điểm cấp vé</span>
+                                <span class="bgp-ticket-kv__val bgp-tk-mono">@issuedDisplay</span>
+                            </div>
+
+                            @if (isUsed)
+                            {
+                                <div class="bgp-ticket-kv" data-testid="ticket-used-timestamp">
+                                    <span class="bgp-ticket-kv__label">Thời điểm quét qua cổng</span>
+                                    <span class="bgp-ticket-kv__val bgp-ticket-kv__val--used bgp-tk-mono">
+                                        @(!string.IsNullOrWhiteSpace(ticket.UsedVietnamText)
+                                            ? $"{ticket.UsedVietnamText} (UTC+7)"
+                                            : "Đã ghi nhận lượt soát vé")
+                                    </span>
+                                </div>
+                            }
                         </div>
                     </div>
 
-                    <!-- Card Footer -->
-                    <div class="card-footer bg-white border-top small text-muted text-center py-2">
-                        <span>ℹ️ Xuất trình mã QR tại cổng soát vé trước giờ chiếu 15 phút.</span>
+                    <!-- Hard-Locked Pure #FFFFFF Optical QR Stub -->
+                    <div class="bgp-ticket-qr-stub">
+                        <div class="bgp-qr-box" data-testid="ticket-qr-box">
+                            <img src="@ticket.QrCodeUrl"
+                                 alt="Mã QR soát vé @ticket.TicketCode — Ghế @ticket.SeatCode"
+                                 width="152"
+                                 height="152"
+                                 loading="eager"
+                                 decoding="sync" />
+                        </div>
+                        <span class="bgp-ticket-qr-caption">MÃ SOÁT VÉ QR</span>
                     </div>
                 </div>
-            </div>
+
+                <!-- Boarding Pass Footer -->
+                <div class="bgp-ticket-foot">
+                    @if (isUsed)
+                    {
+                        <span>Vé này đã được sử dụng tại cổng kiểm soát và không thể quét lặp lần hai.</span>
+                    }
+                    else
+                    {
+                        <span>Xuất trình mã QR tại cổng soát vé trong khung giờ mở cửa trước suất chiếu.</span>
+                    }
+                    <span class="bgp-tk-mono">#@ticket.OrderCode</span>
+                </div>
+            </article>
         }
     </div>
 
-    <!-- Return to list -->
-    <div class="text-center">
-        <a class="btn btn-outline-secondary px-4 py-2" asp-controller="Orders" asp-action="Index">
+    <!-- Bottom Navigation -->
+    <div class="bgp-tk-bottom-nav">
+        <a class="bgp-btn bgp-btn--outline" asp-controller="Orders" asp-action="Index">
             &larr; Quay lại danh sách đơn hàng
+        </a>
+        <a class="bgp-btn bgp-btn--glass" asp-controller="Movies" asp-action="Index" asp-route-filter="has-showtimes">
+            Đặt thêm vé suất chiếu khác &rarr;
         </a>
     </div>
 </div>
+
+@section Scripts {
+    <script type="module" src="~/js/modules/tickets-print.js" asp-append-version="true"></script>
+}

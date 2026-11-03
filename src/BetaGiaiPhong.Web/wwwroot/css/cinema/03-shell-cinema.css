@@ -1,0 +1,629 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   03-shell-cinema.css: Consumer Header (Translucent -> Frosted Obsidian),
+                        Inline Movie Search, Role Context Switch, User Menu,
+                        Mobile Drawer (>= 44x44px) & Provenance Footer
+   ========================================================================== */
+
+/* --- 1. Fixed Consumer Header --- */
+.bgp-cinema-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--bgp-header-h);
+  z-index: 1020;
+  background: var(--bgp-bg-header-top);
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color var(--bgp-duration-base) var(--bgp-ease-out),
+    border-color var(--bgp-duration-base) var(--bgp-ease-out),
+    box-shadow var(--bgp-duration-base) var(--bgp-ease-out),
+    backdrop-filter var(--bgp-duration-base) var(--bgp-ease-out);
+}
+
+/* Translucent default header state over full-bleed Hero backdrop */
+header.bgp-cinema-header.bgp-navbar {
+  background-color: transparent !important;
+  border-bottom-color: transparent;
+  min-height: var(--bgp-header-h);
+  padding: 0;
+}
+
+header.bgp-cinema-header.bgp-cinema-header--solid,
+header.bgp-cinema-header.bgp-cinema-header--scrolled {
+  background: var(--bgp-bg-header-solid) !important;
+  background-color: rgba(10, 10, 12, 0.95) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--bgp-border-subtle);
+}
+
+header.bgp-cinema-header.bgp-cinema-header--scrolled {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.62);
+}
+
+.bgp-cinema-header__inner {
+  width: 100%;
+  max-width: 1680px;
+  height: 100%;
+  margin-inline: auto;
+  padding-inline: var(--bgp-gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.bgp-cinema-header__left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-width: 0;
+}
+
+/* --- 2. Brand Mark --- */
+.bgp-cinema-brand,
+.bgp-cinema-header a.bgp-cinema-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: var(--bgp-target-min);
+  text-decoration: none !important;
+  color: #FFFFFF !important;
+  flex-shrink: 0;
+}
+
+.bgp-cinema-brand__badge {
+  background: var(--bgp-brand-red);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: var(--bgp-radius-xs);
+  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.42);
+  line-height: 1.1;
+}
+
+.bgp-cinema-brand__name {
+  font-weight: 800;
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+@media (max-width: 359.98px) {
+  .bgp-cinema-brand__name {
+    font-size: 0.96rem;
+  }
+}
+
+/* --- 3. Primary Desktop Navigation (Strictly Consumer-Facing) --- */
+.bgp-cinema-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bgp-cinema-nav__link,
+.bgp-cinema-header a.bgp-cinema-nav__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--bgp-target-min);
+  padding: 0 2px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: rgba(245, 245, 247, 0.78) !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: color var(--bgp-duration-fast) ease;
+}
+
+.bgp-cinema-nav__link:hover,
+.bgp-cinema-nav__link:focus-visible,
+.bgp-cinema-nav__link.is-active,
+.bgp-cinema-header a.bgp-cinema-nav__link.is-active {
+  color: #FFFFFF !important;
+}
+
+.bgp-cinema-nav__link.is-active {
+  font-weight: 700;
+}
+
+.bgp-cinema-nav__link.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--bgp-brand-red);
+}
+
+/* --- 4. Right Utilities: Search, Academic Pill, Context Switch & User Menu --- */
+.bgp-cinema-header__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Expandable / Inline Header Search (GET /movies?q=...) */
+.bgp-header-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 10px 0 4px;
+  background: rgba(16, 16, 20, 0.78);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-xs);
+  width: 228px;
+  transition:
+    width var(--bgp-duration-base) var(--bgp-ease-out),
+    border-color var(--bgp-duration-fast) ease,
+    background-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-header-search:focus-within,
+.bgp-header-search.is-expanded {
+  background: rgba(10, 10, 12, 0.96);
+  border-color: rgba(255, 255, 255, 0.55);
+  width: 264px;
+}
+
+@media (min-width: 992px) and (max-width: 1239.98px) {
+  .bgp-header-search {
+    width: 170px;
+  }
+  .bgp-header-search:focus-within,
+  .bgp-header-search.is-expanded {
+    width: 205px;
+  }
+}
+
+.bgp-header-search__btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--bgp-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--bgp-radius-xs);
+  flex-shrink: 0;
+}
+
+.bgp-header-search__btn:hover {
+  color: #FFFFFF;
+}
+
+.bgp-header-search__input {
+  width: 100%;
+  min-width: 0;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--bgp-text-primary) !important;
+  font-family: var(--bgp-font-sans);
+  font-size: 0.84rem;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0;
+}
+
+.bgp-header-search__input::placeholder {
+  color: var(--bgp-text-muted);
+}
+
+/* Subtle Academic Simulation Pill */
+.bgp-sim-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--bgp-radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--bgp-text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bgp-border-subtle);
+  white-space: nowrap;
+}
+
+@media (max-width: 1339.98px) {
+  .bgp-sim-pill {
+    display: none;
+  }
+}
+
+/* Single Clean Context-Switch Pill for STAFF / MANAGER / ADMIN */
+.bgp-ops-switch-pill,
+.bgp-cinema-header a.bgp-ops-switch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: var(--bgp-radius-sm);
+  background: rgba(245, 197, 24, 0.12);
+  border: 1px solid rgba(245, 197, 24, 0.38);
+  color: var(--bgp-accent-gold) !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-ops-switch-pill:hover,
+.bgp-cinema-header a.bgp-ops-switch-pill:hover {
+  background: rgba(245, 197, 24, 0.22);
+  border-color: rgba(245, 197, 24, 0.64);
+}
+
+/* User Menu Dropdown (Zero-Bootstrap Accessible Details/Menu) */
+.bgp-user-menu {
+  position: relative;
+}
+
+.bgp-user-menu__trigger {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 10px 4px 6px;
+  background: var(--bgp-bg-surface-2);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-sm);
+  color: var(--bgp-text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bgp-user-menu__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.bgp-user-menu__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--bgp-radius-xs);
+  background: linear-gradient(135deg, #E50914, #991B1B);
+  color: #FFFFFF;
+  font-size: 0.76rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.bgp-user-menu__name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgp-user-menu__caret {
+  font-size: 0.68rem;
+  color: var(--bgp-text-muted);
+  transition: transform var(--bgp-duration-fast) ease;
+}
+
+.bgp-user-menu[open] .bgp-user-menu__caret {
+  transform: rotate(180deg);
+}
+
+.bgp-user-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 244px;
+  background: var(--bgp-bg-popover);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-md);
+  box-shadow: var(--bgp-shadow-popover);
+  padding: 6px;
+  z-index: 1050;
+}
+
+.bgp-user-menu__header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--bgp-border-subtle);
+  margin-bottom: 4px;
+}
+
+.bgp-user-menu__email {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--bgp-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgp-user-menu__role {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--bgp-text-muted);
+  font-family: var(--bgp-font-mono);
+}
+
+.bgp-user-menu__item,
+.bgp-cinema-header a.bgp-user-menu__item {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--bgp-radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--bgp-text-secondary) !important;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+.bgp-user-menu__item:hover,
+.bgp-cinema-header a.bgp-user-menu__item:hover {
+  background: var(--bgp-bg-surface-2);
+  color: #FFFFFF !important;
+}
+
+.bgp-user-menu__item--danger {
+  color: var(--bgp-status-danger-fg) !important;
+}
+
+.bgp-user-menu__item--danger:hover {
+  background: var(--bgp-status-danger-bg);
+  color: #FFFFFF !important;
+}
+
+/* Login CTA in Header */
+.bgp-header-login-btn,
+.bgp-cinema-header a.bgp-header-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: var(--bgp-radius-xs);
+  background: var(--bgp-brand-red);
+  color: #FFFFFF !important;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-header-login-btn:hover,
+.bgp-cinema-header a.bgp-header-login-btn:hover {
+  background: var(--bgp-brand-red-hover);
+}
+
+/* --- 5. Mobile Controls & Slide-Over Drawer (< 992px) --- */
+.bgp-cinema-mobile-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.bgp-cinema-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1030;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--bgp-duration-base) ease;
+}
+
+.bgp-cinema-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bgp-cinema-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 88vw);
+  max-width: 100vw;
+  z-index: 1040;
+  background: #101015;
+  border-left: 1px solid var(--bgp-border-default);
+  box-shadow: var(--bgp-shadow-elevated);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 16px;
+  overflow-y: auto;
+  visibility: hidden;
+  transform: translateX(104%);
+  transition:
+    transform var(--bgp-duration-base) var(--bgp-ease-out),
+    visibility 0s linear var(--bgp-duration-base);
+}
+
+.bgp-cinema-drawer.is-open {
+  visibility: visible;
+  transform: translateX(0);
+  transition:
+    transform var(--bgp-duration-base) var(--bgp-ease-out),
+    visibility 0s linear 0s;
+}
+
+.bgp-cinema-drawer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bgp-border-subtle);
+}
+
+.bgp-cinema-drawer__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-control);
+  border-radius: var(--bgp-radius-sm);
+  padding: 0 10px;
+  min-height: var(--bgp-target-min);
+}
+
+.bgp-cinema-drawer__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--bgp-text-primary) !important;
+  font-size: 0.92rem;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.bgp-cinema-drawer__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bgp-cinema-drawer__link,
+.bgp-cinema-drawer a.bgp-cinema-drawer__link {
+  min-height: var(--bgp-target-min);
+  padding: 10px 12px;
+  border-radius: var(--bgp-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--bgp-text-secondary) !important;
+  text-decoration: none !important;
+}
+
+.bgp-cinema-drawer__link.is-active,
+.bgp-cinema-drawer a.bgp-cinema-drawer__link.is-active {
+  background: var(--bgp-brand-red-soft);
+  color: #FFFFFF !important;
+  border-left: 3px solid var(--bgp-brand-red);
+}
+
+.bgp-cinema-drawer__footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--bgp-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 991.98px) {
+  .bgp-cinema-nav,
+  .bgp-cinema-header__right {
+    display: none;
+  }
+  .bgp-cinema-mobile-actions {
+    display: flex;
+  }
+}
+
+/* --- 6. Main Viewport Offset & Hero Full-Bleed Clearance --- */
+.bgp-cinema-main {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+body.bgp-cinema-body:not(.bgp-cinema-body--overlay-hero) .bgp-cinema-main {
+  padding-top: var(--bgp-header-h);
+}
+
+/* Ensure UI-02A/02B Hero sections bleed behind translucent header while keeping text below 68px */
+body.bgp-cinema-body--overlay-hero .bgp-home-hero .bgp-hero-container {
+  padding-top: calc(var(--bgp-header-h) + 24px);
+}
+
+body.bgp-cinema-body--overlay-hero .bgp-detail-hero {
+  padding-top: calc(var(--bgp-header-h) + 16px);
+}
+
+/* --- 7. Cinema Footer (Academic Disclaimer + Open Provenance Attribution) --- */
+.bgp-cinema-footer {
+  margin-top: auto;
+  background: var(--bgp-bg-footer);
+  border-top: 1px solid var(--bgp-border-subtle);
+  padding: 28px 0;
+  color: var(--bgp-text-muted);
+  font-size: 0.8rem;
+}
+
+.bgp-cinema-footer__grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.bgp-cinema-footer__brand {
+  max-width: 680px;
+}
+
+.bgp-cinema-footer__title {
+  color: var(--bgp-text-primary);
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 6px;
+}
+
+.bgp-cinema-footer__desc {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--bgp-text-muted);
+}
+
+.bgp-cinema-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.bgp-cinema-footer__link,
+.bgp-cinema-footer a.bgp-cinema-footer__link {
+  color: var(--bgp-text-secondary) !important;
+  font-weight: 600;
+  text-decoration: none !important;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bgp-cinema-footer__link:hover,
+.bgp-cinema-footer a.bgp-cinema-footer__link:hover {
+  color: #FFFFFF !important;
+  text-decoration: underline !important;
+}

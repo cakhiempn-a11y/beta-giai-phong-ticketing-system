@@ -628,21 +628,34 @@ public sealed class StaffCheckInWebTests(TestDatabaseFixture fixture) : IClassFi
 
         var html = await response.Content.ReadAsStringAsync();
 
-        // 1. Security: Must NOT contain raw token logging
-        Assert.DoesNotContain("console.log(\"Debounced duplicate scan:", html);
-        Assert.DoesNotContain("console.log(\"Raw QR Token", html);
+        // Zero-Bootstrap & modular scanner hooks in HTML
+        Assert.DoesNotContain("bootstrap.min.css", html);
+        Assert.DoesNotContain("dark-compat.css", html);
+        Assert.Contains("qrFileScratch", html);
+        Assert.Contains("cameraErrorBanner", html);
+        Assert.Contains("/js/modules/qr-scanner.js", html);
+
+        var jsResp = await client.GetAsync("/js/modules/qr-scanner.js");
+        Assert.Equal(HttpStatusCode.OK, jsResp.StatusCode);
+        var scannerJs = await jsResp.Content.ReadAsStringAsync();
+        var combined = html + "\n" + scannerJs;
+
+        // 1. Security & UX: Must NOT contain raw token logging or browser alert()
+        Assert.DoesNotContain("console.log(\"Debounced duplicate scan:", combined);
+        Assert.DoesNotContain("console.log(\"Raw QR Token", combined);
+        Assert.DoesNotContain("alert(", scannerJs);
 
         // 2. Safe DOM rendering: Must use textContent and createElement rather than insecure innerHTML interpolation
-        Assert.Contains("textContent", html);
-        Assert.Contains("createElement", html);
+        Assert.Contains("textContent", scannerJs);
+        Assert.Contains("createElement", scannerJs);
 
         // 3. Duplicate scan prevention & reset flow + isolated deterministic QR file decoder
-        Assert.Contains("btnScanNext", html);
-        Assert.Contains("btnRescanCurrent", html);
-        Assert.Contains("isInFlight", html);
-        Assert.Contains("isTicketAccepted", html);
-        Assert.Contains("qrFileScratch", html);
-        Assert.Contains("decodeQrFileDeterministically", html);
-        Assert.Contains("INVALID_QR_IMAGE", html);
+        Assert.Contains("btnScanNext", scannerJs);
+        Assert.Contains("btnRescanCurrent", scannerJs);
+        Assert.Contains("isInFlight", scannerJs);
+        Assert.Contains("isTicketAccepted", scannerJs);
+        Assert.Contains("qrFileScratch", scannerJs);
+        Assert.Contains("decodeQrFileDeterministically", scannerJs);
+        Assert.Contains("INVALID_QR_IMAGE", scannerJs);
     }
 }

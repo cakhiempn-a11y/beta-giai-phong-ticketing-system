@@ -17,7 +17,20 @@ public sealed record MovieManagementSummaryDto(
     string? PosterUrl,
     string Status,
     int TotalShowtimes,
-    int ActiveShowtimes);
+    int ActiveShowtimes,
+    string? OriginalTitle = null,
+    short? ReleaseYear = null,
+    string? DirectorNames = null,
+    string? PosterW342Url = null,
+    string? WikidataQid = null,
+    string? ImdbId = null,
+    int? TmdbId = null,
+    string? RatingSource = null,
+    decimal? RatingValue = null,
+    int? RatingVoteCount = null,
+    string? ArtworkSource = null,
+    string? MetadataSource = null,
+    string? ManualOverrideMask = null);
 
 public sealed record ShowtimeManagementSummaryDto(
     long ShowtimeId,
@@ -135,7 +148,15 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
-            query = query.Where(m => m.Title.Contains(s) || (m.GenreText != null && m.GenreText.Contains(s)));
+            bool hasTmdbSearch = int.TryParse(s, out var parsedTmdb);
+            query = query.Where(m =>
+                m.Title.Contains(s) ||
+                (m.OriginalTitle != null && m.OriginalTitle.Contains(s)) ||
+                (m.DirectorNames != null && m.DirectorNames.Contains(s)) ||
+                (m.GenreText != null && m.GenreText.Contains(s)) ||
+                (m.WikidataQid != null && m.WikidataQid == s) ||
+                (m.ImdbId != null && m.ImdbId == s) ||
+                (hasTmdbSearch && m.TmdbId == parsedTmdb));
         }
 
         if (!string.IsNullOrWhiteSpace(status) && status != "ALL")
@@ -162,7 +183,20 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
                 m.PosterUrl,
                 m.Status,
                 m.Showtimes.Count,
-                m.Showtimes.Count(s => s.Status != "CANCELLED" && s.EndUtc > nowUtc)
+                m.Showtimes.Count(s => s.Status != "CANCELLED" && s.EndUtc > nowUtc),
+                m.OriginalTitle,
+                m.ReleaseYear,
+                m.DirectorNames,
+                m.PosterW342Url,
+                m.WikidataQid,
+                m.ImdbId,
+                m.TmdbId,
+                m.RatingSource,
+                m.RatingValue,
+                m.RatingVoteCount,
+                m.ArtworkSource,
+                m.MetadataSource,
+                m.ManualOverrideMask
             ))
             .ToListAsync(ct);
 
@@ -286,8 +320,8 @@ public sealed class ManagementQueryService(BetaDbContext db, ISystemClock clock)
         var capacity = showtime.SellableCapacitySnapshot ?? sales?.SellableCapacity ?? seats.Count;
         var occupancyPct = sales?.OccupancyPct ?? (capacity > 0 ? Math.Round((decimal)ticketsSold * 100m / capacity, 2) : 0m);
 
-        // Can cancel only if ON_SALE, zero tickets sold, and zero seats currently SOLD
-        var canCancel = showtime.Status == "ON_SALE" && ticketsSold == 0 && sold == 0;
+        // Can cancel if not already CANCELLED, zero tickets sold, and zero seats currently SOLD
+        var canCancel = showtime.Status != "CANCELLED" && ticketsSold == 0 && sold == 0;
 
         return new ShowtimeManagementDetailDto(
             showtime.ShowtimeId,

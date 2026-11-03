@@ -3,105 +3,257 @@
     ViewData["Title"] = $"Chỉnh sửa phim #{Model.MovieId}: {Model.Title}";
 }
 
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb small">
-                    <li class="breadcrumb-item"><a asp-action="Movies">Danh mục Phim</a></li>
-                    <li class="breadcrumb-item"><a asp-action="MovieDetail" asp-route-id="@Model.MovieId">@Model.Title</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Chỉnh sửa</li>
-                </ol>
-            </nav>
+@section Styles {
+    <link rel="stylesheet" href="~/css/cinema/page-ops.css" asp-append-version="true" />
+}
 
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="h4 fw-bold mb-0 text-dark">Chỉnh sửa thông tin phim</h1>
-                        <span class="text-muted small">Mã phim: #@Model.MovieId</span>
-                    </div>
-                    <div>
-                        @switch (Model.Status)
-                        {
-                            case "PUBLISHED":
-                                <span class="badge bg-success">PUBLISHED</span>
-                                break;
-                            case "ARCHIVED":
-                                <span class="badge bg-secondary">ARCHIVED</span>
-                                break;
-                            default:
-                                <span class="badge bg-warning text-dark">DRAFT</span>
-                                break;
-                        }
-                    </div>
-                </div>
-                <div class="card-body p-4">
-                    <form method="post" asp-action="MovieEdit" asp-route-id="@Model.MovieId">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="MovieId" value="@Model.MovieId" />
+<div class="bgp-ops-page bgp-ops-page--narrow">
+    <ol class="bgp-ops-breadcrumb" aria-label="Breadcrumb">
+        <li><a asp-action="Movies">Danh mục Phim</a></li>
+        <li class="bgp-ops-breadcrumb__sep" aria-hidden="true">/</li>
+        <li><a asp-action="MovieDetail" asp-route-id="@Model.MovieId">@Model.Title</a></li>
+        <li class="bgp-ops-breadcrumb__sep" aria-hidden="true">/</li>
+        <li aria-current="page">Chỉnh sửa</li>
+    </ol>
 
-                        <div asp-validation-summary="All" class="alert alert-danger small py-2 mb-3" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Tựa phim <span class="text-danger">*</span></label>
-                            <input type="text" name="Title" class="form-control" value="@Model.Title" maxlength="200" required placeholder="Ví dụ: Đào, Phở và Piano" />
-                            <div class="form-text small">Tối đa 200 ký tự.</div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Thời lượng (phút) <span class="text-danger">*</span></label>
-                                @if (Model.HasActiveShowtimes)
-                                {
-                                    <input type="number" class="form-control bg-light" value="@Model.DurationMin" disabled />
-                                    <input type="hidden" name="DurationMin" value="@Model.DurationMin" />
-                                    <div class="alert alert-warning small py-1 px-2 mt-1 mb-0">
-                                        <i class="bi bi-lock-fill"></i> Thời lượng bị khóa vì phim đang có suất chiếu hiệu lực trong lịch chiếu.
-                                    </div>
-                                }
-                                else
-                                {
-                                    <input type="number" name="DurationMin" class="form-control" value="@Model.DurationMin" min="1" max="480" required />
-                                    <div class="form-text small">Từ 1 đến 480 phút.</div>
-                                }
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Phân loại khán giả (Độ tuổi)</label>
-                                <select name="AgeLabel" class="form-select">
-                                    <option value="P" selected="@(Model.AgeLabel == "P")">P - Phổ biến mọi lứa tuổi</option>
-                                    <option value="K" selected="@(Model.AgeLabel == "K")">K - Khán giả dưới 13 tuổi có người giám hộ</option>
-                                    <option value="T13" selected="@(Model.AgeLabel == "T13")">T13 - Khán giả từ đủ 13 tuổi</option>
-                                    <option value="T16" selected="@(Model.AgeLabel == "T16")">T16 - Khán giả từ đủ 16 tuổi</option>
-                                    <option value="T18" selected="@(Model.AgeLabel == "T18")">T18 - Khán giả từ đủ 18 tuổi</option>
-                                    <option value="C" selected="@(Model.AgeLabel == "C")">C - Phim bị cấm phổ biến</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Thể loại</label>
-                            <input type="text" name="GenreText" class="form-control" value="@Model.GenreText" maxlength="100" placeholder="Hành động, Phiêu lưu, Tâm lý..." />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Đường dẫn Poster (URL hoặc đường dẫn tương đối)</label>
-                            <input type="text" name="PosterUrl" class="form-control" value="@Model.PosterUrl" maxlength="500" placeholder="https://... hoặc /images/posters/movie.jpg" />
-                            <div class="form-text small">Chỉ chấp nhận URL HTTPS hoặc đường dẫn tĩnh nội bộ bắt đầu bằng '/'. Không dùng javascript: hoặc http:.</div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">Tóm tắt nội dung (Synopsis)</label>
-                            <textarea name="Synopsis" class="form-control" rows="4" maxlength="2000" placeholder="Nhập tóm tắt nội dung phim...">@Model.Synopsis</textarea>
-                            <div class="form-text small">Tối đa 2000 ký tự.</div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <a asp-action="MovieDetail" asp-route-id="@Model.MovieId" class="btn btn-outline-secondary">Hủy bỏ</a>
-                            <button type="submit" class="btn btn-primary px-4">Lưu thay đổi</button>
-                        </div>
-                    </form>
-                </div>
+    <section class="bgp-ops-card">
+        <div class="bgp-ops-card__header">
+            <div>
+                <h1 class="bgp-ops-title" style="font-size: 1.3rem;">Chỉnh sửa thông tin phim</h1>
+                <div class="bgp-ops-movie-sub bgp-ops-mono">Mã phim: #@Model.MovieId</div>
+            </div>
+            <div>
+                @switch (Model.Status)
+                {
+                    case "PUBLISHED":
+                        <span class="badge bgp-ops-badge bgp-ops-badge--emerald">PUBLISHED</span>
+                        break;
+                    case "ARCHIVED":
+                        <span class="badge bgp-ops-badge bgp-ops-badge--slate">ARCHIVED</span>
+                        break;
+                    default:
+                        <span class="badge bgp-ops-badge bgp-ops-badge--amber">DRAFT</span>
+                        break;
+                }
             </div>
         </div>
-    </div>
+        <div class="bgp-ops-card__body">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="bgp-ops-alert bgp-ops-alert--danger alert-danger" role="alert">
+                    <div asp-validation-summary="All"></div>
+                </div>
+            }
+
+            <form method="post"
+                  asp-action="MovieEdit"
+                  asp-route-id="@Model.MovieId"
+                  data-movie-edit-form>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MovieId" value="@Model.MovieId" />
+                <input type="hidden" name="ApplyOverrideLocks" value="true" />
+
+                <div class="bgp-ops-form-group">
+                    <label for="editTitle" class="bgp-ops-label">Tựa phim phát hành <span style="color: #F87171;">*</span></label>
+                    <input id="editTitle"
+                           type="text"
+                           name="Title"
+                           class="bgp-ops-input"
+                           value="@Model.Title"
+                           maxlength="200"
+                           required
+                           data-override-field="title"
+                           placeholder="Ví dụ: Đêm trắng kinh hoàng" />
+                    <div class="bgp-ops-hint">Tối đa 200 ký tự. Khi chỉnh sửa, trường này tự động được đánh dấu khóa ghi đè.</div>
+                </div>
+
+                <div class="bgp-ops-form-row-2 bgp-ops-form-group">
+                    <div>
+                        <label for="editDuration" class="bgp-ops-label">Thời lượng (phút) <span style="color: #F87171;">*</span></label>
+                        @if (Model.HasActiveShowtimes)
+                        {
+                            <input id="editDuration" type="number" class="bgp-ops-input bgp-ops-mono" value="@Model.DurationMin" disabled />
+                            <input type="hidden" name="DurationMin" value="@Model.DurationMin" />
+                            <div class="bgp-ops-alert bgp-ops-alert--warning" style="margin: 8px 0 0; padding: 8px 10px; font-size: 0.78rem;">
+                                <span>Thời lượng bị khóa vì phim đang có suất chiếu hiệu lực trong lịch chiếu.</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <input id="editDuration"
+                                   type="number"
+                                   name="DurationMin"
+                                   class="bgp-ops-input bgp-ops-mono"
+                                   value="@Model.DurationMin"
+                                   min="1"
+                                   max="480"
+                                   required
+                                   data-override-field="duration_min" />
+                            <div class="bgp-ops-hint">Từ 1 đến 480 phút.</div>
+                        }
+                    </div>
+                    <div>
+                        <label for="editAgeLabel" class="bgp-ops-label">Phân loại khán giả Việt Nam (Độ tuổi)</label>
+                        <select id="editAgeLabel"
+                                name="AgeLabel"
+                                class="bgp-ops-select"
+                                data-override-field="age_label">
+                            <option value="" selected="@(string.IsNullOrEmpty(Model.AgeLabel))">-- Chưa phân loại độ tuổi VN --</option>
+                            <option value="P" selected="@(Model.AgeLabel == "P")">P - Phổ biến mọi lứa tuổi</option>
+                            <option value="K" selected="@(Model.AgeLabel == "K")">K - Khán giả dưới 13 tuổi có người giám hộ</option>
+                            <option value="T13" selected="@(Model.AgeLabel == "T13")">T13 - Khán giả từ đủ 13 tuổi</option>
+                            <option value="T16" selected="@(Model.AgeLabel == "T16")">T16 - Khán giả từ đủ 16 tuổi</option>
+                            <option value="T18" selected="@(Model.AgeLabel == "T18")">T18 - Khán giả từ đủ 18 tuổi</option>
+                            <option value="C" selected="@(Model.AgeLabel == "C")">C - Phim không phổ biến</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bgp-ops-form-group">
+                    <label for="editGenre" class="bgp-ops-label">Thể loại</label>
+                    <input id="editGenre"
+                           type="text"
+                           name="GenreText"
+                           class="bgp-ops-input"
+                           value="@Model.GenreText"
+                           maxlength="100"
+                           data-override-field="genre_text"
+                           placeholder="Hành động, Phiêu lưu, Tâm lý..." />
+                </div>
+
+                <div class="bgp-ops-form-group">
+                    <label for="editPoster" class="bgp-ops-label">Đường dẫn Poster (URL HTTPS hoặc đường dẫn tương đối /)</label>
+                    <input id="editPoster"
+                           type="text"
+                           name="PosterUrl"
+                           class="bgp-ops-input bgp-ops-mono"
+                           value="@Model.PosterUrl"
+                           maxlength="500"
+                           data-override-field="poster_url"
+                           placeholder="https://... hoặc /media/verified/posters/movie.jpg" />
+                    <div class="bgp-ops-hint">Chỉ chấp nhận URL HTTPS hoặc đường dẫn tĩnh nội bộ bắt đầu bằng <code>/</code>.</div>
+                </div>
+
+                <div class="bgp-ops-form-group">
+                    <label for="editSynopsis" class="bgp-ops-label">Tóm tắt nội dung (Synopsis)</label>
+                    <textarea id="editSynopsis"
+                              name="Synopsis"
+                              class="bgp-ops-textarea"
+                              rows="4"
+                              maxlength="2000"
+                              data-override-field="synopsis"
+                              placeholder="Nhập tóm tắt nội dung phim...">@Model.Synopsis</textarea>
+                </div>
+
+                <!-- Provenance Metadata Fields -->
+                <details class="bgp-override-box" data-provenance-details open>
+                    <summary style="cursor:pointer; font-weight:700; color:#FFFFFF; font-size:0.88rem;">
+                        Định danh nguồn xác minh (Wikidata / IMDb / TMDB) &amp; Tư liệu điện ảnh
+                    </summary>
+                    <div style="margin-top: 14px;">
+                        <div class="bgp-ops-form-row-2 bgp-ops-form-group">
+                            <div>
+                                <label for="editOriginalTitle" class="bgp-ops-label">Tựa gốc (Original Title)</label>
+                                <input id="editOriginalTitle" type="text" name="OriginalTitle" value="@Model.OriginalTitle" class="bgp-ops-input" maxlength="200" />
+                            </div>
+                            <div>
+                                <label for="editDirector" class="bgp-ops-label">Đạo diễn</label>
+                                <input id="editDirector" type="text" name="DirectorNames" value="@Model.DirectorNames" class="bgp-ops-input" maxlength="200" />
+                            </div>
+                        </div>
+
+                        <div class="bgp-ops-form-row-3 bgp-ops-form-group">
+                            <div>
+                                <label for="editReleaseYear" class="bgp-ops-label">Năm phát hành</label>
+                                <input id="editReleaseYear" type="number" name="ReleaseYear" value="@Model.ReleaseYear" class="bgp-ops-input bgp-ops-mono" min="1888" max="2100" />
+                            </div>
+                            <div>
+                                <label for="editCountry" class="bgp-ops-label">Quốc gia</label>
+                                <input id="editCountry" type="text" name="OriginCountry" value="@Model.OriginCountry" class="bgp-ops-input" maxlength="80" />
+                            </div>
+                            <div>
+                                <label for="editLang" class="bgp-ops-label">Ngôn ngữ gốc</label>
+                                <input id="editLang" type="text" name="OriginalLanguage" value="@Model.OriginalLanguage" class="bgp-ops-input" maxlength="40" />
+                            </div>
+                        </div>
+
+                        <div class="bgp-ops-form-row-3 bgp-ops-form-group">
+                            <div>
+                                <label for="editWikidata" class="bgp-ops-label">Wikidata QID</label>
+                                <input id="editWikidata" type="text" name="WikidataQid" value="@Model.WikidataQid" class="bgp-ops-input bgp-ops-mono" maxlength="32" />
+                            </div>
+                            <div>
+                                <label for="editImdb" class="bgp-ops-label">IMDb ID</label>
+                                <input id="editImdb" type="text" name="ImdbId" value="@Model.ImdbId" class="bgp-ops-input bgp-ops-mono" maxlength="24" />
+                            </div>
+                            <div>
+                                <label for="editTmdb" class="bgp-ops-label">TMDB ID</label>
+                                <input id="editTmdb" type="number" name="TmdbId" value="@Model.TmdbId" class="bgp-ops-input bgp-ops-mono" min="1" />
+                            </div>
+                        </div>
+
+                        <div class="bgp-ops-form-row-2" style="margin-bottom:0;">
+                            <div>
+                                <label for="editBackdrop" class="bgp-ops-label">Backdrop ngang 16:9 (HTTPS hoặc /)</label>
+                                <input id="editBackdrop" type="text" name="BackdropUrl" value="@Model.BackdropUrl" class="bgp-ops-input bgp-ops-mono" maxlength="500" />
+                            </div>
+                            <div>
+                                <label for="editTrailer" class="bgp-ops-label">YouTube Trailer ID chính thức</label>
+                                <input id="editTrailer" type="text" name="OfficialTrailerYoutubeId" value="@Model.OfficialTrailerYoutubeId" class="bgp-ops-input bgp-ops-mono" maxlength="32" />
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- ManualOverrideMask Lock Controls -->
+                <div class="bgp-override-box" data-testid="manual-override-locks">
+                    <div style="font-weight: 700; font-size: 0.88rem; color: #FDE047;">
+                        Khóa bảo toàn biên tập thủ công (<code>ManualOverrideMask</code>)
+                    </div>
+                    <div class="bgp-ops-hint">
+                        Các trường được đánh dấu dưới đây sẽ <strong>không bị ghi đè</strong> khi chạy lệnh Đồng bộ lại từ TMDB / Wikidata / IMDb.
+                    </div>
+                    <div class="bgp-override-grid">
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="title" checked="@Model.HasOverride("title")" />
+                            <span>Tựa phim (<code>title</code>)</span>
+                        </label>
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="age_label" checked="@Model.HasOverride("age_label")" />
+                            <span>Độ tuổi VN (<code>age_label</code>)</span>
+                        </label>
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="synopsis" checked="@Model.HasOverride("synopsis")" />
+                            <span>Tóm tắt (<code>synopsis</code>)</span>
+                        </label>
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="genre_text" checked="@Model.HasOverride("genre_text")" />
+                            <span>Thể loại (<code>genre_text</code>)</span>
+                        </label>
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="poster_url" checked="@Model.HasOverride("poster_url")" />
+                            <span>Poster (<code>poster_url</code>)</span>
+                        </label>
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="duration_min" checked="@Model.HasOverride("duration_min")" />
+                            <span>Thời lượng (<code>duration_min</code>)</span>
+                        </label>
+                        <label class="bgp-override-check">
+                            <input type="checkbox" name="ManualOverrides" value="rating_value" checked="@Model.HasOverride("rating_value")" />
+                            <span>Điểm đánh giá (<code>rating_value</code>)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding-top:16px; border-top:1px solid var(--bgp-border-subtle);">
+                    <a asp-action="MovieDetail" asp-route-id="@Model.MovieId" class="bgp-btn bgp-btn--outline">Hủy bỏ</a>
+                    <button type="submit" class="bgp-btn bgp-btn--primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </section>
 </div>
+
+@section Scripts {
+    <script type="module" src="~/js/modules/ops-management.js" asp-append-version="true"></script>
+}

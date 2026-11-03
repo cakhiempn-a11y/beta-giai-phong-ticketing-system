@@ -51,9 +51,44 @@ CREATE TABLE dbo.[Movies] (
     [synopsis] NVARCHAR(MAX) NULL,
     [poster_url] NVARCHAR(500) NULL,
     [status] VARCHAR(12) NOT NULL CONSTRAINT DF_Movies_status DEFAULT ('DRAFT'),
+    [original_title] NVARCHAR(250) NULL,
+    [release_year] SMALLINT NULL,
+    [release_date_vn] DATE NULL,
+    [origin_country] NVARCHAR(100) NULL,
+    [original_language] VARCHAR(16) NULL,
+    [tmdb_id] INT NULL,
+    [imdb_id] VARCHAR(16) NULL,
+    [wikidata_qid] VARCHAR(16) NULL,
+    [poster_w342_url] NVARCHAR(500) NULL,
+    [backdrop_url] NVARCHAR(500) NULL,
+    [backdrop_w780_url] NVARCHAR(500) NULL,
+    [title_logo_url] NVARCHAR(500) NULL,
+    [official_trailer_youtube_id] VARCHAR(32) NULL,
+    [artwork_source] VARCHAR(32) NULL,
+    [artwork_license_text] NVARCHAR(300) NULL,
+    [artwork_attribution_text] NVARCHAR(500) NULL,
+    [rating_source] VARCHAR(32) NULL,
+    [rating_value] DECIMAL(3,1) NULL,
+    [rating_scale_max] DECIMAL(4,1) NULL,
+    [rating_vote_count] INT NULL,
+    [rating_fetched_utc] DATETIME2(0) NULL,
+    [age_label_market] VARCHAR(8) NULL,
+    [age_label_source] NVARCHAR(200) NULL,
+    [director_names] NVARCHAR(300) NULL,
+    [cast_json] NVARCHAR(MAX) NULL,
+    [metadata_source] VARCHAR(32) NULL,
+    [external_synced_utc] DATETIME2(0) NULL,
+    [external_expires_utc] DATETIME2(0) NULL,
+    [manual_override_mask] NVARCHAR(500) NULL,
     CONSTRAINT PK_Movies PRIMARY KEY ([movie_id]),
     CONSTRAINT CK_Movies_01 CHECK (duration_min BETWEEN 1 AND 480),
-    CONSTRAINT CK_Movies_02 CHECK (status IN ('DRAFT','PUBLISHED','ARCHIVED'))
+    CONSTRAINT CK_Movies_02 CHECK (status IN ('DRAFT','PUBLISHED','ARCHIVED')),
+    CONSTRAINT CK_Movies_03 CHECK (release_year IS NULL OR release_year BETWEEN 1888 AND 2100),
+    CONSTRAINT CK_Movies_04 CHECK (artwork_source IS NULL OR artwork_source IN ('TMDB','WIKIMEDIA_COMMONS','DISTRIBUTOR','PENDING_TMDB_API_KEY','NONE')),
+    CONSTRAINT CK_Movies_05 CHECK (rating_source IS NULL OR rating_source IN ('IMDB','TMDB')),
+    CONSTRAINT CK_Movies_06 CHECK (rating_value IS NULL OR (rating_scale_max IS NOT NULL AND rating_scale_max > 0 AND rating_value >= 0 AND rating_value <= rating_scale_max AND rating_vote_count IS NOT NULL AND rating_vote_count >= 0)),
+    CONSTRAINT CK_Movies_07 CHECK (cast_json IS NULL OR ISJSON(cast_json) = 1),
+    CONSTRAINT CK_Movies_08 CHECK (age_label_market IS NULL OR age_label_market IN ('VN'))
 );
 GO
 
@@ -275,6 +310,13 @@ CREATE TABLE dbo.[AuditLogs] (
     CONSTRAINT CK_AuditLogs_01 CHECK (details_json IS NULL OR ISJSON(details_json) = 1),
     CONSTRAINT FK_AuditLogs_Users_01 FOREIGN KEY ([actor_user_id]) REFERENCES dbo.[Users] ([user_id]) ON DELETE NO ACTION
 );
+GO
+
+CREATE UNIQUE INDEX UX_Movies_TmdbId ON dbo.Movies(tmdb_id) WHERE tmdb_id IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_Movies_ImdbId ON dbo.Movies(imdb_id) WHERE imdb_id IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_Movies_WikidataQid ON dbo.Movies(wikidata_qid) WHERE wikidata_qid IS NOT NULL;
 GO
 
 CREATE INDEX IX_Showtimes_Room_Start ON dbo.Showtimes(room_id, start_utc) INCLUDE(end_utc, status, buffer_minutes);

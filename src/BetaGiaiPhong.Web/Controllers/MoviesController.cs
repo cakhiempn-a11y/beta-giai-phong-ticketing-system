@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using BetaGiaiPhong.Web.Models.Responses;
 using BetaGiaiPhong.Web.Models.ViewModels;
@@ -9,6 +11,11 @@ namespace BetaGiaiPhong.Web.Controllers;
 public sealed class MoviesController(ICatalogService catalogService) : Controller
 {
     private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
+    private static readonly JsonSerializerOptions PreviewJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = JavaScriptEncoder.Default
+    };
 
     [HttpGet("")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -30,7 +37,9 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
         {
             filtered = filtered.Where(m =>
                 m.Title.Contains(trimmedQuery, StringComparison.OrdinalIgnoreCase) ||
-                (!string.IsNullOrWhiteSpace(m.GenreText) && m.GenreText.Contains(trimmedQuery, StringComparison.OrdinalIgnoreCase)));
+                (!string.IsNullOrWhiteSpace(m.OriginalTitle) && m.OriginalTitle.Contains(trimmedQuery, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(m.GenreText) && m.GenreText.Contains(trimmedQuery, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(m.DirectorNames) && m.DirectorNames.Contains(trimmedQuery, StringComparison.OrdinalIgnoreCase)));
         }
 
         filtered = normalizedFilter switch
@@ -40,14 +49,28 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
             _ => filtered
         };
 
+        var filteredList = filtered.ToList();
+        var previewMap = await catalogService.GetMoviesQuickPreviewMapAsync(filteredList.Select(m => m.MovieId), ct);
+        var stringKeyMap = previewMap.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value);
+
+        var availableGenres = allPublished
+            .Where(m => !string.IsNullOrWhiteSpace(m.GenreText))
+            .SelectMany(m => m.GenreText!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(g => g.Length > 1)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .Take(8)
+            .ToList();
+
         var vm = new MovieCatalogViewModel
         {
-            Movies = filtered.ToList(),
+            Movies = filteredList,
             TotalPublishedCount = allPublished.Count,
             WithShowtimesCount = allPublished.Count(m => m.UpcomingShowtimesCount > 0),
             WithoutShowtimesCount = allPublished.Count(m => m.UpcomingShowtimesCount == 0),
             SearchQuery = trimmedQuery,
-            ActiveFilter = normalizedFilter
+            ActiveFilter = normalizedFilter,
+            AvailableGenres = availableGenres,
+            QuickPreviewJson = JsonSerializer.Serialize(stringKeyMap, PreviewJsonOptions)
         };
 
         return View(vm);
@@ -112,12 +135,23 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
             selectedDateKey = (matchingGroup ?? dateGroups[0]).DateKey;
         }
 
+        IReadOnlyList<MovieSummaryDto> suggestedOnSale = [];
+        if (dateGroups.Count == 0)
+        {
+            var allPublished = await catalogService.GetPublishedMoviesAsync(ct);
+            suggestedOnSale = allPublished
+                .Where(m => m.MovieId != id && m.UpcomingShowtimesCount > 0)
+                .Take(4)
+                .ToList();
+        }
+
         var vm = new MovieDetailViewModel
         {
             Movie = movie,
             ShowtimesByDate = groupedLegacy,
             DateGroups = dateGroups,
-            SelectedDateKey = selectedDateKey
+            SelectedDateKey = selectedDateKey,
+            SuggestedOnSaleMovies = suggestedOnSale
         };
 
         return View(vm);

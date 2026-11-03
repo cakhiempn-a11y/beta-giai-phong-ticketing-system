@@ -52,6 +52,12 @@ public static class BetaModelConfiguration
             {
                 t.HasCheckConstraint("CK_Movies_01", @"(duration_min BETWEEN 1 AND 480)");
                 t.HasCheckConstraint("CK_Movies_02", @"(status IN ('DRAFT','PUBLISHED','ARCHIVED'))");
+                t.HasCheckConstraint("CK_Movies_03", @"(release_year IS NULL OR release_year BETWEEN 1888 AND 2100)");
+                t.HasCheckConstraint("CK_Movies_04", @"(artwork_source IS NULL OR artwork_source IN ('TMDB','WIKIMEDIA_COMMONS','DISTRIBUTOR','PENDING_TMDB_API_KEY','NONE'))");
+                t.HasCheckConstraint("CK_Movies_05", @"(rating_source IS NULL OR rating_source IN ('IMDB','TMDB'))");
+                t.HasCheckConstraint("CK_Movies_06", @"(rating_value IS NULL OR (rating_scale_max IS NOT NULL AND rating_scale_max > 0 AND rating_value >= 0 AND rating_value <= rating_scale_max AND rating_vote_count IS NOT NULL AND rating_vote_count >= 0))");
+                t.HasCheckConstraint("CK_Movies_07", @"(cast_json IS NULL OR ISJSON(cast_json) = 1)");
+                t.HasCheckConstraint("CK_Movies_08", @"(age_label_market IS NULL OR age_label_market IN ('VN'))");
             });
             b.HasKey(e => e.MovieId).HasName("PK_Movies");
             b.Property(e => e.MovieId).HasColumnName("movie_id").HasColumnType("bigint").ValueGeneratedOnAdd().UseIdentityColumn();
@@ -62,6 +68,35 @@ public static class BetaModelConfiguration
             b.Property(e => e.Synopsis).HasColumnName("synopsis").HasColumnType("nvarchar(max)");
             b.Property(e => e.PosterUrl).HasColumnName("poster_url").HasColumnType("nvarchar(500)");
             b.Property(e => e.Status).HasColumnName("status").HasColumnType("varchar(12)").IsRequired().HasDefaultValueSql(@"('DRAFT')");
+            b.Property(e => e.OriginalTitle).HasColumnName("original_title").HasColumnType("nvarchar(250)");
+            b.Property(e => e.ReleaseYear).HasColumnName("release_year").HasColumnType("smallint");
+            b.Property(e => e.ReleaseDateVn).HasColumnName("release_date_vn").HasColumnType("date");
+            b.Property(e => e.OriginCountry).HasColumnName("origin_country").HasColumnType("nvarchar(100)");
+            b.Property(e => e.OriginalLanguage).HasColumnName("original_language").HasColumnType("varchar(16)");
+            b.Property(e => e.TmdbId).HasColumnName("tmdb_id").HasColumnType("int");
+            b.Property(e => e.ImdbId).HasColumnName("imdb_id").HasColumnType("varchar(16)");
+            b.Property(e => e.WikidataQid).HasColumnName("wikidata_qid").HasColumnType("varchar(16)");
+            b.Property(e => e.PosterW342Url).HasColumnName("poster_w342_url").HasColumnType("nvarchar(500)");
+            b.Property(e => e.BackdropUrl).HasColumnName("backdrop_url").HasColumnType("nvarchar(500)");
+            b.Property(e => e.BackdropW780Url).HasColumnName("backdrop_w780_url").HasColumnType("nvarchar(500)");
+            b.Property(e => e.TitleLogoUrl).HasColumnName("title_logo_url").HasColumnType("nvarchar(500)");
+            b.Property(e => e.OfficialTrailerYoutubeId).HasColumnName("official_trailer_youtube_id").HasColumnType("varchar(32)");
+            b.Property(e => e.ArtworkSource).HasColumnName("artwork_source").HasColumnType("varchar(32)");
+            b.Property(e => e.ArtworkLicenseText).HasColumnName("artwork_license_text").HasColumnType("nvarchar(300)");
+            b.Property(e => e.ArtworkAttributionText).HasColumnName("artwork_attribution_text").HasColumnType("nvarchar(500)");
+            b.Property(e => e.RatingSource).HasColumnName("rating_source").HasColumnType("varchar(32)");
+            b.Property(e => e.RatingValue).HasColumnName("rating_value").HasColumnType("decimal(3,1)");
+            b.Property(e => e.RatingScaleMax).HasColumnName("rating_scale_max").HasColumnType("decimal(4,1)");
+            b.Property(e => e.RatingVoteCount).HasColumnName("rating_vote_count").HasColumnType("int");
+            b.Property(e => e.RatingFetchedUtc).HasColumnName("rating_fetched_utc").HasColumnType("datetime2(0)");
+            b.Property(e => e.AgeLabelMarket).HasColumnName("age_label_market").HasColumnType("varchar(8)");
+            b.Property(e => e.AgeLabelSource).HasColumnName("age_label_source").HasColumnType("nvarchar(200)");
+            b.Property(e => e.DirectorNames).HasColumnName("director_names").HasColumnType("nvarchar(300)");
+            b.Property(e => e.CastJson).HasColumnName("cast_json").HasColumnType("nvarchar(max)");
+            b.Property(e => e.MetadataSource).HasColumnName("metadata_source").HasColumnType("varchar(32)");
+            b.Property(e => e.ExternalSyncedUtc).HasColumnName("external_synced_utc").HasColumnType("datetime2(0)");
+            b.Property(e => e.ExternalExpiresUtc).HasColumnName("external_expires_utc").HasColumnType("datetime2(0)");
+            b.Property(e => e.ManualOverrideMask).HasColumnName("manual_override_mask").HasColumnType("nvarchar(500)");
         });
 
         modelBuilder.Entity<Room>(b =>
@@ -333,6 +368,12 @@ public static class BetaModelConfiguration
             b.Property(e => e.RevenueVnd).HasColumnName("revenue_vnd").HasColumnType("decimal(38,0)");
             b.Property(e => e.SellableCapacity).HasColumnName("sellable_capacity").HasColumnType("int");
             b.Property(e => e.OccupancyPct).HasColumnName("occupancy_pct").HasColumnType("decimal(7,2)");
+        });
+        modelBuilder.Entity<Movie>(b =>
+        {
+            b.HasIndex(e => e.TmdbId).HasDatabaseName("UX_Movies_TmdbId").IsUnique().HasFilter(@"[tmdb_id] IS NOT NULL");
+            b.HasIndex(e => e.ImdbId).HasDatabaseName("UX_Movies_ImdbId").IsUnique().HasFilter(@"[imdb_id] IS NOT NULL");
+            b.HasIndex(e => e.WikidataQid).HasDatabaseName("UX_Movies_WikidataQid").IsUnique().HasFilter(@"[wikidata_qid] IS NOT NULL");
         });
         modelBuilder.Entity<Showtime>(b =>
         {

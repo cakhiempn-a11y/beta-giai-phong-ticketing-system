@@ -1,0 +1,18 @@
+# Beta Giải Phóng — High-Fidelity Netflix-Cinema Prototype (`v1.0`)
+
+Thư mục này chứa bộ **Mockup / Prototype HTML+CSS+JS độc lập (Standalone Prototype)** và bộ **ảnh chụp kết xuất thực tế bằng trình duyệt Chromium** phục vụ kế hoạch thiết kế lại toàn diện giao diện Beta Giải Phóng.
+
+- **Không can thiệp mã nguồn ứng dụng (`src/`, `tests/`, `e2e/`).**
+- **Không phụ thuộc Bootstrap:** Sử dụng 100% kiến trúc CSS thiết kế mới [`netflix-cinema.css`](./netflix-cinema.css) và hành vi Progressive Enhancement [`prototype.js`](./prototype.js).
+- **Nội dung phim thật 100% đã xác minh:** Toàn bộ tên phim, năm phát hành, đạo diễn, diễn viên, thời lượng, trailer YouTube chính thức, điểm đánh giá IMDb gốc kèm số lượt bình chọn (`2026-11-03 UTC`) và 20 file hình ảnh cục bộ trong [`assets/ASSET_MANIFEST.json`](./assets/ASSET_MANIFEST.json) đều thuộc `Public Domain` / `CC0` / `CC BY 3.0` / `CC BY 4.0` hoặc hiển thị trung thực placeholder `"Chưa có hình ảnh"` khi chờ cấu hình `BGP_TMDB_READ_TOKEN`.
+
+## Danh sách 6 Màn hình Prototype & Ảnh Kết xuất
+
+| # | File HTML Tương tác | Ảnh Chụp Đã Render (`Chromium`) | Khung nhìn | Nội dung Thiết kế Trọng tâm |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | [`01-home-desktop.html`](./01-home-desktop.html) | [`screenshots/01-home-desktop.png`](./screenshots/01-home-desktop.png) | `1440×900` (Full) | Header chuyển trong suốt sang đặc, Hero toàn chiều ngang với ảnh Criterion *Charade (1963)*, vùng chữ an toàn bên trái, hàng phim mở bán hôm nay (`16:9`) kèm **Hover Quick-Preview Card** (*Charge 2022* + logo gốc), hàng poster dọc `2:3` không nhân bản phim. |
+| 2 | [`02-movie-detail-desktop.html`](./02-movie-detail-desktop.html) | [`screenshots/02-movie-detail-desktop.png`](./screenshots/02-movie-detail-desktop.png) | `1440×900` (Full) | Backdrop điện ảnh kết hợp khung Poster `2:3` chuẩn, thông tin tác phẩm xác minh + dàn diễn viên + nút Trailer chính thức, tách biệt với **Bộ chọn ngày & suất chiếu `UTC+7`** và bảng hồ sơ nguồn dữ liệu. |
+| 3 | [`03-catalog-mobile.html`](./03-catalog-mobile.html) | [`screenshots/03-catalog-mobile.png`](./screenshots/03-catalog-mobile.png) | `390×844` (`@2x`) | Trải nghiệm di động riêng với thanh tìm kiếm dính (sticky), chip lọc ngang `>= 44px`, lưới poster 2 cột cân đối, minh họa trung thực placeholder **`Chưa có hình ảnh`** trên phim Việt *Mai (2024 — T18)* và thanh điều hướng đáy cảm ứng. |
+| 4 | [`04-seat-selection-desktop.html`](./04-seat-selection-desktop.html) | [`screenshots/04-seat-selection-desktop.png`](./screenshots/04-seat-selection-desktop.png) | `1440×900` | Màn hình cong chiếu sáng, ghế là phần tử `<button aria-pressed>` hỗ trợ bàn phím 2 chiều, phân biệt trạng thái bằng **đa dấu hiệu** (`★` VIP, `✓` Đang chọn, sọc chéo + `⏳` Đang giữ, `✕` Đã bán), **không đếm ngược trước khi giữ ghế**. |
+| 5 | [`05-checkout-desktop.html`](./05-checkout-desktop.html) | [`screenshots/05-checkout-desktop.png`](./screenshots/05-checkout-desktop.png) | `1440×900` | Thanh đếm ngược giữ ghế lấy từ `HoldExpiresUtc` của máy chủ, tóm tắt phim/phòng/ghế/tổng tiền VND nguyên, bản xem trước **Vé điện tử QR nền trắng `#FFFFFF` có quiet zone**, và **Trình mô phỏng thanh toán học thuật HMAC-SHA256** minh bạch (không giả mạo form nhập thẻ ngân hàng). |
+| 6 | [`06-operations-desktop.html`](./06-operations-desktop.html) | [`screenshots/06-operations-desktop.png`](./screenshots/06-operations-desktop.png) | `1440×900` | Khung `_OperationsLayout` mật độ cao cho `MANAGER`/`ADMIN` (bảng danh mục phim thật, định danh `QID`/`tt`/`TMDB`, khóa ghi đè thủ công `Manual Override`, cảnh báo `BGP_TMDB_READ_TOKEN`) và chuẩn phản hồi cổng soát vé QR cho `STAFF`. |

@@ -1,61 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
-  <defs>
-    <linearGradient id="posterBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#181818"/>
-      <stop offset="50%" stop-color="#222222"/>
-      <stop offset="100%" stop-color="#121212"/>
-    </linearGradient>
-    <linearGradient id="redAccent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#E50914"/>
-      <stop offset="100%" stop-color="#B20710"/>
-    </linearGradient>
-    <pattern id="filmHoles" width="12" height="24" patternUnits="userSpaceOnUse">
-      <rect x="2" y="4" width="8" height="12" rx="2" fill="#0c0c0c" opacity="0.6"/>
-    </pattern>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450" role="img" aria-label="Chưa có hình ảnh">
+  <rect width="300" height="450" fill="#18181B" rx="6"/>
+  <rect x="1" y="1" width="298" height="448" fill="none" stroke="#27272A" stroke-width="2" rx="5"/>
+  <rect x="20" y="20" width="260" height="410" fill="none" stroke="#232329" stroke-width="1" stroke-dasharray="4 4" rx="4"/>
 
-  <!-- Background Base -->
-  <rect width="300" height="450" fill="url(#posterBg)" rx="6"/>
-
-  <!-- Film strip perforations on left and right -->
-  <rect x="0" y="0" width="12" height="450" fill="url(#filmHoles)"/>
-  <rect x="288" y="0" width="12" height="450" fill="url(#filmHoles)"/>
-
-  <!-- Inner Frame -->
-  <rect x="18" y="14" width="264" height="422" fill="none" stroke="#333333" stroke-width="1.5" rx="4"/>
-  <rect x="24" y="20" width="252" height="410" fill="none" stroke="#262626" stroke-width="1" rx="3"/>
-
-  <!-- Top Brand Tag -->
-  <rect x="105" y="32" width="90" height="22" rx="3" fill="url(#redAccent)"/>
-  <text x="150" y="47" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">BETA CINEMA</text>
-
-  <!-- Cinema Reel / Projector Icon -->
-  <g transform="translate(150, 195)" text-anchor="middle">
-    <!-- Outer reel ring -->
-    <circle r="56" fill="#1c1c1c" stroke="#444444" stroke-width="2"/>
-    <circle r="50" fill="#141414" stroke="#333333" stroke-width="1.5"/>
-    <circle r="42" fill="none" stroke="#E50914" stroke-width="1.5" opacity="0.6"/>
-
-    <!-- Reel holes -->
-    <circle cx="0" cy="-24" r="9" fill="#242424" stroke="#383838" stroke-width="1"/>
-    <circle cx="21" cy="-12" r="9" fill="#242424" stroke="#383838" stroke-width="1"/>
-    <circle cx="21" cy="12" r="9" fill="#242424" stroke="#383838" stroke-width="1"/>
-    <circle cx="0" cy="24" r="9" fill="#242424" stroke="#383838" stroke-width="1"/>
-    <circle cx="-21" cy="12" r="9" fill="#242424" stroke="#383838" stroke-width="1"/>
-    <circle cx="-21" cy="-12" r="9" fill="#242424" stroke="#383838" stroke-width="1"/>
-
-    <!-- Center hub -->
-    <circle r="14" fill="#262626" stroke="#555555" stroke-width="1.5"/>
-    <circle r="6" fill="#E50914"/>
+  <g transform="translate(150, 188)" fill="none" stroke="#52525B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="-36" y="-28" width="72" height="56" rx="6" fill="#131316" stroke="#3F3F46"/>
+    <line x1="-36" y1="-12" x2="36" y2="-12" stroke="#3F3F46"/>
+    <line x1="-20" y1="-28" x2="-12" y2="-12" stroke="#3F3F46"/>
+    <line x1="0" y1="-28" x2="8" y2="-12" stroke="#3F3F46"/>
+    <line x1="20" y1="-28" x2="28" y2="-12" stroke="#3F3F46"/>
+    <circle cx="-12" cy="4" r="5" stroke="#71717A"/>
+    <path d="M -24 20 L -6 4 L 8 16 L 16 8 L 26 20" stroke="#71717A"/>
   </g>
 
-  <!-- Typography Labels -->
-  <text x="150" y="295" font-family="'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" fill="#F5F5F1" text-anchor="middle" letter-spacing="1">TÁC PHẨM ĐIỆN ẢNH</text>
-  <line x1="110" y1="310" x2="190" y2="310" stroke="#E50914" stroke-width="2" opacity="0.8"/>
-  <text x="150" y="332" font-family="'Segoe UI', Roboto, sans-serif" font-size="11" fill="#B3B3B3" text-anchor="middle">Beta Giải Phóng</text>
-  <text x="150" y="352" font-family="'Segoe UI', Roboto, sans-serif" font-size="10" fill="#777777" text-anchor="middle">Âm Thanh Sống Động • Chuẩn Quốc Tế</text>
-
-  <!-- Footer Tagline -->
-  <rect x="40" y="396" width="220" height="20" rx="2" fill="#181818" stroke="#2a2a2a" stroke-width="1"/>
-  <text x="150" y="410" font-family="'Segoe UI', Roboto, sans-serif" font-size="9.5" fill="#888888" text-anchor="middle" letter-spacing="0.5">LỊCH CHIẾU &amp; SƠ ĐỒ GHẾ THỜI GIAN THỰC</text>
+  <text x="150" y="256" font-family="'Be Vietnam Pro', 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="700" fill="#D4D4D8" text-anchor="middle" letter-spacing="0.8">CHƯA CÓ HÌNH ẢNH</text>
+  <text x="150" y="280" font-family="'Be Vietnam Pro', 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#71717A" text-anchor="middle">Chờ đồng bộ ảnh tác phẩm chính thức</text>
 </svg>

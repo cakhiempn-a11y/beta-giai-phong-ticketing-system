@@ -269,17 +269,121 @@ namespace BetaGiaiPhong.Data.Persistence.Migrations
                         .HasColumnType("nvarchar(24)")
                         .HasColumnName("age_label");
 
+                    b.Property<string>("AgeLabelMarket")
+                        .HasColumnType("varchar(8)")
+                        .HasColumnName("age_label_market");
+
+                    b.Property<string>("AgeLabelSource")
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("age_label_source");
+
+                    b.Property<string>("ArtworkAttributionText")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("artwork_attribution_text");
+
+                    b.Property<string>("ArtworkLicenseText")
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("artwork_license_text");
+
+                    b.Property<string>("ArtworkSource")
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("artwork_source");
+
+                    b.Property<string>("BackdropUrl")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("backdrop_url");
+
+                    b.Property<string>("BackdropW780Url")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("backdrop_w780_url");
+
+                    b.Property<string>("CastJson")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("cast_json");
+
+                    b.Property<string>("DirectorNames")
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("director_names");
+
                     b.Property<short>("DurationMin")
                         .HasColumnType("smallint")
                         .HasColumnName("duration_min");
+
+                    b.Property<DateTime?>("ExternalExpiresUtc")
+                        .HasColumnType("datetime2(0)")
+                        .HasColumnName("external_expires_utc");
+
+                    b.Property<DateTime?>("ExternalSyncedUtc")
+                        .HasColumnType("datetime2(0)")
+                        .HasColumnName("external_synced_utc");
 
                     b.Property<string>("GenreText")
                         .HasColumnType("nvarchar(160)")
                         .HasColumnName("genre_text");
 
+                    b.Property<string>("ImdbId")
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("imdb_id");
+
+                    b.Property<string>("ManualOverrideMask")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("manual_override_mask");
+
+                    b.Property<string>("MetadataSource")
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("metadata_source");
+
+                    b.Property<string>("OfficialTrailerYoutubeId")
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("official_trailer_youtube_id");
+
+                    b.Property<string>("OriginCountry")
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("origin_country");
+
+                    b.Property<string>("OriginalLanguage")
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("original_language");
+
+                    b.Property<string>("OriginalTitle")
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("original_title");
+
                     b.Property<string>("PosterUrl")
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("poster_url");
+
+                    b.Property<string>("PosterW342Url")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("poster_w342_url");
+
+                    b.Property<DateTime?>("RatingFetchedUtc")
+                        .HasColumnType("datetime2(0)")
+                        .HasColumnName("rating_fetched_utc");
+
+                    b.Property<decimal?>("RatingScaleMax")
+                        .HasColumnType("decimal(4,1)")
+                        .HasColumnName("rating_scale_max");
+
+                    b.Property<string>("RatingSource")
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("rating_source");
+
+                    b.Property<decimal?>("RatingValue")
+                        .HasColumnType("decimal(3,1)")
+                        .HasColumnName("rating_value");
+
+                    b.Property<int?>("RatingVoteCount")
+                        .HasColumnType("int")
+                        .HasColumnName("rating_vote_count");
+
+                    b.Property<DateOnly?>("ReleaseDateVn")
+                        .HasColumnType("date")
+                        .HasColumnName("release_date_vn");
+
+                    b.Property<short?>("ReleaseYear")
+                        .HasColumnType("smallint")
+                        .HasColumnName("release_year");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -297,14 +401,53 @@ namespace BetaGiaiPhong.Data.Persistence.Migrations
                         .HasColumnType("nvarchar(250)")
                         .HasColumnName("title");
 
+                    b.Property<string>("TitleLogoUrl")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("title_logo_url");
+
+                    b.Property<int?>("TmdbId")
+                        .HasColumnType("int")
+                        .HasColumnName("tmdb_id");
+
+                    b.Property<string>("WikidataQid")
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("wikidata_qid");
+
                     b.HasKey("MovieId")
                         .HasName("PK_Movies");
+
+                    b.HasIndex("ImdbId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Movies_ImdbId")
+                        .HasFilter("[imdb_id] IS NOT NULL");
+
+                    b.HasIndex("TmdbId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Movies_TmdbId")
+                        .HasFilter("[tmdb_id] IS NOT NULL");
+
+                    b.HasIndex("WikidataQid")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Movies_WikidataQid")
+                        .HasFilter("[wikidata_qid] IS NOT NULL");
 
                     b.ToTable("Movies", "dbo", t =>
                         {
                             t.HasCheckConstraint("CK_Movies_01", "(duration_min BETWEEN 1 AND 480)");
 
                             t.HasCheckConstraint("CK_Movies_02", "(status IN ('DRAFT','PUBLISHED','ARCHIVED'))");
+
+                            t.HasCheckConstraint("CK_Movies_03", "(release_year IS NULL OR release_year BETWEEN 1888 AND 2100)");
+
+                            t.HasCheckConstraint("CK_Movies_04", "(artwork_source IS NULL OR artwork_source IN ('TMDB','WIKIMEDIA_COMMONS','DISTRIBUTOR','PENDING_TMDB_API_KEY','NONE'))");
+
+                            t.HasCheckConstraint("CK_Movies_05", "(rating_source IS NULL OR rating_source IN ('IMDB','TMDB'))");
+
+                            t.HasCheckConstraint("CK_Movies_06", "(rating_value IS NULL OR (rating_scale_max IS NOT NULL AND rating_scale_max > 0 AND rating_value >= 0 AND rating_value <= rating_scale_max AND rating_vote_count IS NOT NULL AND rating_vote_count >= 0))");
+
+                            t.HasCheckConstraint("CK_Movies_07", "(cast_json IS NULL OR ISJSON(cast_json) = 1)");
+
+                            t.HasCheckConstraint("CK_Movies_08", "(age_label_market IS NULL OR age_label_market IN ('VN'))");
                         });
                 });
 

@@ -186,6 +186,10 @@ builder.Services.AddRateLimiter(options =>
 
 // 8. MVC and API controllers
 builder.Services.AddControllersWithViews();
+builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
+{
+    options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All);
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 

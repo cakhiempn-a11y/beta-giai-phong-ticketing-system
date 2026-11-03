@@ -90,9 +90,9 @@ test.describe('BE-05B Phase 7: Restart, Recovery, Idempotency & Failure Behavior
       // OR publish a showtime at now + 15m if room is free. Let's check existing showtimes first:
       // Actually in 01 and 02 we already created showtimes at now + 15m and now + 20m in Room 1!
       // Let's find showtimeA from 01-full-journey or 02-negative on /movies!
-      await customerPage.goto('/movies');
+      await customerPage.goto('/movies?q=Phim+E2E'); if ((await customerPage.locator('[data-testid="catalog-movie-card"]').count()) === 0) { await customerPage.goto('/movies?filter=has-showtimes'); }
       // Let's find the first movie that has an upcoming showtime and open its seat map
-      const firstMovieDetailLink = customerPage.locator('a[href*="/movies/"]').first();
+      const firstMovieDetailLink = customerPage.locator('[data-testid="catalog-movie-card"]').first();
       await firstMovieDetailLink.click();
       const firstShowtimeSeatLink = customerPage.locator('a[href*="/showtimes/"][href*="/seats"]').first();
       const showtimeHref = (await firstShowtimeSeatLink.getAttribute('href'))!;

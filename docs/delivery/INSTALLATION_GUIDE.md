@@ -53,6 +53,7 @@ Theo yêu cầu bảo mật `NFR-10`, kho mã nguồn **không lưu cứng (hard
 | `BGP_DEMO_PASSWORD` | Mật khẩu khởi tạo cho 5 tài khoản demo khi chạy `seed-demo` hoặc `seed-checkin-demo` | Bắt buộc tối thiểu **12 ký tự** (ví dụ: `BetaDemo@2026!`) |
 | `BGP_ALLOW_DEMO_SEED` | Cho phép chạy lệnh `seed-demo` (`true`/`false`) | `true` (được `scripts/01_prepare_dev_session.ps1` bật sẵn) |
 | `BGP_ALLOW_CHECKIN_DEMO` | Cho phép chạy lệnh `seed-checkin-demo` (`true`/`false`) | `true` (được `scripts/01_prepare_dev_session.ps1` bật sẵn) |
+| `BGP_TMDB_READ_TOKEN` | *(Tùy chọn)* Khóa đọc TMDB API v3 phía server phục vụ tra cứu mở rộng tại `/management/movies` | Để trống nếu chạy offline — hệ thống tự động vận hành ở **Chế độ không khóa TMDB (`Wikidata`/`IMDb` sẵn sàng)** |
 | `MockPayment__AllowDemoTrigger` | Bật nút mô phỏng thanh toán trực tiếp trên trang Checkout (`POST /orders/{id}/demo-pay`) | Mặc định `true` trong `appsettings.Development.json` |
 
 ### 3.1. Khởi tạo Khóa Mật mã Ổn định bằng CSPRNG (Chỉ chạy 1 lần duy nhất khi cài máy mới)
@@ -84,7 +85,7 @@ Remove-Variable hmacBytes, aesBytes, hmac, aes -ErrorAction SilentlyContinue
 Thư mục `scripts/` cung cấp đúng 3 tệp công cụ thực tế:
 - `scripts/01_prepare_dev_session.ps1`: Thiết lập `ConnectionStrings__BetaDb`, bật `BGP_ALLOW_DEMO_SEED=true`, `BGP_ALLOW_CHECKIN_DEMO=true` và đồng bộ `BGP_QR_AES_KEY_B64` + `BGP_MOCK_HMAC_KEY_B64` từ `.NET User Secrets` ra biến môi trường của phiên PowerShell hiện tại.
 - `scripts/02_run_dev.ps1`: Chạy toàn bộ chuỗi kiểm định cục bộ trên `BetaGiaiPhong.Runner` (`migrate`, `seed-demo`, `status`, `smoke`, `race`, `late`, `verify`).
-- `scripts/static_schema_checks.py`: Kiểm tra tĩnh cấu trúc 17 bảng, 116 cột và 22 khóa ngoại `NO ACTION`.
+- `scripts/static_schema_checks.py`: Kiểm tra tĩnh cấu trúc 17 bảng, 145 cột (bao gồm dữ liệu xuất xứ phim thật xác minh), 39 SQL batches và 22 khóa ngoại `NO ACTION`.
 
 ### Cách 1: Chuẩn bị cơ sở dữ liệu sạch cho phiên Demo / Phát triển
 
@@ -99,7 +100,7 @@ $env:BGP_DEMO_PASSWORD = "BetaDemo@2026!"
 dotnet run --project .\src\BetaGiaiPhong.Runner -- migrate
 
 # Bước 3: Nạp dữ liệu danh mục mẫu (5 tài khoản, 2 phòng chiếu, sơ đồ ghế, phim và suất chiếu mẫu)
-dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-demo
+dotnet run --project .\src\BetaGiaiPhong.Runner -- seed-verified-showcase
 
 # Bước 4 (Chỉ chạy khi muốn có sẵn 1 suất chiếu ở now + 15 phút và 1 vé PAID để demo quét vé ngay):
 # Lưu ý: Nếu bạn định tự dùng tài khoản Manager tạo suất chiếu mới ở Phòng 1 tại now + 15 phút, KHÔNG chạy lệnh này để tránh trùng lịch Phòng 1.
@@ -160,7 +161,7 @@ python scripts/static_schema_checks.py
 dotnet ef migrations has-pending-model-changes --project src/BetaGiaiPhong.Data --startup-project src/BetaGiaiPhong.Data
 ```
 
-### 6.2. Chạy 166 bài kiểm thử xUnit (Unit + SQL Integration + WebApplicationFactory)
+### 6.2. Chạy 173 bài kiểm thử xUnit (Unit + SQL Integration + WebApplicationFactory)
 > **Cơ chế an toàn DB kiểm thử (`TestDatabaseFixture`):** Bộ kiểm thử tích hợp yêu cầu biến môi trường `BGP_TEST_ALLOW_DB_CREATE=true` và đọc chuỗi kết nối SQL Server qua biến `BGP_TEST_SQL_MASTER_CONNECTION` để tự động tạo các cơ sở dữ liệu tạm thời độc lập (`BetaGiaiPhong_Test_<guid12>`) gắn nhãn sở hữu `BGP_TestRunOwnershipToken` và tự động dọn sạch (`DROP DATABASE`) sau khi chạy xong.
 
 ```powershell
@@ -169,7 +170,7 @@ $env:BGP_TEST_SQL_MASTER_CONNECTION = "Server=localhost;Database=master;Trusted_
 dotnet test BetaGiaiPhong.slnx -c Release
 ```
 
-### 6.3. Chạy 5 Bộ Kiểm thử Trình duyệt Thực Playwright Chromium E2E
+### 6.3. Chạy 15 Bộ Kiểm thử Trình duyệt Thực Playwright Chromium E2E (`50` bài kiểm thử)
 Playwright E2E (`e2e/global-setup.ts`) tự động tạo một CSDL riêng `BetaGiaiPhong_E2E_<runId>`, khởi chạy tiến trình `BetaGiaiPhong.Web` trên cổng `5199`, chạy toàn bộ 5 tệp spec trên trình duyệt Chromium (`retries: 0`), chạy `Runner verify` kiểm tra 9 bất biến SQL, và tự động xóa CSDL E2E trong `e2e/global-teardown.ts`:
 
 ```powershell

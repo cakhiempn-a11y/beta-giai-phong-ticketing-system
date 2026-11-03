@@ -1,41 +1,67 @@
 @{
-    ViewData["Title"] = "Giới thiệu & Quy chế học thuật";
+    Layout = "_CinemaLayout";
+    ViewData["Title"] = "Giới thiệu, Quy chế học thuật & Nguồn dữ liệu";
 }
 
-<div class="container mt-4">
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body p-4 p-md-5">
-            <span class="badge bg-secondary mb-2 text-uppercase">Tài liệu công bố</span>
-            <h1 class="h2 fw-bold mb-4">Giới Thiệu Đề Án & Tuyên Bố Học Thuật</h1>
+<section class="bgp-static-page" aria-labelledby="privacy-doc-title">
+    <div class="bgp-container--narrow">
+        <div class="bgp-panel bgp-panel--elevated">
+            <header class="bgp-doc-header">
+                <span class="bgp-badge bgp-badge--brand">TÀI LIỆU CÔNG BỐ &amp; QUY CHẾ HỌC THUẬT</span>
+                <h1 id="privacy-doc-title" class="bgp-doc-title">Giới Thiệu Đề Án, Tuyên Bố Học Thuật &amp; Xuất Xứ Dữ Liệu</h1>
+                <p class="bgp-doc-lead">
+                    Hệ thống Bán vé Rạp chiếu phim Beta Giải Phóng là đề án tốt nghiệp ngành
+                    <strong>Hệ thống thông tin quản lý (MIS)</strong>, tập trung vào độ toàn vẹn giao dịch đặt ghế thời gian thực,
+                    bảo mật vé điện tử và chuẩn mực thiết kế trải nghiệm điện ảnh hiện đại.
+                </p>
+            </header>
 
-            <div class="alert alert-warning border-warning">
-                <h5 class="fw-bold mb-1">Tuyên bố miễn trừ trách nhiệm (Academic Disclaimer)</h5>
-                <p class="mb-0 small">
-                    Hệ thống này là sản phẩm đề án học thuật tốt nghiệp ngành <strong>Hệ thống thông tin quản lý (MIS)</strong>.
-                    Toàn bộ phim, lịch chiếu, giá vé và sơ đồ rạp là <strong>dữ liệu mô phỏng độc lập</strong>.
-                    Hệ thống <strong>không kết nối, không đại diện và không sử dụng bất kỳ hạ tầng hay tài sản thương mại nào của Beta Cinemas</strong>.
+            <div class="bgp-alert bgp-alert--warning" role="note" aria-label="Tuyên bố miễn trừ trách nhiệm học thuật">
+                <h2 class="bgp-alert__title">Tuyên bố miễn trừ trách nhiệm (Academic Simulation Disclaimer)</h2>
+                <p style="margin:0;">
+                    Toàn bộ <strong>lịch chiếu, phòng chiếu, sơ đồ ghế, giá vé VND và giao dịch thanh toán</strong> trên hệ thống là
+                    <strong>dữ liệu vận hành mô phỏng độc lập phục vụ nghiên cứu học thuật</strong>.
+                    Hệ thống <strong>không kết nối, không đại diện thương mại và không sử dụng hạ tầng nội bộ của Beta Cinemas</strong>.
                 </p>
             </div>
 
-            <h4 class="fw-bold mt-4 mb-3">1. Mục tiêu đề tài</h4>
-            <p class="text-muted">
-                Nghiên cứu, phân tích và hiện thực hóa kiến trúc phần mềm xử lý giao dịch bán vé trực tuyến có độ tin cậy cao,
-                giải quyết bài toán tranh chấp giữ ghế đồng thời (concurrency race conditions), xác thực thanh toán webhook phi trạng thái (stateless HMAC verification),
-                và mã hóa vé điện tử bảo mật chuẩn AES-256-GCM.
-            </p>
+            <div class="bgp-doc-grid">
+                <article class="bgp-doc-section">
+                    <h2 class="bgp-doc-section__title">1. Mục tiêu kỹ thuật cốt lõi</h2>
+                    <ul>
+                        <li>Giải quyết tranh chấp giữ ghế đồng thời cao (<strong>Concurrency Race Conditions</strong>) bằng khóa giao dịch cô lập mức cơ sở dữ liệu.</li>
+                        <li>Xác thực phản hồi cổng thanh toán phi trạng thái bằng chữ ký số <code>HMAC-SHA256</code> và đối soát bất biến.</li>
+                        <li>Bảo vệ mã vé điện tử QR bằng mã hóa xác thực <code>AES-256-GCM</code> chống giả mạo và quét lặp tại cổng soát vé.</li>
+                    </ul>
+                </article>
 
-            <h4 class="fw-bold mt-4 mb-3">2. Công nghệ nền tảng</h4>
-            <ul class="text-muted">
-                <li><strong>Backend:</strong> ASP.NET Core 10 MVC & Web API, .NET 10 LTS.</li>
-                <li><strong>ORM & Database:</strong> Entity Framework Core 10, Microsoft SQL Server (17 bảng nghiệp vụ, 22 khóa ngoại, 30 CHECK constraints).</li>
-                <li><strong>Bảo mật:</strong> Cookie Authentication, PasswordHasher, Rate Limiting, Anti-CSRF Tokens, AES-256-GCM, HMAC-SHA256.</li>
-            </ul>
+                <article class="bgp-doc-section">
+                    <h2 class="bgp-doc-section__title">2. Kiến trúc &amp; Hạ tầng nền tảng</h2>
+                    <ul>
+                        <li><strong>Ứng dụng:</strong> ASP.NET Core MVC &amp; RESTful JSON API, kiến trúc Dual-Shell (<code>_CinemaLayout</code> &amp; <code>_OperationsLayout</code>).</li>
+                        <li><strong>Cơ sở dữ liệu:</strong> Microsoft SQL Server (17 bảng nghiệp vụ, 22 khóa ngoại, 30 ràng buộc <code>CHECK</code>).</li>
+                        <li><strong>An toàn thông tin:</strong> Cookie <code>HttpOnly</code>, Anti-CSRF hai lớp, Rate Limiting và kiểm tra thu hồi vai trò động.</li>
+                    </ul>
+                </article>
 
-            <h4 class="fw-bold mt-4 mb-3">3. Thông tin học thuật</h4>
-            <p class="text-muted mb-0">
-                <strong>Nhóm nghiên cứu:</strong> <code>cakhiempn-a11y</code><br />
-                <strong>Kho lưu trữ mã nguồn:</strong> <code>cakhiempn-a11y/beta-giai-phong-ticketing-system</code>
-            </p>
+                <article class="bgp-doc-section">
+                    <h2 class="bgp-doc-section__title">3. Chuẩn dữ liệu tác phẩm &amp; Ghi nhận nguồn</h2>
+                    <ul>
+                        <li><strong>Siêu dữ liệu mở &amp; Hình ảnh:</strong> Đối chiếu qua định danh <code>Wikidata (CC0)</code> và kho tư liệu <code>Wikimedia Commons</code> theo giấy phép mở (<code>Public Domain</code>, <code>CC0</code>, <code>CC BY 3.0</code>, <code>CC BY 4.0</code>).</li>
+                        <li><strong>Điểm đánh giá:</strong> Trích xuất nguyên gốc kèm thang điểm và tổng lượt bình chọn từ <code>IMDb Non-Commercial Datasets</code> (chỉ sử dụng phi thương mại học thuật).</li>
+                        <li><strong>TMDB Notice:</strong> <em>This product uses the TMDB API but is not endorsed or certified by TMDB.</em></li>
+                    </ul>
+                </article>
+
+                <article class="bgp-doc-section">
+                    <h2 class="bgp-doc-section__title">4. Phân loại độ tuổi &amp; Thông tin đề án</h2>
+                    <ul>
+                        <li><strong>Phân loại phim:</strong> Tuân thủ hệ nhãn Cục Điện ảnh Việt Nam (<code>P</code>, <code>K</code>, <code>T13</code>, <code>T16</code>, <code>T18</code>, <code>C</code> theo Thông tư 05/2023/TT-BVHTTDL); không tự quy đổi nhãn nước ngoài.</li>
+                        <li><strong>Nhóm nghiên cứu:</strong> <code>cakhiempn-a11y</code></li>
+                        <li><strong>Kho lưu trữ:</strong> <code>cakhiempn-a11y/beta-giai-phong-ticketing-system</code></li>
+                    </ul>
+                </article>
+            </div>
         </div>
     </div>
-</div>
+</section>

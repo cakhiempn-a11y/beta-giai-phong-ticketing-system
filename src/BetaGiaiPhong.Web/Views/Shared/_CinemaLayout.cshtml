@@ -1,0 +1,347 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    bool isHomeActive = currentController.Equals("Home", StringComparison.OrdinalIgnoreCase)
+                        && currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase);
+    bool isMoviesActive = currentController.Equals("Movies", StringComparison.OrdinalIgnoreCase);
+    bool isOrdersActive = currentController.Equals("Orders", StringComparison.OrdinalIgnoreCase);
+    bool isPrivacyActive = currentController.Equals("Home", StringComparison.OrdinalIgnoreCase)
+                           && currentAction.Equals("Privacy", StringComparison.OrdinalIgnoreCase);
+
+    bool isHeroOverlay = ViewData["HeaderOverlay"] as bool?
+        ?? (isHomeActive || (isMoviesActive && currentAction.Equals("Details", StringComparison.OrdinalIgnoreCase)));
+
+    bool isAuthenticated = User.Identity?.IsAuthenticated == true;
+    bool isCustomer = User.IsInRole("CUSTOMER");
+    bool isManagerOrAdmin = User.IsInRole("MANAGER") || User.IsInRole("ADMIN");
+    bool isStaff = User.IsInRole("STAFF");
+    bool isOperationalRole = isManagerOrAdmin || isStaff;
+
+    string roleClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "USER";
+    string displayName = User.Identity?.Name ?? "Tài khoản";
+    string avatarInitial = !string.IsNullOrWhiteSpace(displayName)
+        ? char.ToUpperInvariant(displayName.Trim()[0]).ToString()
+        : "U";
+
+    string currentSearchQ = Context.Request.Query["q"].ToString();
+    bool hasSearchValue = !string.IsNullOrWhiteSpace(currentSearchQ);
+
+    string opsConsoleController = isManagerOrAdmin ? "Management" : "StaffCheckIn";
+    string opsConsoleAction = isManagerOrAdmin ? "Reports" : "Index";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Beta Giải Phóng Cinema</title>
+
+    <link rel="stylesheet" href="~/css/cinema/01-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/02-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/03-shell-cinema.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/04-components.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="bgp-cinema-body @(isHeroOverlay ? "bgp-cinema-body--overlay-hero" : "")">
+    <a href="#main-content" class="bgp-skip-link">Chuyển đến nội dung chính</a>
+
+    <header class="bgp-cinema-header bgp-navbar @(isHeroOverlay ? "" : "bgp-cinema-header--solid")"
+            data-cinema-header
+            data-header-mode="@(isHeroOverlay ? "overlay" : "solid")"
+            data-testid="cinema-header">
+        <div class="bgp-cinema-header__inner">
+            <div class="bgp-cinema-header__left">
+                <a class="bgp-cinema-brand" href="/" aria-label="Beta Giải Phóng Trang chủ">
+                    <span class="bgp-cinema-brand__badge">BETA</span>
+                    <span class="bgp-cinema-brand__name">Giải Phóng</span>
+                </a>
+
+                <nav aria-label="Điều hướng khách hàng">
+                    <ul class="bgp-cinema-nav" data-testid="cinema-desktop-nav">
+                        <li>
+                            <a class="bgp-cinema-nav__link @(isHomeActive ? "is-active" : "")"
+                               aria-current="@(isHomeActive ? "page" : null)"
+                               href="/">Trang chủ</a>
+                        </li>
+                        <li>
+                            <a class="bgp-cinema-nav__link @(isMoviesActive ? "is-active" : "")"
+                               aria-current="@(isMoviesActive ? "page" : null)"
+                               asp-controller="Movies"
+                               asp-action="Index">Danh mục phim</a>
+                        </li>
+                        @if (isCustomer)
+                        {
+                            <li>
+                                <a class="bgp-cinema-nav__link @(isOrdersActive ? "is-active" : "")"
+                                   aria-current="@(isOrdersActive ? "page" : null)"
+                                   asp-controller="Orders"
+                                   asp-action="Index">Đơn hàng của tôi</a>
+                            </li>
+                        }
+                        <li>
+                            <a class="bgp-cinema-nav__link @(isPrivacyActive ? "is-active" : "")"
+                               aria-current="@(isPrivacyActive ? "page" : null)"
+                               asp-controller="Home"
+                               asp-action="Privacy">Giới thiệu &amp; Quy chế</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="bgp-cinema-header__right">
+                <form method="get"
+                      asp-controller="Movies"
+                      asp-action="Index"
+                      class="bgp-header-search @(hasSearchValue ? "is-expanded" : "")"
+                      role="search"
+                      data-header-search
+                      data-testid="header-search-form">
+                    <button type="button"
+                            class="bgp-header-search__btn"
+                            data-search-trigger
+                            data-testid="header-search-trigger"
+                            aria-label="Tìm kiếm phim">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                    </button>
+                    <label for="cinemaHeaderSearchInput" class="bgp-sr-only">Tìm phim theo tên hoặc thể loại</label>
+                    <input type="search"
+                           id="cinemaHeaderSearchInput"
+                           name="q"
+                           value="@currentSearchQ"
+                           class="bgp-header-search__input"
+                           placeholder="Tìm tên phim, thể loại..."
+                           autocomplete="off"
+                           data-search-input
+                           data-testid="header-search-input" />
+                </form>
+
+                <span class="bgp-sim-pill" title="Hệ thống đồ án học thuật MIS — Dữ liệu vận hành rạp độc lập">
+                    Mô phỏng học thuật
+                </span>
+
+                @if (isOperationalRole)
+                {
+                    <a class="bgp-ops-switch-pill"
+                       asp-controller="@opsConsoleController"
+                       asp-action="@opsConsoleAction"
+                       data-testid="ops-console-switch">
+                        <span>Console Vận hành</span>
+                        <span aria-hidden="true">&rarr;</span>
+                    </a>
+                }
+
+                @if (isAuthenticated)
+                {
+                    <details class="bgp-user-menu" data-user-menu data-testid="cinema-user-menu">
+                        <summary class="bgp-user-menu__trigger" aria-label="Menu tài khoản @displayName">
+                            <span class="bgp-user-menu__avatar" aria-hidden="true">@avatarInitial</span>
+                            <span class="bgp-user-menu__name">@displayName</span>
+                            <span class="bgp-user-menu__caret" aria-hidden="true">&#9662;</span>
+                        </summary>
+                        <div class="bgp-user-menu__dropdown">
+                            <div class="bgp-user-menu__header">
+                                <div class="bgp-user-menu__email" title="@displayName">@displayName</div>
+                                <div class="bgp-user-menu__role">VAI TRÒ: @roleClaim</div>
+                            </div>
+                            <a class="bgp-user-menu__item" asp-controller="Account" asp-action="Profile">
+                                Hồ sơ tài khoản
+                            </a>
+                            @if (isCustomer)
+                            {
+                                <a class="bgp-user-menu__item" asp-controller="Orders" asp-action="Index">
+                                    Đơn hàng &amp; Vé điện tử
+                                </a>
+                            }
+                            <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="bgp-user-menu__item bgp-user-menu__item--danger">
+                                    Đăng xuất
+                                </button>
+                            </form>
+                        </div>
+                    </details>
+                }
+                else
+                {
+                    <a class="bgp-header-login-btn"
+                       asp-controller="Account"
+                       asp-action="Login"
+                       data-testid="cinema-login-btn">Đăng nhập</a>
+                }
+            </div>
+
+            <!-- Mobile Action Buttons (< 992px, >= 44x44px touch targets) -->
+            <div class="bgp-cinema-mobile-actions">
+                <button type="button"
+                        class="bgp-icon-btn"
+                        data-cinema-mobile-search
+                        data-testid="cinema-mobile-search-btn"
+                        aria-label="Mở tìm kiếm phim">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </button>
+                <button type="button"
+                        class="bgp-icon-btn"
+                        data-cinema-drawer-toggle
+                        data-testid="cinema-mobile-toggle"
+                        aria-controls="cinema-mobile-drawer"
+                        aria-expanded="false"
+                        aria-label="Mở menu điều hướng">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Slide-Over Drawer -->
+    <div class="bgp-cinema-drawer-backdrop" data-cinema-drawer-backdrop aria-hidden="true"></div>
+    <aside id="cinema-mobile-drawer"
+           class="bgp-cinema-drawer"
+           data-cinema-drawer
+           data-testid="cinema-mobile-drawer"
+           aria-label="Menu di động khách hàng"
+           aria-hidden="true">
+        <div class="bgp-cinema-drawer__top">
+            <span class="bgp-cinema-brand">
+                <span class="bgp-cinema-brand__badge">BETA</span>
+                <span class="bgp-cinema-brand__name">Giải Phóng</span>
+            </span>
+            <button type="button"
+                    class="bgp-icon-btn"
+                    data-cinema-drawer-close
+                    aria-label="Đóng menu điều hướng">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form method="get"
+              asp-controller="Movies"
+              asp-action="Index"
+              class="bgp-cinema-drawer__search"
+              role="search"
+              data-drawer-search>
+            <label for="cinemaDrawerSearchInput" class="bgp-sr-only">Tìm kiếm phim</label>
+            <input type="search"
+                   id="cinemaDrawerSearchInput"
+                   name="q"
+                   value="@currentSearchQ"
+                   placeholder="Tìm tên phim, thể loại..."
+                   autocomplete="off"
+                   data-drawer-search-input
+                   data-testid="drawer-search-input" />
+            <button type="button"
+                    class="bgp-header-search__btn"
+                    data-drawer-search-trigger
+                    data-testid="drawer-search-trigger"
+                    aria-label="Thực hiện tìm kiếm">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+        </form>
+
+        <nav class="bgp-cinema-drawer__nav" aria-label="Liên kết di động">
+            <a class="bgp-cinema-drawer__link @(isHomeActive ? "is-active" : "")"
+               aria-current="@(isHomeActive ? "page" : null)"
+               href="/">
+                <span>Trang chủ</span>
+            </a>
+            <a class="bgp-cinema-drawer__link @(isMoviesActive ? "is-active" : "")"
+               aria-current="@(isMoviesActive ? "page" : null)"
+               asp-controller="Movies"
+               asp-action="Index">
+                <span>Danh mục phim</span>
+            </a>
+            @if (isCustomer)
+            {
+                <a class="bgp-cinema-drawer__link @(isOrdersActive ? "is-active" : "")"
+                   aria-current="@(isOrdersActive ? "page" : null)"
+                   asp-controller="Orders"
+                   asp-action="Index">
+                    <span>Đơn hàng của tôi</span>
+                </a>
+            }
+            <a class="bgp-cinema-drawer__link @(isPrivacyActive ? "is-active" : "")"
+               aria-current="@(isPrivacyActive ? "page" : null)"
+               asp-controller="Home"
+               asp-action="Privacy">
+                <span>Giới thiệu &amp; Quy chế</span>
+            </a>
+
+            @if (isOperationalRole)
+            {
+                <a class="bgp-ops-switch-pill"
+                   style="margin-top: 8px; justify-content: space-between; min-height: 44px;"
+                   asp-controller="@opsConsoleController"
+                   asp-action="@opsConsoleAction"
+                   data-testid="ops-console-switch-mobile">
+                    <span>Console Vận hành (@roleClaim)</span>
+                    <span aria-hidden="true">&rarr;</span>
+                </a>
+            }
+        </nav>
+
+        <div class="bgp-cinema-drawer__footer">
+            @if (isAuthenticated)
+            {
+                <div style="font-size: 0.8rem; color: var(--bgp-text-muted);">
+                    Đang đăng nhập: <strong style="color: var(--bgp-text-primary);">@displayName</strong> (@roleClaim)
+                </div>
+                <a class="bgp-btn bgp-btn--outline bgp-btn--sm" style="min-height: 44px;" asp-controller="Account" asp-action="Profile">
+                    Hồ sơ tài khoản
+                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="bgp-btn bgp-btn--danger bgp-btn--sm" style="width:100%; min-height: 44px;">
+                        Đăng xuất
+                    </button>
+                </form>
+            }
+            else
+            {
+                <a class="bgp-btn bgp-btn--primary" style="width:100%;" asp-controller="Account" asp-action="Login">
+                    Đăng nhập tài khoản
+                </a>
+            }
+        </div>
+    </aside>
+
+    <main id="main-content" role="main" class="bgp-cinema-main">
+        @RenderBody()
+    </main>
+
+    <footer class="bgp-cinema-footer" data-testid="cinema-footer">
+        <div class="bgp-container bgp-cinema-footer__grid">
+            <div class="bgp-cinema-footer__brand">
+                <div class="bgp-cinema-footer__title">Beta Giải Phóng — Đề án Học thuật MIS Capstone &copy; 2026</div>
+                <p class="bgp-cinema-footer__desc">
+                    Hệ thống nghiên cứu kiến trúc đặt giữ ghế thời gian thực, thanh toán mô phỏng ký số HMAC-SHA256 và vé điện tử AES-256-GCM.
+                    Lịch chiếu, phòng chiếu và giá vé là dữ liệu vận hành độc lập phục vụ học thuật, không đại diện dịch vụ thương mại của Beta Cinemas.
+                    Dữ liệu tác phẩm điện ảnh tuân thủ ghi nhận nguồn mở (Wikidata / Wikimedia Commons, IMDb Non-Commercial Datasets &amp; TMDB API).
+                </p>
+            </div>
+            <div class="bgp-cinema-footer__links">
+                <a class="bgp-cinema-footer__link" asp-controller="Movies" asp-action="Index">Danh mục phim</a>
+                <a class="bgp-cinema-footer__link" asp-controller="Home" asp-action="Privacy">Giới thiệu, Quy chế &amp; Nguồn dữ liệu</a>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="~/js/modules/shell-nav.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

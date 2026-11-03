@@ -35,6 +35,7 @@ public sealed class PublicCatalogWebTests : IClassFixture<CustomWebApplicationFa
         Assert.NotNull(movies);
         Assert.NotEmpty(movies);
         Assert.All(movies, m => Assert.Equal("PUBLISHED", m.Status));
+        Assert.DoesNotContain(movies, m => m.Title.Contains("Phim mo phong", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -59,7 +60,11 @@ public sealed class PublicCatalogWebTests : IClassFixture<CustomWebApplicationFa
         var apiResp = await client.GetAsync($"/api/movies/{draftMovie.MovieId}");
         Assert.Equal(HttpStatusCode.NotFound, apiResp.StatusCode);
 
-        // 2. MVC call
+        // 2. Quick-preview API call
+        var previewResp = await client.GetAsync($"/api/movies/{draftMovie.MovieId}/quick-preview");
+        Assert.Equal(HttpStatusCode.NotFound, previewResp.StatusCode);
+
+        // 3. MVC call
         var mvcResp = await client.GetAsync($"/movies/{draftMovie.MovieId}");
         Assert.Equal(HttpStatusCode.NotFound, mvcResp.StatusCode);
     }
@@ -157,5 +162,79 @@ public sealed class PublicCatalogWebTests : IClassFixture<CustomWebApplicationFa
             Assert.Equal(seatsBefore[i].OwnerOrderId, seatsAfter[i].OwnerOrderId);
             Assert.Equal(seatsBefore[i].RowVer, seatsAfter[i].RowVer);
         }
+    }
+
+    [Fact]
+    public async Task TC_WEB_CAT_07_MovieApisAndQuickPreview_ReturnGroundedProvenanceRatingCastAndHeroEligibility()
+    {
+        var listResp = await client.GetAsync("/api/movies");
+        listResp.EnsureSuccessStatusCode();
+        var movies = await listResp.Content.ReadFromJsonAsync<List<MovieSummaryDto>>();
+        Assert.NotNull(movies);
+
+        var charade = Assert.Single(movies, m => m.Provenance?.WikidataQid == "Q496266");
+        Assert.Equal("Mê trong mê", charade.Title);
+        Assert.Equal("Charade", charade.OriginalTitle);
+        Assert.Equal((short)1963, charade.ReleaseYear);
+        Assert.Equal("Stanley Donen", charade.DirectorNames);
+        Assert.Equal("BJ_njww9SOQ", charade.OfficialTrailerYoutubeId);
+        Assert.True(charade.IsHeroEligible);
+        Assert.NotNull(charade.Rating);
+        Assert.Equal("IMDB", charade.Rating!.Source);
+        Assert.Equal(7.8m, charade.Rating.Score);
+        Assert.Equal(10.0m, charade.Rating.ScaleMax);
+        Assert.Equal(95223, charade.Rating.VoteCount);
+        Assert.Contains("IMDb 7.8/10", charade.Rating.DisplayText);
+        Assert.NotNull(charade.Artwork);
+        Assert.True(charade.Artwork!.HasVerifiedPoster);
+        Assert.True(charade.Artwork.HasVerifiedBackdrop);
+        Assert.Equal("/media/movies/verified/charade-1963-poster-w342.jpg", charade.Artwork.PosterW342Url);
+        Assert.Equal("/media/movies/verified/charade-1963-backdrop-w780.jpg", charade.Artwork.BackdropW780Url);
+
+        var mai = Assert.Single(movies, m => m.Provenance?.WikidataQid == "Q124516759");
+        Assert.False(mai.IsHeroEligible);
+        Assert.Equal("T18", mai.AgeLabel);
+        Assert.Equal("VN", mai.Provenance?.AgeLabelMarket);
+        Assert.Equal("PENDING_TMDB_API_KEY", mai.Artwork?.Source);
+        Assert.False(mai.Artwork?.HasVerifiedPoster ?? true);
+        Assert.False(mai.Artwork?.HasVerifiedBackdrop ?? true);
+
+        // Detail endpoint includes verified Cast array
+        var detailResp = await client.GetAsync($"/api/movies/{charade.MovieId}");
+        detailResp.EnsureSuccessStatusCode();
+        var detail = await detailResp.Content.ReadFromJsonAsync<MovieDetailDto>();
+        Assert.NotNull(detail);
+        Assert.NotNull(detail!.Cast);
+        Assert.Contains(detail.Cast!, c => c.Name == "Cary Grant" && c.Character == "Peter Joshua");
+        Assert.Contains(detail.Cast!, c => c.Name == "Audrey Hepburn");
+
+        // Quick-preview endpoint returns compact grounded DTO
+        var previewResp = await client.GetAsync($"/api/movies/{charade.MovieId}/quick-preview");
+        previewResp.EnsureSuccessStatusCode();
+        var preview = await previewResp.Content.ReadFromJsonAsync<MovieQuickPreviewDto>();
+        Assert.NotNull(preview);
+        Assert.Equal("Mê trong mê", preview!.Title);
+        Assert.Equal("Charade", preview.OriginalTitle);
+        Assert.Equal("BJ_njww9SOQ", preview.OfficialTrailerYoutubeId);
+        Assert.NotNull(preview.Rating);
+        Assert.True(preview.Artwork.HasVerifiedBackdrop);
+
+        // Homepage renders Hero with Hero-eligible movie (Mê trong mê) and never selects backdrop-less Mai as Hero
+        var homeResp = await client.GetAsync("/");
+        homeResp.EnsureSuccessStatusCode();
+        var homeHtml = await homeResp.Content.ReadAsStringAsync();
+        Assert.Contains("Mê trong mê", homeHtml);
+        Assert.DoesNotContain("Phim mo phong", homeHtml);
+
+        // Catalogue search by OriginalTitle ("Charade") and DirectorNames ("Trấn Thành") works cleanly
+        var searchOriginalResp = await client.GetAsync("/movies?q=Charade");
+        searchOriginalResp.EnsureSuccessStatusCode();
+        var searchOriginalHtml = await searchOriginalResp.Content.ReadAsStringAsync();
+        Assert.Contains("Mê trong mê", searchOriginalHtml);
+
+        var searchDirectorResp = await client.GetAsync("/movies?q=Tr%E1%BA%A5n%20Th%C3%A0nh");
+        searchDirectorResp.EnsureSuccessStatusCode();
+        var searchDirectorHtml = await searchDirectorResp.Content.ReadAsStringAsync();
+        Assert.Contains("Mai", searchDirectorHtml);
     }
 }

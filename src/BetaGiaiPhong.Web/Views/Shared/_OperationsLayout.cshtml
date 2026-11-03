@@ -1,0 +1,195 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    bool isStaffCheckInActive = currentController.Equals("StaffCheckIn", StringComparison.OrdinalIgnoreCase)
+                                && currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase);
+    bool isStaffHistoryActive = currentController.Equals("StaffCheckIn", StringComparison.OrdinalIgnoreCase)
+                                && currentAction.Equals("History", StringComparison.OrdinalIgnoreCase);
+
+    bool isManagementController = currentController.Equals("Management", StringComparison.OrdinalIgnoreCase);
+    bool isReportsActive = isManagementController && currentAction.Equals("Reports", StringComparison.OrdinalIgnoreCase);
+    bool isMgmtMoviesActive = isManagementController && currentAction.StartsWith("Movie", StringComparison.OrdinalIgnoreCase);
+    bool isMgmtShowtimesActive = isManagementController && currentAction.StartsWith("Showtime", StringComparison.OrdinalIgnoreCase);
+    bool isMgmtRoomsActive = isManagementController && currentAction.StartsWith("Room", StringComparison.OrdinalIgnoreCase);
+
+    bool canAccessStaffGate = User.IsInRole("STAFF") || User.IsInRole("MANAGER") || User.IsInRole("ADMIN");
+    bool canAccessManagement = User.IsInRole("MANAGER") || User.IsInRole("ADMIN");
+
+    string roleClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "STAFF";
+    string displayName = User.Identity?.Name ?? "Nhân sự vận hành";
+    string areaTitle = ViewData["Title"]?.ToString() ?? "Console Vận hành";
+
+    string brandController = canAccessManagement ? "Management" : "StaffCheckIn";
+    string brandAction = canAccessManagement ? "Reports" : "Index";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@areaTitle - Console Vận hành | Beta Giải Phóng</title>
+
+    <link rel="stylesheet" href="~/css/cinema/01-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/02-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/03-shell-ops.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/cinema/04-components.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="bgp-ops-body">
+    <a href="#main-content" class="bgp-skip-link">Chuyển đến nội dung làm việc</a>
+
+    <div class="bgp-ops-backdrop" data-ops-backdrop aria-hidden="true"></div>
+
+    <div class="bgp-ops-shell" data-testid="ops-shell">
+        <aside id="ops-sidebar-nav"
+               class="bgp-ops-sidebar"
+               data-ops-sidebar
+               data-testid="ops-sidebar"
+               aria-label="Điều hướng vận hành nội bộ">
+            <div>
+                <div class="bgp-ops-sidebar__top">
+                    <a class="bgp-ops-sidebar__brand" asp-controller="@brandController" asp-action="@brandAction">
+                        <span class="bgp-ops-sidebar__badge">BETA</span>
+                        <span class="bgp-ops-sidebar__title">
+                            <strong>Giải Phóng</strong>
+                            <span>Operations Console</span>
+                        </span>
+                    </a>
+                    <button type="button"
+                            class="bgp-icon-btn bgp-ops-sidebar__close"
+                            data-ops-drawer-close
+                            aria-label="Đóng menu vận hành">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                @if (canAccessStaffGate)
+                {
+                    <div class="bgp-ops-nav-section">
+                        <div class="bgp-ops-nav-section__label">Kiểm soát cổng rạp</div>
+                        <ul class="bgp-ops-nav">
+                            <li>
+                                <a class="bgp-ops-nav__link @(isStaffCheckInActive ? "is-active" : "")"
+                                   aria-current="@(isStaffCheckInActive ? "page" : null)"
+                                   asp-controller="StaffCheckIn"
+                                   asp-action="Index">
+                                    <span>Soát vé QR</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="bgp-ops-nav__link @(isStaffHistoryActive ? "is-active" : "")"
+                                   aria-current="@(isStaffHistoryActive ? "page" : null)"
+                                   asp-controller="StaffCheckIn"
+                                   asp-action="History">
+                                    <span>Lịch sử soát vé</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                }
+
+                @if (canAccessManagement)
+                {
+                    <div class="bgp-ops-nav-section">
+                        <div class="bgp-ops-nav-section__label">Quản trị &amp; Lịch chiếu</div>
+                        <ul class="bgp-ops-nav" data-testid="ops-management-nav">
+                            <li>
+                                <a class="bgp-ops-nav__link @(isReportsActive ? "is-active" : "")"
+                                   aria-current="@(isReportsActive ? "page" : null)"
+                                   asp-controller="Management"
+                                   asp-action="Reports">
+                                    <span>Báo cáo &amp; Doanh thu</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="bgp-ops-nav__link @(isMgmtMoviesActive ? "is-active" : "")"
+                                   aria-current="@(isMgmtMoviesActive ? "page" : null)"
+                                   asp-controller="Management"
+                                   asp-action="Movies">
+                                    <span>Quản lý Phim</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="bgp-ops-nav__link @(isMgmtShowtimesActive ? "is-active" : "")"
+                                   aria-current="@(isMgmtShowtimesActive ? "page" : null)"
+                                   asp-controller="Management"
+                                   asp-action="Showtimes">
+                                    <span>Lịch chiếu &amp; Suất chiếu</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="bgp-ops-nav__link @(isMgmtRoomsActive ? "is-active" : "")"
+                                   aria-current="@(isMgmtRoomsActive ? "page" : null)"
+                                   asp-controller="Management"
+                                   asp-action="Rooms">
+                                    <span>Phòng chiếu &amp; Sơ đồ ghế</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                }
+            </div>
+
+            <div class="bgp-ops-sidebar__footer">
+                <a class="bgp-ops-return-link"
+                   href="/"
+                   data-testid="ops-return-cinema">
+                    <span>Xem giao diện khách</span>
+                    <span aria-hidden="true">&#8599;</span>
+                </a>
+                <a class="bgp-ops-nav__link" asp-controller="Account" asp-action="Profile">
+                    <span>Hồ sơ nhân sự</span>
+                </a>
+            </div>
+        </aside>
+
+        <div class="bgp-ops-workspace">
+            <header class="bgp-ops-topbar" data-testid="ops-topbar">
+                <div class="bgp-ops-topbar__left">
+                    <button type="button"
+                            class="bgp-icon-btn bgp-ops-mobile-toggle"
+                            data-ops-drawer-toggle
+                            data-testid="ops-mobile-toggle"
+                            aria-controls="ops-sidebar-nav"
+                            aria-expanded="false"
+                            aria-label="Mở menu vận hành">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div class="bgp-ops-topbar__context">
+                        <span class="bgp-ops-topbar__area">@areaTitle</span>
+                    </div>
+                </div>
+
+                <div class="bgp-ops-topbar__right">
+                    <span class="bgp-ops-role-chip" data-testid="ops-role-chip">@roleClaim</span>
+                    <span class="bgp-ops-user-email" title="@displayName">@displayName</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="bgp-ops-logout-btn">Đăng xuất</button>
+                    </form>
+                </div>
+            </header>
+
+            <main id="main-content" role="main" class="bgp-ops-main">
+                @RenderBody()
+            </main>
+
+            <footer class="bgp-ops-footer">
+                <span>Beta Giải Phóng — Console Vận hành Nội bộ (MIS Capstone)</span>
+                <span>Múi giờ nghiệp vụ: Việt Nam (UTC+7)</span>
+            </footer>
+        </div>
+    </div>
+
+    <script type="module" src="~/js/modules/shell-nav.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

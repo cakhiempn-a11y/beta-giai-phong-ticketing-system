@@ -6,6 +6,7 @@ sql=(root/'sql/01_reference_schema_SQL_ONLY.sql').read_text(encoding='utf-8')
 config=(root/'src/BetaGiaiPhong.Data/Persistence/BetaModelConfiguration.cs').read_text(encoding='utf-8')
 snapshot=(root/'src/BetaGiaiPhong.Data/Persistence/Migrations/BetaDbContextModelSnapshot.cs').read_text(encoding='utf-8')
 mg=(root/'src/BetaGiaiPhong.Data/Persistence/Migrations/202610310001_InitialSchema.cs').read_text(encoding='utf-8')
+mg_p2=(root/'src/BetaGiaiPhong.Data/Persistence/Migrations/20261103051835_RealMovieProvenanceSchema.cs').read_text(encoding='utf-8')
 blocks=re.findall(r'CREATE TABLE dbo\.\[(\w+)\] \(\n(.*?)\n\);\nGO',sql,re.S)
 checks=[]
 assert len(blocks)==17,len(blocks)
@@ -14,7 +15,7 @@ cols=0;fks=0;tbls=[]
 entities={x.stem:x.read_text(encoding='utf-8') for x in (root/'src/BetaGiaiPhong.Data/Entities').glob('*.cs')}
 for table,body in blocks:
     tbls.append(table)
-    names=re.findall(r'^\s*\[(\w+)\]\s+(?:BIGINT|INT|SMALLINT|TINYINT|VARCHAR|NVARCHAR|DATETIME2|BIT|ROWVERSION|BINARY|VARBINARY|UNIQUEIDENTIFIER)',body,re.M)
+    names=re.findall(r'^\s*\[(\w+)\]\s+(?:BIGINT|INT|SMALLINT|TINYINT|VARCHAR|NVARCHAR|DATETIME2|DATE|DECIMAL|BIT|ROWVERSION|BINARY|VARBINARY|UNIQUEIDENTIFIER)',body,re.M)
     cols+=len(names)
     for name in names:
         num=config.count(f'.HasColumnName("{name}")')
@@ -24,7 +25,9 @@ for table,body in blocks:
     assert f'b.ToTable("{table}"' in config,table
     for cons in re.findall(r'CONSTRAINT (FK_\w+|PK_\w+|UQ_\w+|CK_\w+)',body):
         assert f'"{cons}"' in config,(table,cons)
-assert cols==116,cols
+for idx in re.findall(r'CREATE (?:UNIQUE )?INDEX (\w+) ON dbo\.',sql):
+    assert f'.HasDatabaseName("{idx}")' in config,idx
+assert cols==145,cols
 assert fks==22,fks
 for f in root.rglob('*.cs'):
     text=f.read_text(encoding='utf-8')
@@ -35,12 +38,17 @@ for f in root.rglob('*.cs'):
     assert clean.count('[')==clean.count(']'),('brackets',f)
 for f in root.rglob('*.csproj'): ET.parse(f)
 ET.parse(root/'BetaGiaiPhong.slnx')
-assert mg.count('migrationBuilder.Sql(')==len([s for s in re.split(r'^GO\s*$',sql,flags=re.M) if s.strip()])
+sql_batches=[s for s in re.split(r'^GO\s*$',sql,flags=re.M) if s.strip()]
+assert len(sql_batches)==39,len(sql_batches)
+assert mg.count('migrationBuilder.Sql(')==36
 assert mg.count('migrationBuilder.DropTable(')==17
+assert mg_p2.count('migrationBuilder.AddColumn')==29
+assert mg_p2.count('migrationBuilder.CreateIndex')==3
+assert mg_p2.count('migrationBuilder.AddCheckConstraint')==6
 assert config.count('HasConstraintName("FK_')==22
 assert 'HasColumnType("rowversion").IsRequired().IsRowVersion()' in config
 for vulnerable in ['PaymentEvents','ShowtimeSeats','Tickets','Orders','OrderSeats']:
     assert vulnerable in entities or vulnerable in tbls
-print('PASS: 17 tables, 116 columns, 22 FKs; migration/snapshot/code mapping structurally consistent.')
-print('PASS: 36 SQL batches, 17 Down drops; C# delimiter checks; csproj/slnx XML.')
+print('PASS: 17 tables, 145 columns, 22 FKs; migration/snapshot/code mapping structurally consistent.')
+print('PASS: 39 SQL batches (36 baseline + 3 movie provenance unique indexes), 17 Down drops; C# delimiter checks; csproj/slnx XML.')
 print('NOTE: This is STATIC review. Execute dotnet build / migrate / smoke / race with a live SQL Server locally.')

@@ -15,6 +15,7 @@ namespace BetaGiaiPhong.Web.Controllers;
 public sealed class ManagementController(
     BetaDbContext db,
     MovieManagementService movieService,
+    MovieContentSyncService syncService,
     ShowtimePublishingService publishingService,
     ManagementQueryService queryService,
     ISystemClock clock,
@@ -42,6 +43,61 @@ public sealed class ManagementController(
             return DateTime.SpecifyKind(vnLocalTime.AddHours(-7), DateTimeKind.Utc);
         }
     }
+
+    private ManageMovieFormViewModel MapCreateRequestToFormVm(CreateMovieRequest request) => new()
+    {
+        Title = request.Title,
+        DurationMin = request.DurationMin,
+        GenreText = request.GenreText,
+        AgeLabel = request.AgeLabel,
+        Synopsis = request.Synopsis,
+        PosterUrl = request.PosterUrl,
+        OriginalTitle = request.OriginalTitle,
+        ReleaseYear = request.ReleaseYear,
+        DirectorNames = request.DirectorNames,
+        OriginCountry = request.OriginCountry,
+        OriginalLanguage = request.OriginalLanguage,
+        WikidataQid = request.WikidataQid,
+        ImdbId = request.ImdbId,
+        TmdbId = request.TmdbId,
+        BackdropUrl = request.BackdropUrl,
+        OfficialTrailerYoutubeId = request.OfficialTrailerYoutubeId,
+        ManualOverrideMask = request.ManualOverrides is { Count: > 0 } ? string.Join(",", request.ManualOverrides) : null,
+        IsTmdbConfigured = syncService.IsTmdbConfigured
+    };
+
+    private ManageMovieFormViewModel MapEditRequestToFormVm(long id, EditMovieRequest request, bool hasActiveShowtimes, Movie? existing = null) => new()
+    {
+        MovieId = id,
+        Title = request.Title,
+        DurationMin = request.DurationMin,
+        GenreText = request.GenreText,
+        AgeLabel = request.AgeLabel,
+        Synopsis = request.Synopsis,
+        PosterUrl = request.PosterUrl,
+        Status = existing?.Status ?? "DRAFT",
+        HasActiveShowtimes = hasActiveShowtimes,
+        IsTmdbConfigured = syncService.IsTmdbConfigured,
+        OriginalTitle = request.OriginalTitle,
+        ReleaseYear = request.ReleaseYear,
+        DirectorNames = request.DirectorNames,
+        OriginCountry = request.OriginCountry,
+        OriginalLanguage = request.OriginalLanguage,
+        WikidataQid = request.WikidataQid,
+        ImdbId = request.ImdbId,
+        TmdbId = request.TmdbId,
+        BackdropUrl = request.BackdropUrl,
+        OfficialTrailerYoutubeId = request.OfficialTrailerYoutubeId,
+        ArtworkSource = existing?.ArtworkSource,
+        MetadataSource = existing?.MetadataSource,
+        RatingSource = existing?.RatingSource,
+        RatingValue = existing?.RatingValue,
+        RatingVoteCount = existing?.RatingVoteCount,
+        ExternalSyncedUtc = existing?.ExternalSyncedUtc,
+        ManualOverrideMask = request.ApplyOverrideLocks
+            ? (request.ManualOverrides is { Count: > 0 } ? string.Join(",", request.ManualOverrides) : null)
+            : existing?.ManualOverrideMask
+    };
 
     // =========================================================================
     // 1. DASHBOARD & OVERVIEW
@@ -93,7 +149,7 @@ public sealed class ManagementController(
     }
 
     // =========================================================================
-    // 2. MOVIE MANAGEMENT
+    // 2. MOVIE MANAGEMENT & EXTERNAL PROVENANCE SYNC
     // =========================================================================
 
     [HttpGet("movies")]
@@ -112,7 +168,8 @@ public sealed class ManagementController(
             StatusFilter = status ?? "ALL",
             CurrentPage = result.Page,
             TotalPages = result.TotalPages,
-            TotalCount = result.TotalCount
+            TotalCount = result.TotalCount,
+            IsTmdbConfigured = syncService.IsTmdbConfigured
         };
 
         return View(vm);
@@ -121,7 +178,10 @@ public sealed class ManagementController(
     [HttpGet("movies/create")]
     public IActionResult MovieCreate()
     {
-        return View(new ManageMovieFormViewModel());
+        return View(new ManageMovieFormViewModel
+        {
+            IsTmdbConfigured = syncService.IsTmdbConfigured
+        });
     }
 
     [HttpPost("movies/create")]
@@ -131,24 +191,30 @@ public sealed class ManagementController(
     {
         if (!ModelState.IsValid)
         {
-            return View(new ManageMovieFormViewModel
-            {
-                Title = request.Title,
-                DurationMin = request.DurationMin,
-                GenreText = request.GenreText,
-                AgeLabel = request.AgeLabel,
-                Synopsis = request.Synopsis,
-                PosterUrl = request.PosterUrl
-            });
+            return View(MapCreateRequestToFormVm(request));
         }
 
         try
         {
             var managerId = GetCurrentManagerId();
+            var provenance = new MovieProvenanceEditInput(
+                OriginalTitle: request.OriginalTitle,
+                ReleaseYear: request.ReleaseYear,
+                DirectorNames: request.DirectorNames,
+                OriginCountry: request.OriginCountry,
+                OriginalLanguage: request.OriginalLanguage,
+                WikidataQid: request.WikidataQid,
+                ImdbId: request.ImdbId,
+                TmdbId: request.TmdbId,
+                BackdropUrl: request.BackdropUrl,
+                OfficialTrailerYoutubeId: request.OfficialTrailerYoutubeId,
+                ApplyExplicitOverrideLocks: request.ManualOverrides is { Count: > 0 },
+                ExplicitOverrideLocks: request.ManualOverrides);
+
             var movieId = await movieService.CreateMovieAsync(
                 managerId, request.Title, request.DurationMin,
                 request.GenreText, request.AgeLabel, request.Synopsis,
-                request.PosterUrl, ct);
+                request.PosterUrl, ct, provenance);
 
             logger.LogInformation("Manager {ManagerId} created movie {MovieId} ({Title})", managerId, movieId, request.Title);
             TempData["Success"] = $"Đã tạo phim '{request.Title}' thành công ở trạng thái DRAFT.";
@@ -157,16 +223,61 @@ public sealed class ManagementController(
         catch (BusinessRuleException ex)
         {
             ModelState.AddModelError(string.Empty, ex.Message);
-            return View(new ManageMovieFormViewModel
-            {
-                Title = request.Title,
-                DurationMin = request.DurationMin,
-                GenreText = request.GenreText,
-                AgeLabel = request.AgeLabel,
-                Synopsis = request.Synopsis,
-                PosterUrl = request.PosterUrl
-            });
+            return View(MapCreateRequestToFormVm(request));
         }
+    }
+
+    [HttpPost("movies/sync-external")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncExternalMovie(
+        [FromForm] SyncExternalMovieRequest request,
+        CancellationToken ct)
+    {
+        var managerId = GetCurrentManagerId();
+        var result = await syncService.SyncExternalMovieAsync(
+            request.VerifiedKey,
+            request.TmdbId,
+            managerId,
+            request.TargetMovieId,
+            ct);
+
+        if (result.Outcome is "CREATED_DRAFT" or "UPDATED")
+        {
+            TempData["Success"] = result.Message;
+            if (result.MovieId.HasValue)
+            {
+                return RedirectToAction(nameof(MovieDetail), new { id = result.MovieId.Value });
+            }
+        }
+        else if (result.Outcome == "MISSING_API_KEY")
+        {
+            TempData["Warning"] = result.Message;
+        }
+        else
+        {
+            TempData["Error"] = result.Message;
+        }
+
+        if (request.TargetMovieId is > 0)
+        {
+            return RedirectToAction(nameof(MovieDetail), new { id = request.TargetMovieId.Value });
+        }
+
+        return RedirectToAction(nameof(Movies));
+    }
+
+    [HttpPost("movies/sync-verified-catalog")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncVerifiedCatalog(CancellationToken ct)
+    {
+        var managerId = GetCurrentManagerId();
+        var summary = await syncService.SyncVerifiedShowcaseCatalogAsync(
+            publishAll: false,
+            actorUserId: managerId,
+            ct: ct);
+
+        TempData["Success"] = $"Đã đồng bộ danh mục xác minh Wikidata/IMDb: tạo mới {summary.CreatedCount}, cập nhật {summary.UpdatedCount}, bảo toàn {summary.PreservedOverrideFieldsCount} trường đã khóa thủ công.";
+        return RedirectToAction(nameof(Movies));
     }
 
     [HttpGet("movies/{id:long}")]
@@ -175,10 +286,15 @@ public sealed class ManagementController(
         var movie = await queryService.GetMovieByIdAsync(id, ct);
         if (movie == null) return NotFound();
 
+        var now = clock.UtcNow;
+        var hasActiveShowtimes = movie.Showtimes.Any(s => s.Status != "CANCELLED" && s.EndUtc > now);
+
         var vm = new ManageMovieDetailViewModel
         {
             Movie = movie,
-            Showtimes = movie.Showtimes.ToList()
+            Showtimes = movie.Showtimes.ToList(),
+            IsTmdbConfigured = syncService.IsTmdbConfigured,
+            HasActiveShowtimes = hasActiveShowtimes
         };
 
         return View(vm);
@@ -204,7 +320,25 @@ public sealed class ManagementController(
             Synopsis = movie.Synopsis,
             PosterUrl = movie.PosterUrl,
             Status = movie.Status,
-            HasActiveShowtimes = hasActiveShowtimes
+            HasActiveShowtimes = hasActiveShowtimes,
+            IsTmdbConfigured = syncService.IsTmdbConfigured,
+            OriginalTitle = movie.OriginalTitle,
+            ReleaseYear = movie.ReleaseYear,
+            DirectorNames = movie.DirectorNames,
+            OriginCountry = movie.OriginCountry,
+            OriginalLanguage = movie.OriginalLanguage,
+            WikidataQid = movie.WikidataQid,
+            ImdbId = movie.ImdbId,
+            TmdbId = movie.TmdbId,
+            BackdropUrl = movie.BackdropUrl,
+            OfficialTrailerYoutubeId = movie.OfficialTrailerYoutubeId,
+            ArtworkSource = movie.ArtworkSource,
+            MetadataSource = movie.MetadataSource,
+            RatingSource = movie.RatingSource,
+            RatingValue = movie.RatingValue,
+            RatingVoteCount = movie.RatingVoteCount,
+            ExternalSyncedUtc = movie.ExternalSyncedUtc,
+            ManualOverrideMask = movie.ManualOverrideMask
         };
 
         return View(vm);
@@ -225,27 +359,44 @@ public sealed class ManagementController(
             var now = clock.UtcNow;
             var hasActiveShowtimes = await db.Showtimes
                 .AnyAsync(s => s.MovieId == id && s.Status != "CANCELLED" && s.EndUtc > now, ct);
+            var existingMovie = await queryService.GetMovieByIdAsync(id, ct);
 
-            return View(new ManageMovieFormViewModel
-            {
-                MovieId = id,
-                Title = request.Title,
-                DurationMin = request.DurationMin,
-                GenreText = request.GenreText,
-                AgeLabel = request.AgeLabel,
-                Synopsis = request.Synopsis,
-                PosterUrl = request.PosterUrl,
-                HasActiveShowtimes = hasActiveShowtimes
-            });
+            return View(MapEditRequestToFormVm(id, request, hasActiveShowtimes, existingMovie));
         }
 
         try
         {
             var managerId = GetCurrentManagerId();
+            MovieProvenanceEditInput? provenance = null;
+            if (request.ApplyOverrideLocks ||
+                request.OriginalTitle != null ||
+                request.ReleaseYear.HasValue ||
+                request.DirectorNames != null ||
+                request.WikidataQid != null ||
+                request.ImdbId != null ||
+                request.TmdbId.HasValue ||
+                request.BackdropUrl != null ||
+                request.OfficialTrailerYoutubeId != null)
+            {
+                provenance = new MovieProvenanceEditInput(
+                    OriginalTitle: request.OriginalTitle,
+                    ReleaseYear: request.ReleaseYear,
+                    DirectorNames: request.DirectorNames,
+                    OriginCountry: request.OriginCountry,
+                    OriginalLanguage: request.OriginalLanguage,
+                    WikidataQid: request.WikidataQid,
+                    ImdbId: request.ImdbId,
+                    TmdbId: request.TmdbId,
+                    BackdropUrl: request.BackdropUrl,
+                    OfficialTrailerYoutubeId: request.OfficialTrailerYoutubeId,
+                    ApplyExplicitOverrideLocks: request.ApplyOverrideLocks,
+                    ExplicitOverrideLocks: request.ManualOverrides);
+            }
+
             await movieService.UpdateMovieAsync(
                 managerId, id, request.Title, request.DurationMin,
                 request.GenreText, request.AgeLabel, request.Synopsis,
-                request.PosterUrl, ct);
+                request.PosterUrl, ct, provenance);
 
             logger.LogInformation("Manager {ManagerId} updated movie {MovieId}", managerId, id);
             TempData["Success"] = $"Đã cập nhật thông tin phim '{request.Title}' thành công.";
@@ -257,18 +408,9 @@ public sealed class ManagementController(
             var now = clock.UtcNow;
             var hasActiveShowtimes = await db.Showtimes
                 .AnyAsync(s => s.MovieId == id && s.Status != "CANCELLED" && s.EndUtc > now, ct);
+            var existingMovie = await queryService.GetMovieByIdAsync(id, ct);
 
-            return View(new ManageMovieFormViewModel
-            {
-                MovieId = id,
-                Title = request.Title,
-                DurationMin = request.DurationMin,
-                GenreText = request.GenreText,
-                AgeLabel = request.AgeLabel,
-                Synopsis = request.Synopsis,
-                PosterUrl = request.PosterUrl,
-                HasActiveShowtimes = hasActiveShowtimes
-            });
+            return View(MapEditRequestToFormVm(id, request, hasActiveShowtimes, existingMovie));
         }
     }
 
@@ -356,7 +498,9 @@ public sealed class ManagementController(
     }
 
     [HttpGet("showtimes/create")]
-    public async Task<IActionResult> ShowtimeCreate(CancellationToken ct)
+    public async Task<IActionResult> ShowtimeCreate(
+        [FromQuery] long? movieId = null,
+        CancellationToken ct = default)
     {
         var publishedMovies = await db.Movies.AsNoTracking()
             .Where(m => m.Status == "PUBLISHED")
@@ -365,6 +509,7 @@ public sealed class ManagementController(
 
         var activeRooms = await db.Rooms.AsNoTracking()
             .Where(r => r.Status == "ACTIVE")
+            .Include(r => r.Seats)
             .OrderBy(r => r.RoomName)
             .ToListAsync(ct);
 
@@ -373,7 +518,6 @@ public sealed class ManagementController(
             .OrderBy(st => st.SeatTypeCode)
             .ToListAsync(ct);
 
-        // Prepopulate standard default prices in VND
         var defaultPrices = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         foreach (var st in seatTypes)
         {
@@ -390,6 +534,7 @@ public sealed class ManagementController(
             PublishedMovies = publishedMovies,
             ActiveRooms = activeRooms,
             SeatTypes = seatTypes,
+            SelectedMovieId = movieId,
             Prices = defaultPrices,
             BufferMinutes = 15,
             StartTimeVn = DateTime.Now.AddHours(2)
@@ -420,7 +565,6 @@ public sealed class ManagementController(
                 return await ReloadShowtimeCreateView(request, ct);
             }
 
-            // Build price inputs
             var priceInputs = new List<SeatPriceInput>();
             foreach (var kvp in request.Prices)
             {
@@ -460,7 +604,7 @@ public sealed class ManagementController(
         var publishedMovies = await db.Movies.AsNoTracking()
             .Where(m => m.Status == "PUBLISHED").OrderBy(m => m.Title).ToListAsync(ct);
         var activeRooms = await db.Rooms.AsNoTracking()
-            .Where(r => r.Status == "ACTIVE").OrderBy(r => r.RoomName).ToListAsync(ct);
+            .Where(r => r.Status == "ACTIVE").Include(r => r.Seats).OrderBy(r => r.RoomName).ToListAsync(ct);
         var seatTypes = await db.SeatTypes.AsNoTracking()
             .Where(st => st.IsActive).OrderBy(st => st.SeatTypeCode).ToListAsync(ct);
 

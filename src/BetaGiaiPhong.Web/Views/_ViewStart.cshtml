@@ -1,3 +1,7 @@
 @{
-    Layout = "_Layout";
+    var controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    bool isOperationsArea = controllerName.Equals("StaffCheckIn", StringComparison.OrdinalIgnoreCase)
+                            || controllerName.Equals("Management", StringComparison.OrdinalIgnoreCase);
+
+    Layout = isOperationsArea ? "_OperationsLayout" : "_CinemaLayout";
 }

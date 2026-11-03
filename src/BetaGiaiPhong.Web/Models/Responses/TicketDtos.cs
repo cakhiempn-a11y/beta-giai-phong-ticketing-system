@@ -17,5 +17,7 @@ public sealed record CustomerTicketDto(
     string Status,
     DateTime IssuedUtc,
     DateTime? UsedUtc,
-    string QrCodeUrl
+    string QrCodeUrl,
+    string IssuedVietnamText = "",
+    string? UsedVietnamText = null
 );

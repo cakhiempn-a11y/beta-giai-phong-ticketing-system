@@ -1,0 +1,456 @@
+/* ==========================================================================
+   BETA GIẢI PHÓNG — NETFLIX-CINEMA DESIGN SYSTEM
+   page-catalog.css: Movie Catalogue (/movies), Sticky Filter & Search Bar,
+                     Responsive 2:3 Poster Grid (srcset/sizes), Honest Neutral
+                     Placeholder & Non-Duplicating Few-Movies Layout
+   Zero Bootstrap Dependencies
+   ========================================================================== */
+
+.bgp-movies-catalog {
+  width: 100%;
+  padding: 28px 0 60px;
+}
+
+/* --- 1. Catalogue Hero Header --- */
+.bgp-catalog-header {
+  margin-bottom: 22px;
+}
+
+.bgp-catalog-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bgp-brand-red);
+  margin-bottom: 6px;
+}
+
+.bgp-catalog-title {
+  margin: 0 0 8px;
+  font-size: var(--bgp-text-h1);
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.025em;
+  color: #FFFFFF;
+}
+
+.bgp-catalog-subtitle {
+  margin: 0;
+  max-width: 720px;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--bgp-text-secondary);
+}
+
+/* --- 2. Search & Status Filter Toolbar --- */
+.bgp-catalog-toolbar {
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-default);
+  border-radius: var(--bgp-radius-md);
+  padding: 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--bgp-shadow-card);
+}
+
+.bgp-catalog-search-form {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.bgp-catalog-search-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bgp-catalog-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--bgp-text-muted);
+  pointer-events: none;
+}
+
+.bgp-catalog-search-input {
+  width: 100%;
+  min-height: var(--bgp-target-min);
+  padding: 9px 14px 9px 40px;
+  border-radius: var(--bgp-radius-sm);
+  background: var(--bgp-bg-canvas);
+  border: 1px solid var(--bgp-border-control);
+  color: var(--bgp-text-primary);
+  font-size: 0.92rem;
+  transition: border-color var(--bgp-duration-fast) ease, background-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-catalog-search-input::placeholder {
+  color: var(--bgp-text-muted);
+}
+
+.bgp-catalog-search-input:focus {
+  background: var(--bgp-bg-surface-2);
+  border-color: #FFFFFF;
+}
+
+.bgp-catalog-search-btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 479.98px) {
+  .bgp-catalog-search-form {
+    flex-direction: column;
+  }
+
+  .bgp-catalog-search-btn {
+    width: 100%;
+  }
+}
+
+.bgp-catalog-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bgp-catalog-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.bgp-catalog-filter-group::-webkit-scrollbar {
+  display: none;
+}
+
+.bgp-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: var(--bgp-radius-pill);
+  background: var(--bgp-bg-surface-2);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-primary) !important;
+  font-size: 0.83rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none !important;
+  transition: background-color var(--bgp-duration-fast) ease, border-color var(--bgp-duration-fast) ease, color var(--bgp-duration-fast) ease;
+}
+
+.bgp-filter-pill:hover {
+  background: var(--bgp-bg-surface-3);
+  border-color: var(--bgp-border-strong);
+  color: #FFFFFF !important;
+}
+
+.bgp-filter-pill.is-active {
+  background: var(--bgp-brand-red);
+  border-color: var(--bgp-brand-red);
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.34);
+}
+
+.bgp-filter-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--bgp-radius-pill);
+  background: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
+  font-family: var(--bgp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bgp-filter-pill.is-active .bgp-filter-pill-count {
+  background: rgba(10, 10, 12, 0.34);
+}
+
+.bgp-catalog-genre-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.bgp-catalog-genre-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.bgp-genre-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: var(--bgp-radius-pill);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--bgp-border-subtle);
+  color: var(--bgp-text-secondary) !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none !important;
+  transition: background-color var(--bgp-duration-fast) ease, color var(--bgp-duration-fast) ease;
+}
+
+.bgp-genre-chip:hover,
+.bgp-genre-chip.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--bgp-border-strong);
+  color: #FFFFFF !important;
+}
+
+/* --- 3. Result Summary Bar --- */
+.bgp-catalog-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  font-size: 0.88rem;
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-catalog-summary-bar strong {
+  color: #FFFFFF;
+}
+
+/* --- 4. Responsive 2:3 Theatrical Poster Grid --- */
+.bgp-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+@media (min-width: 576px) {
+  .bgp-catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px 14px;
+  }
+}
+
+@media (min-width: 992px) {
+  .bgp-catalog-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px 18px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .bgp-catalog-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 24px 20px;
+  }
+}
+
+@media (min-width: 1560px) {
+  .bgp-catalog-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.bgp-catalog-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bgp-bg-surface-1);
+  border: 1px solid var(--bgp-border-subtle);
+  border-radius: var(--bgp-radius-md);
+  overflow: hidden;
+  color: var(--bgp-text-primary) !important;
+  text-decoration: none !important;
+  box-shadow: var(--bgp-shadow-card);
+  transition:
+    transform var(--bgp-duration-base) var(--bgp-ease-out),
+    border-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-catalog-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--bgp-border-strong);
+}
+
+.bgp-catalog-poster-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: #141418;
+  overflow: hidden;
+  border-bottom: 1px solid var(--bgp-border-subtle);
+}
+
+.bgp-catalog-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 320ms var(--bgp-ease-out);
+}
+
+.bgp-catalog-card:hover .bgp-catalog-poster-img {
+  transform: scale(1.03);
+}
+
+.bgp-catalog-badge-age {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+}
+
+.bgp-catalog-badge-rating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 3px 7px;
+  border-radius: var(--bgp-radius-xs);
+  background: rgba(10, 10, 12, 0.88);
+  border: 1px solid rgba(245, 197, 24, 0.48);
+  color: var(--bgp-accent-gold);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.bgp-catalog-badge-status {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  text-align: center;
+  padding: 5px 8px;
+  border-radius: var(--bgp-radius-xs);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  backdrop-filter: blur(6px);
+}
+
+.bgp-catalog-badge-status--active {
+  background: rgba(9, 28, 17, 0.90);
+  border: 1px solid var(--bgp-status-success-border);
+  color: var(--bgp-status-success-fg);
+}
+
+.bgp-catalog-badge-status--empty {
+  background: rgba(16, 16, 22, 0.90);
+  border: 1px solid var(--bgp-border-default);
+  color: var(--bgp-text-secondary);
+}
+
+.bgp-catalog-card-info {
+  padding: 12px 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bgp-catalog-card-title {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1.32;
+  color: #FFFFFF;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.bgp-catalog-card-orig {
+  font-size: 0.75rem;
+  color: var(--bgp-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgp-catalog-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.77rem;
+  color: var(--bgp-text-secondary);
+  min-width: 0;
+}
+
+.bgp-catalog-card-meta > span:first-child {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bgp-catalog-card-genre {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgp-catalog-card-cta {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #FF8086;
+}
+
+.bgp-catalog-card-cta--muted {
+  color: var(--bgp-text-muted);
+}
+
+/* --- 5. Empty System / Empty Filter States --- */
+.bgp-discovery-empty {
+  background: var(--bgp-bg-surface-1);
+  border: 1px dashed var(--bgp-border-strong);
+  border-radius: var(--bgp-radius-lg);
+  padding: 44px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.bgp-discovery-empty-icon {
+  color: var(--bgp-text-muted);
+  margin-bottom: 4px;
+}
+
+.bgp-discovery-empty__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.bgp-discovery-empty__desc {
+  margin: 0 0 8px;
+  max-width: 480px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--bgp-text-secondary);
+}

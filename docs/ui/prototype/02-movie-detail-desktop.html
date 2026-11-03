@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mê Trong Mê (Charade, 1963) — Chi tiết phim &amp; Chọn suất chiếu | Beta Giải Phóng</title>
+  <link rel="stylesheet" href="netflix-cinema.css" />
+  <style>
+    .bgp-detail-stage {
+      position: relative;
+      padding: calc(var(--bgp-header-h) + 28px) var(--bgp-gutter) 38px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--bgp-border-subtle);
+    }
+    .bgp-detail-stage__bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 78% 24%;
+      opacity: 0.34;
+      filter: saturate(1.05);
+    }
+    .bgp-detail-stage__scrim {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, #0A0A0C 0%, rgba(10,10,12,0.92) 46%, rgba(10,10,12,0.62) 100%),
+        linear-gradient(180deg, rgba(10,10,12,0.65) 0%, rgba(10,10,12,0.25) 45%, #0A0A0C 100%);
+    }
+    .bgp-detail-grid {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 236px minmax(0, 1fr);
+      gap: 32px;
+      align-items: start;
+    }
+    .bgp-detail-poster {
+      border-radius: var(--bgp-radius-md);
+      overflow: hidden;
+      border: 1px solid var(--bgp-border-strong);
+      box-shadow: var(--bgp-shadow-card);
+      aspect-ratio: 2 / 3;
+      background: var(--bgp-bg-surface-2);
+    }
+    .bgp-detail-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .bgp-cast-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .bgp-cast-chip {
+      background: rgba(22, 22, 27, 0.85);
+      border: 1px solid var(--bgp-border-subtle);
+      border-radius: var(--bgp-radius-sm);
+      padding: 8px 11px;
+    }
+    .bgp-showtimes-wrap {
+      padding: 26px var(--bgp-gutter) 44px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 28px;
+      align-items: start;
+    }
+    .bgp-date-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .bgp-date-tab {
+      padding: 9px 16px;
+      border-radius: var(--bgp-radius-sm);
+      background: var(--bgp-bg-surface-1);
+      border: 1px solid var(--bgp-border-default);
+      color: var(--bgp-text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 124px;
+    }
+    .bgp-date-tab--active {
+      background: var(--bgp-brand-red-soft);
+      border-color: var(--bgp-brand-red);
+      color: #FFFFFF;
+    }
+    .bgp-room-block {
+      background: var(--bgp-bg-surface-1);
+      border: 1px solid var(--bgp-border-subtle);
+      border-radius: var(--bgp-radius-md);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .bgp-slot-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .bgp-slot-card {
+      background: var(--bgp-bg-surface-2);
+      border: 1px solid var(--bgp-border-default);
+      border-radius: var(--bgp-radius-sm);
+      padding: 11px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .bgp-slot-card--prime {
+      border-color: var(--bgp-brand-red-border);
+      box-shadow: inset 0 0 0 1px rgba(229,9,20,0.18);
+    }
+    .bgp-slot-card--soldout {
+      opacity: 0.58;
+      background: #141419;
+    }
+  </style>
+</head>
+<body>
+  <header class="bgp-header bgp-header--solid">
+    <div class="bgp-header__left">
+      <a href="01-home-desktop.html" class="bgp-brand">
+        <span class="bgp-brand__badge">BETA</span>
+        <span class="bgp-brand__text">Giải Phóng</span>
+      </a>
+      <nav class="bgp-nav" aria-label="Điều hướng chính">
+        <a href="01-home-desktop.html" class="bgp-nav__link">Trang chủ</a>
+        <a href="03-catalog-mobile.html" class="bgp-nav__link bgp-nav__link--active">Danh mục phim</a>
+        <a href="#showtimes" class="bgp-nav__link">Lịch chiếu hôm nay</a>
+        <a href="05-checkout-desktop.html" class="bgp-nav__link">Vé &amp; Đơn hàng</a>
+      </nav>
+    </div>
+    <div class="bgp-header__right">
+      <span class="bgp-sim-notice-pill">Dữ liệu tác phẩm xác minh • Lịch rạp mô phỏng</span>
+      <div class="bgp-user-chip">
+        <span class="bgp-user-chip__avatar">KH</span>
+        <span>Nguyễn Minh Anh</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Part A: Verified Film Work Data Hero -->
+    <section class="bgp-detail-stage" aria-labelledby="movie-title">
+      <img class="bgp-detail-stage__bg" src="assets/charade-1963-still-2.jpg" alt="" aria-hidden="true" />
+      <div class="bgp-detail-stage__scrim" aria-hidden="true"></div>
+
+      <div class="bgp-detail-grid">
+        <div class="bgp-detail-poster">
+          <img src="assets/charade-1963-poster.jpg" alt="Poster chính thức phim Charade (1963)" />
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <span class="bgp-badge bgp-badge--cinema-open">CÓ LỊCH CHIẾU • 5 SUẤT SẮP TỚI</span>
+            <span class="bgp-badge bgp-badge--imdb">IMDb 7.8/10 • 95.223 lượt đánh giá</span>
+            <span class="bgp-badge bgp-badge--age-unrated">Phân loại VN: Chưa có thông tin</span>
+          </div>
+
+          <h1 id="movie-title" style="margin:0 0 4px;font-size:2.45rem;font-weight:800;letter-spacing:-0.02em;">Mê Trong Mê</h1>
+          <p style="margin:0 0 12px;color:var(--bgp-text-secondary);font-size:0.92rem;font-weight:600;">
+            Tên gốc: <strong>Charade</strong> &nbsp;•&nbsp; Năm phát hành: <strong>1963</strong> &nbsp;•&nbsp; Thời lượng: <strong>113 phút</strong> &nbsp;•&nbsp; Quốc gia: <strong>Hoa Kỳ</strong> &nbsp;•&nbsp; Ngôn ngữ gốc: <strong>Tiếng Anh</strong>
+          </p>
+
+          <p style="margin:0 0 14px;max-width:780px;font-size:0.94rem;line-height:1.6;color:rgba(245,245,247,0.92);">
+            Trở về Paris sau kỳ nghỉ tại dãy Alps với ý định ly hôn, Regina Lampert phát hiện căn hộ trống trơn còn người chồng Charles đã bị sát hại bí ẩn. Giữa sự truy đuổi của ba cựu đồng đội Thế chiến II đòi lại 250.000 đô la Mỹ mất tích, người đàn ông lịch lãm Peter Joshua trở thành đồng minh duy nhất — nhưng danh tính của anh liên tục đảo chiều.
+          </p>
+
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+            <a href="#showtimes" class="bgp-btn bgp-btn--primary">Chọn suất chiếu bên dưới &darr;</a>
+            <button type="button" class="bgp-btn bgp-btn--glass">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
+              Xem Trailer chính thức (YouTube • BJ_njww9SOQ)
+            </button>
+            <span style="font-size:0.76rem;color:var(--bgp-text-muted);">
+              Đạo diễn: <strong style="color:var(--bgp-text-secondary);">Stanley Donen</strong> • Kịch bản: <strong style="color:var(--bgp-text-secondary);">Peter Stone</strong>
+            </span>
+          </div>
+
+          <div class="bgp-cast-grid" aria-label="Diễn viên và vai diễn đã xác minh">
+            <div class="bgp-cast-chip">
+              <div style="font-size:0.82rem;font-weight:700;">Cary Grant</div>
+              <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Peter Joshua / Alexander Dyle</div>
+            </div>
+            <div class="bgp-cast-chip">
+              <div style="font-size:0.82rem;font-weight:700;">Audrey Hepburn</div>
+              <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Regina &ldquo;Reggie&rdquo; Lampert</div>
+            </div>
+            <div class="bgp-cast-chip">
+              <div style="font-size:0.82rem;font-weight:700;">Walter Matthau</div>
+              <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Hamilton Bartholomew</div>
+            </div>
+            <div class="bgp-cast-chip">
+              <div style="font-size:0.82rem;font-weight:700;">James Coburn</div>
+              <div style="font-size:0.73rem;color:var(--bgp-text-muted);">Tex Panthollow</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Part B: Cinema Operational Showtime Selector (UTC+7) -->
+    <section id="showtimes" class="bgp-showtimes-wrap" aria-labelledby="showtimes-heading">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+          <h2 id="showtimes-heading" style="margin:0;font-size:1.25rem;font-weight:800;">
+            Lịch chiếu tại Beta Giải Phóng (Múi giờ Việt Nam UTC+7)
+          </h2>
+          <span style="font-size:0.76rem;color:var(--bgp-text-muted);">Dữ liệu suất chiếu &amp; giá vé mô phỏng học thuật</span>
+        </div>
+
+        <div class="bgp-date-tabs" role="tablist" aria-label="Chọn ngày chiếu">
+          <a href="#showtimes" role="tab" aria-selected="true" class="bgp-date-tab bgp-date-tab--active">
+            <span style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;">Hôm nay • T4</span>
+            <strong style="font-size:0.95rem;">04/11/2026</strong>
+            <span style="font-size:0.72rem;color:#FF9EA3;">3 suất mở bán</span>
+          </a>
+          <a href="#showtimes" role="tab" aria-selected="false" class="bgp-date-tab">
+            <span style="font-size:0.72rem;text-transform:uppercase;">Thứ Năm</span>
+            <strong style="font-size:0.95rem;">05/11/2026</strong>
+            <span style="font-size:0.72rem;color:var(--bgp-text-muted);">2 suất mở bán</span>
+          </a>
+          <a href="#showtimes" role="tab" aria-selected="false" class="bgp-date-tab">
+            <span style="font-size:0.72rem;text-transform:uppercase;">Thứ Sáu</span>
+            <strong style="font-size:0.95rem;">06/11/2026</strong>
+            <span style="font-size:0.72rem;color:var(--bgp-text-muted);">Chưa mở lịch</span>
+          </a>
+        </div>
+
+        <div class="bgp-room-block">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong style="font-size:0.94rem;">Phòng Chiếu 01 — Tiêu chuẩn 2D Phụ đề Việt</strong>
+              <span style="margin-left:8px;font-size:0.76rem;color:var(--bgp-text-muted);">Ghế Thường 70.000 đ • Ghế VIP 90.000 đ</span>
+            </div>
+            <span class="bgp-badge bgp-badge--cinema-open">Đang nhận đặt vé</span>
+          </div>
+
+          <div class="bgp-slot-grid">
+            <a href="04-seat-selection-desktop.html" class="bgp-slot-card bgp-slot-card--prime">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-family:var(--bgp-font-mono);font-size:1.1rem;font-weight:800;color:#fff;">19:15</span>
+                <span style="font-size:0.74rem;color:var(--bgp-text-muted);">&rarr; 21:08</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;">
+                <span style="color:var(--bgp-status-success);font-weight:700;">42 / 50 ghế trống</span>
+                <span style="color:#FF858B;font-weight:700;">Chọn ghế &rarr;</span>
+              </div>
+            </a>
+
+            <a href="04-seat-selection-desktop.html" class="bgp-slot-card">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-family:var(--bgp-font-mono);font-size:1.1rem;font-weight:800;">21:30</span>
+                <span style="font-size:0.74rem;color:var(--bgp-text-muted);">&rarr; 23:23</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;">
+                <span style="color:var(--bgp-status-warning);font-weight:700;">9 / 50 ghế trống</span>
+                <span style="color:var(--bgp-text-secondary);font-weight:600;">Chọn ghế &rarr;</span>
+              </div>
+            </a>
+
+            <div class="bgp-slot-card bgp-slot-card--soldout" aria-label="Suất 23:15 đã hết ghế trống">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-family:var(--bgp-font-mono);font-size:1.1rem;font-weight:800;">23:15</span>
+                <span style="font-size:0.72rem;color:#FCD34D;">&rarr; 01:08 (+1 ngày)</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;">
+                <span style="color:var(--bgp-text-muted);">Hết ghế trống (0/50)</span>
+                <a href="04-seat-selection-desktop.html" style="text-decoration:underline;">Xem sơ đồ</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provenance & Source Verification Box -->
+      <aside class="bgp-summary-panel" aria-label="Nguồn xác minh tác phẩm">
+        <h3 style="margin:0 0 10px;font-size:0.92rem;font-weight:800;">Hồ sơ Nguồn Dữ liệu Tác phẩm</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:0.79rem;color:var(--bgp-text-secondary);">
+          <div style="display:flex;justify-content:space-between;"><span>Wikidata QID:</span><strong style="font-family:var(--bgp-font-mono);">Q496266</strong></div>
+          <div style="display:flex;justify-content:space-between;"><span>IMDb ID:</span><strong style="font-family:var(--bgp-font-mono);">tt0056923</strong></div>
+          <div style="display:flex;justify-content:space-between;"><span>TMDB ID:</span><strong style="font-family:var(--bgp-font-mono);">4808</strong></div>
+          <div style="display:flex;justify-content:space-between;"><span>Điểm gốc IMDb:</span><strong style="color:var(--bgp-accent-gold);">7.8 / 10 (95.223 lượt)</strong></div>
+          <div style="display:flex;justify-content:space-between;"><span>Thời điểm lấy điểm:</span><span>03/11/2026 03:47 UTC</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Giấy phép Artwork:</span><span>Public Domain (US 1963)</span></div>
+          <hr style="border:0;border-top:1px solid var(--bgp-border-subtle);margin:4px 0;" />
+          <p style="margin:0;font-size:0.73rem;color:var(--bgp-text-muted);line-height:1.45;">
+            Điểm đánh giá trích xuất từ <em>IMDb Non-Commercial Datasets</em>. Tách biệt hoàn toàn với lịch chiếu mô phỏng của rạp Beta Giải Phóng.
+          </p>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

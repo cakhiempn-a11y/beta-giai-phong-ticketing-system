@@ -1,6 +1,7 @@
 using BetaGiaiPhong.Data.Persistence;
 using BetaGiaiPhong.Data.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BetaGiaiPhong.Data;
@@ -15,6 +16,20 @@ public static class ServiceRegistration
         services.AddDbContext<BetaDbContext>(options => options.UseSqlServer(connection));
         services.AddSingleton<ISystemClock, SystemClock>();
         services.AddSingleton<QrTokenProtector>();
+        services.AddSingleton(sp =>
+        {
+            var config = sp.GetService<IConfiguration>();
+            var opts = MovieContentSyncOptions.FromEnvironment();
+            if (string.IsNullOrWhiteSpace(opts.TmdbReadToken) && config is not null)
+            {
+                opts.TmdbReadToken = config["BGP_TMDB_READ_TOKEN"];
+            }
+            if (string.IsNullOrWhiteSpace(opts.MediaCacheDirectory) && config is not null)
+            {
+                opts.MediaCacheDirectory = config["BGP_MEDIA_CACHE_DIR"];
+            }
+            return opts;
+        });
         services.AddScoped<ShowtimePublishingService>();
         services.AddScoped<SeatReservationService>();
         services.AddScoped<OrderLifecycleService>();
@@ -22,6 +37,7 @@ public static class ServiceRegistration
         services.AddScoped<TicketScanningService>();
         services.AddScoped<MovieManagementService>();
         services.AddScoped<ManagementQueryService>();
+        services.AddScoped<MovieContentSyncService>();
         return services;
     }
 }
