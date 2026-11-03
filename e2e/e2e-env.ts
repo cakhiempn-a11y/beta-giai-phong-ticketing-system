@@ -112,6 +112,40 @@ export function runRunnerCommand(
   };
 }
 
+export function runRunnerCommandOrThrow(
+  args: string[],
+  state: E2eState,
+  extraEnv?: Record<string, string>
+): { status: number; stdout: string; stderr: string } {
+  const res = runRunnerCommand(args, state, extraEnv);
+  if (res.status !== 0) {
+    const safeOut = sanitizeTextForLog(res.stderr || res.stdout || 'Unknown runner failure', state);
+    throw new Error(
+      `[Runner] Command '${args.join(' ')}' failed with exit code ${res.status}:\n${safeOut}`
+    );
+  }
+  return res;
+}
+
+export function runRunnerCleanupSafe(
+  args: string[],
+  state: E2eState,
+  priorError?: unknown,
+  extraEnv?: Record<string, string>
+): { status: number; stdout: string; stderr: string } {
+  const res = runRunnerCommand(args, state, extraEnv);
+  if (res.status !== 0) {
+    const safeOut = sanitizeTextForLog(res.stderr || res.stdout || 'Unknown runner cleanup failure', state);
+    const errMsg = `[Runner] Cleanup command '${args.join(' ')}' failed with exit code ${res.status}:\n${safeOut}`;
+    if (priorError) {
+      console.error(errMsg);
+    } else {
+      throw new Error(errMsg);
+    }
+  }
+  return res;
+}
+
 export async function waitForHealth(baseUrl: string, timeoutMs = 30_000, healthPath = '/health'): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const healthUrl = `${baseUrl.replace(/\/$/, '')}${healthPath}`;

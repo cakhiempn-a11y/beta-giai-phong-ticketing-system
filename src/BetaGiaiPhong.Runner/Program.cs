@@ -579,82 +579,371 @@ END";
                 return 0;
             case "seed-ui-fixtures":
                 cmd.CommandText = @"
--- Update demo movie with valid values
-UPDATE dbo.Movies 
-SET age_label = 'T16', 
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.__E2eMovieSnapshots (
+        snapshot_scope NVARCHAR(64) NOT NULL,
+        movie_id BIGINT NOT NULL,
+        title NVARCHAR(250) NOT NULL,
+        duration_min SMALLINT NOT NULL,
+        genre_text NVARCHAR(160) NULL,
+        status VARCHAR(12) NOT NULL,
+        age_label NVARCHAR(24) NULL,
+        synopsis NVARCHAR(MAX) NULL,
+        poster_url NVARCHAR(500) NULL,
+        is_inserted_fixture BIT NOT NULL DEFAULT 0,
+        PRIMARY KEY (snapshot_scope, movie_id)
+    );
+END
+
+IF OBJECT_ID('dbo.__E2eShowtimeFixtures', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.__E2eShowtimeFixtures (
+        fixture_scope NVARCHAR(64) NOT NULL,
+        showtime_id BIGINT NOT NULL,
+        PRIMARY KEY (fixture_scope, showtime_id)
+    );
+END
+
+-- If ui-fixtures scope already exists, clean it first for idempotency
+IF EXISTS (SELECT 1 FROM dbo.__E2eShowtimeFixtures WHERE fixture_scope = 'ui-fixtures')
+BEGIN
+    DELETE sp FROM dbo.SeatPrices sp JOIN dbo.__E2eShowtimeFixtures sf ON sp.showtime_id = sf.showtime_id WHERE sf.fixture_scope = 'ui-fixtures';
+    DELETE ss FROM dbo.ShowtimeSeats ss JOIN dbo.__E2eShowtimeFixtures sf ON ss.showtime_id = sf.showtime_id WHERE sf.fixture_scope = 'ui-fixtures';
+    DELETE st FROM dbo.Showtimes st JOIN dbo.__E2eShowtimeFixtures sf ON st.showtime_id = sf.showtime_id WHERE sf.fixture_scope = 'ui-fixtures';
+    DELETE FROM dbo.__E2eShowtimeFixtures WHERE fixture_scope = 'ui-fixtures';
+END
+
+IF EXISTS (SELECT 1 FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'ui-fixtures')
+BEGIN
+    UPDATE m
+    SET m.title = s.title, m.duration_min = s.duration_min, m.genre_text = s.genre_text,
+        m.status = s.status, m.age_label = s.age_label, m.synopsis = s.synopsis, m.poster_url = s.poster_url
+    FROM dbo.Movies m JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+    WHERE s.snapshot_scope = 'ui-fixtures' AND s.is_inserted_fixture = 0;
+
+    DELETE m FROM dbo.Movies m JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+    WHERE s.snapshot_scope = 'ui-fixtures' AND s.is_inserted_fixture = 1;
+
+    DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'ui-fixtures';
+END
+
+-- Snapshot original demo movie before modifying
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 0
+FROM dbo.Movies
+WHERE title = 'Phim mo phong - KHONG phai lich Beta';
+
+UPDATE dbo.Movies
+SET age_label = 'T16',
     synopsis = N'Tác phẩm điện ảnh hồi hộp đặc sắc tại Beta Giải Phóng.',
-    poster_url = '/images/poster-fallback.svg'
+    poster_url = '/images/posters/poster-noir.svg'
 WHERE title = 'Phim mo phong - KHONG phai lich Beta';
 
 -- 1. Movie with 0 showtimes, null synopsis, and target broken poster URL for fallback test
-IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Phim Khong Co Suat')
+DECLARE @noShowtimeMovieId BIGINT;
+INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+VALUES (N'Phim Khong Co Suat', 90, N'Tâm Lý', 'PUBLISHED', 'P', NULL, 'https://example.invalid/posters/broken-poster-target.jpg');
+SET @noShowtimeMovieId = SCOPE_IDENTITY();
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @noShowtimeMovieId;
+
+-- 2. Movie with long title, long synopsis, and multi-date showtimes (including UTC+7 midnight crossover & sold-out showtime)
+DECLARE @multiMovieId BIGINT;
+INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+VALUES (
+    N'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket',
+    135,
+    N'Hành Động, Viễn Tưởng',
+    'PUBLISHED',
+    'T16',
+    N'Chiến trường đa vũ trụ rực lửa mở ra cuộc đối đầu định mệnh giữa các nền văn minh cổ đại và hạm đội tuần tra liên ngân hà. Một hành trình nghẹt thở với kỹ xảo điện ảnh hoành tráng và âm thanh sống động tại phòng chiếu tiêu chuẩn.',
+    '/images/posters/poster-scifi.svg'
+);
+SET @multiMovieId = SCOPE_IDENTITY();
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @multiMovieId;
+
+-- 3. Movie with missing poster (NULL) and 0 showtimes
+DECLARE @m3Id BIGINT;
+INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+VALUES (N'Thanh Pho Hoang Hon', 105, N'Lãng Mạn', 'PUBLISHED', 'T13', N'Chuyện tình đô thị nhẹ nhàng.', NULL);
+SET @m3Id = SCOPE_IDENTITY();
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @m3Id;
+
+-- 4. Additional movie 4
+DECLARE @m4Id BIGINT;
+INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+VALUES (N'Vu Dieu Bong Dem', 115, N'Kinh Dị', 'PUBLISHED', 'T18', N'Bóng ma ẩn sâu sau bức màn nhung.', '/images/posters/poster-horror.svg');
+SET @m4Id = SCOPE_IDENTITY();
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @m4Id;
+
+-- 5. Additional movie 5
+DECLARE @m5Id BIGINT;
+INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+VALUES (N'Sieu Diep Vien Nhi', 88, N'Hoạt Hình', 'PUBLISHED', 'P', N'Biệt đội thám tử nhí phá án tài ba.', '/images/posters/poster-animation.svg');
+SET @m5Id = SCOPE_IDENTITY();
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @m5Id;
+
+-- 6. Pre-existing DRAFT movie (must never be published by restore-all-movies and must not appear publicly)
+DECLARE @draftMovieId BIGINT;
+INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
+VALUES (N'Phim Ban Nhap Chua Cong Bo', 100, N'Tài Liệu', 'DRAFT', 'T13', N'Bản nháp nội bộ chưa công bố.', NULL);
+SET @draftMovieId = SCOPE_IDENTITY();
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'ui-fixtures', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 1 FROM dbo.Movies WHERE movie_id = @draftMovieId;
+
+-- Seed multi-date showtimes for @multiMovieId across 2 Vietnam dates (UTC+7)
+DECLARE @roomId BIGINT = (SELECT TOP (1) room_id FROM dbo.Rooms WHERE status = 'ACTIVE' ORDER BY room_id);
+DECLARE @creatorId BIGINT = (SELECT TOP (1) user_id FROM dbo.Users WHERE normalized_email = 'MANAGER@DEMO.INVALID');
+DECLARE @cap INT = (SELECT COUNT(*) FROM dbo.Seats WHERE room_id = @roomId AND is_active = 1);
+
+IF @roomId IS NOT NULL AND @creatorId IS NOT NULL
 BEGIN
-    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-    VALUES (N'Phim Khong Co Suat', 90, N'Tâm Lý', 'PUBLISHED', 'P', NULL, 'https://example.invalid/posters/broken-poster-target.jpg');
+    DECLARE @nowVn DATETIME2(3) = DATEADD(HOUR, 7, SYSUTCDATETIME());
+    DECLARE @day1Vn DATETIME2(3) = DATEADD(DAY, 1, CAST(CAST(@nowVn AS DATE) AS DATETIME2(3)));
+    DECLARE @day2Vn DATETIME2(3) = DATEADD(DAY, 2, CAST(CAST(@nowVn AS DATE) AS DATETIME2(3)));
+
+    -- Showtime A: Day 1 VN at 18:30 -> 20:45 VN (Available seats)
+    DECLARE @stAStartUtc DATETIME2(3) = DATEADD(HOUR, -7, DATEADD(MINUTE, 18 * 60 + 30, @day1Vn));
+    DECLARE @stAEndUtc DATETIME2(3) = DATEADD(MINUTE, 135, @stAStartUtc);
+    INSERT INTO dbo.Showtimes (movie_id, room_id, start_utc, end_utc, buffer_minutes, status, sellable_capacity_snapshot, created_by, created_utc)
+    VALUES (@multiMovieId, @roomId, @stAStartUtc, @stAEndUtc, 15, 'ON_SALE', @cap, @creatorId, SYSUTCDATETIME());
+    DECLARE @stAId BIGINT = SCOPE_IDENTITY();
+    INSERT INTO dbo.__E2eShowtimeFixtures (fixture_scope, showtime_id) VALUES ('ui-fixtures', @stAId);
+    INSERT INTO dbo.SeatPrices (showtime_id, seat_type_code, amount_vnd) VALUES (@stAId, 'STANDARD', 75000), (@stAId, 'VIP', 95000);
+    INSERT INTO dbo.ShowtimeSeats (showtime_id, room_id, seat_id, state)
+    SELECT @stAId, @roomId, seat_id, CASE WHEN is_active = 1 THEN 'AVAILABLE' ELSE 'BLOCKED' END FROM dbo.Seats WHERE room_id = @roomId;
+
+    -- Showtime B: Day 1 VN at 23:15 -> 01:30 (+1 day) VN (Crosses midnight in UTC+7, 0 available seats)
+    DECLARE @stBStartUtc DATETIME2(3) = DATEADD(HOUR, -7, DATEADD(MINUTE, 23 * 60 + 15, @day1Vn));
+    DECLARE @stBEndUtc DATETIME2(3) = DATEADD(MINUTE, 135, @stBStartUtc);
+    INSERT INTO dbo.Showtimes (movie_id, room_id, start_utc, end_utc, buffer_minutes, status, sellable_capacity_snapshot, created_by, created_utc)
+    VALUES (@multiMovieId, @roomId, @stBStartUtc, @stBEndUtc, 15, 'ON_SALE', @cap, @creatorId, SYSUTCDATETIME());
+    DECLARE @stBId BIGINT = SCOPE_IDENTITY();
+    INSERT INTO dbo.__E2eShowtimeFixtures (fixture_scope, showtime_id) VALUES ('ui-fixtures', @stBId);
+    INSERT INTO dbo.SeatPrices (showtime_id, seat_type_code, amount_vnd) VALUES (@stBId, 'STANDARD', 75000), (@stBId, 'VIP', 95000);
+    INSERT INTO dbo.ShowtimeSeats (showtime_id, room_id, seat_id, state)
+    SELECT @stBId, @roomId, seat_id, 'BLOCKED' FROM dbo.Seats WHERE room_id = @roomId;
+
+    -- Showtime C: Day 2 VN at 00:30 -> 02:45 VN (17:30 UTC previous day - tests UTC+7 date boundary)
+    DECLARE @stCStartUtc DATETIME2(3) = DATEADD(HOUR, -7, DATEADD(MINUTE, 30, @day2Vn));
+    DECLARE @stCEndUtc DATETIME2(3) = DATEADD(MINUTE, 135, @stCStartUtc);
+    INSERT INTO dbo.Showtimes (movie_id, room_id, start_utc, end_utc, buffer_minutes, status, sellable_capacity_snapshot, created_by, created_utc)
+    VALUES (@multiMovieId, @roomId, @stCStartUtc, @stCEndUtc, 15, 'ON_SALE', @cap, @creatorId, SYSUTCDATETIME());
+    DECLARE @stCId BIGINT = SCOPE_IDENTITY();
+    INSERT INTO dbo.__E2eShowtimeFixtures (fixture_scope, showtime_id) VALUES ('ui-fixtures', @stCId);
+    INSERT INTO dbo.SeatPrices (showtime_id, seat_type_code, amount_vnd) VALUES (@stCId, 'STANDARD', 75000), (@stCId, 'VIP', 95000);
+    INSERT INTO dbo.ShowtimeSeats (showtime_id, room_id, seat_id, state)
+    SELECT @stCId, @roomId, seat_id, CASE WHEN is_active = 1 THEN 'AVAILABLE' ELSE 'BLOCKED' END FROM dbo.Seats WHERE room_id = @roomId;
+
+    -- Showtime D: Day 2 VN at 19:00 -> 21:15 VN (Available seats)
+    DECLARE @stDStartUtc DATETIME2(3) = DATEADD(HOUR, -7, DATEADD(MINUTE, 19 * 60, @day2Vn));
+    DECLARE @stDEndUtc DATETIME2(3) = DATEADD(MINUTE, 135, @stDStartUtc);
+    INSERT INTO dbo.Showtimes (movie_id, room_id, start_utc, end_utc, buffer_minutes, status, sellable_capacity_snapshot, created_by, created_utc)
+    VALUES (@multiMovieId, @roomId, @stDStartUtc, @stDEndUtc, 15, 'ON_SALE', @cap, @creatorId, SYSUTCDATETIME());
+    DECLARE @stDId BIGINT = SCOPE_IDENTITY();
+    INSERT INTO dbo.__E2eShowtimeFixtures (fixture_scope, showtime_id) VALUES ('ui-fixtures', @stDId);
+    INSERT INTO dbo.SeatPrices (showtime_id, seat_type_code, amount_vnd) VALUES (@stDId, 'STANDARD', 75000), (@stDId, 'VIP', 95000);
+    INSERT INTO dbo.ShowtimeSeats (showtime_id, room_id, seat_id, state)
+    SELECT @stDId, @roomId, seat_id, CASE WHEN is_active = 1 THEN 'AVAILABLE' ELSE 'BLOCKED' END FROM dbo.Seats WHERE room_id = @roomId;
 END
 
--- 2. Movie with long title for hero/rail wrapping test
-IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title LIKE N'Chien Binh Khong Gian%')
-BEGIN
-    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-    VALUES (N'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket', 135, N'Hành Động, Viễn Tưởng', 'PUBLISHED', 'T16', N'Chiến trường đa vũ trụ rực lửa.', '/images/poster-fallback.svg');
-END
-
--- 3, 4, 5: Additional movies to guarantee horizontal scroll rail overflow (>5 cards)
-IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Thanh Pho Hoang Hon')
-BEGIN
-    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-    VALUES (N'Thanh Pho Hoang Hon', 105, N'Lãng Mạn', 'PUBLISHED', 'T13', N'Chuyện tình đô thị nhẹ nhàng.', '/images/poster-fallback.svg');
-END
-
-IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Vu Dieu Bong Dem')
-BEGIN
-    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-    VALUES (N'Vu Dieu Bong Dem', 115, N'Kinh Dị', 'PUBLISHED', 'T18', N'Bóng ma ẩn sâu sau bức màn nhung.', '/images/poster-fallback.svg');
-END
-
-IF NOT EXISTS (SELECT 1 FROM dbo.Movies WHERE title = N'Sieu Diep Vien Nhi')
-BEGIN
-    INSERT INTO dbo.Movies (title, duration_min, genre_text, status, age_label, synopsis, poster_url)
-    VALUES (N'Sieu Diep Vien Nhi', 88, N'Hoạt Hình', 'PUBLISHED', 'P', N'Biệt đội thám tử nhí phá án tài ba.', '/images/poster-fallback.svg');
-END";
-                await cmd.ExecuteNonQueryAsync();
+SELECT @draftMovieId AS DraftMovieId, @multiMovieId AS MultiMovieId, @noShowtimeMovieId AS NoShowtimeMovieId;
+";
+                await using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        Console.WriteLine($"DRAFT_MOVIE_ID:{reader["DraftMovieId"]}");
+                        Console.WriteLine($"MULTI_DATE_MOVIE_ID:{reader["MultiMovieId"]}");
+                        Console.WriteLine($"NO_SHOWTIME_MOVIE_ID:{reader["NoShowtimeMovieId"]}");
+                    }
+                }
                 Console.WriteLine("UI_FIXTURES_SEEDED");
                 return 0;
             case "reset-ui-fixtures":
                 cmd.CommandText = @"
-DELETE FROM dbo.Movies WHERE title IN (
-    N'Phim Khong Co Suat',
-    N'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket',
-    N'Thanh Pho Hoang Hon',
-    N'Vu Dieu Bong Dem',
-    N'Sieu Diep Vien Nhi'
-);
-UPDATE dbo.Movies 
-SET age_label = NULL, synopsis = NULL, poster_url = NULL
-WHERE title = 'Phim mo phong - KHONG phai lich Beta';";
+IF OBJECT_ID('dbo.__E2eShowtimeFixtures', 'U') IS NOT NULL
+BEGIN
+    DELETE sp FROM dbo.SeatPrices sp
+    JOIN dbo.__E2eShowtimeFixtures sf ON sp.showtime_id = sf.showtime_id
+    WHERE sf.fixture_scope = 'ui-fixtures';
+
+    DELETE ss FROM dbo.ShowtimeSeats ss
+    JOIN dbo.__E2eShowtimeFixtures sf ON ss.showtime_id = sf.showtime_id
+    WHERE sf.fixture_scope = 'ui-fixtures';
+
+    DELETE st FROM dbo.Showtimes st
+    JOIN dbo.__E2eShowtimeFixtures sf ON st.showtime_id = sf.showtime_id
+    WHERE sf.fixture_scope = 'ui-fixtures';
+
+    DELETE FROM dbo.__E2eShowtimeFixtures WHERE fixture_scope = 'ui-fixtures';
+END
+
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NOT NULL
+BEGIN
+    UPDATE m
+    SET m.title = s.title,
+        m.duration_min = s.duration_min,
+        m.genre_text = s.genre_text,
+        m.status = s.status,
+        m.age_label = s.age_label,
+        m.synopsis = s.synopsis,
+        m.poster_url = s.poster_url
+    FROM dbo.Movies m
+    JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+    WHERE s.snapshot_scope = 'ui-fixtures' AND s.is_inserted_fixture = 0;
+
+    DELETE m
+    FROM dbo.Movies m
+    JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+    WHERE s.snapshot_scope = 'ui-fixtures' AND s.is_inserted_fixture = 1;
+
+    DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'ui-fixtures';
+END
+
+IF OBJECT_ID('dbo.__E2eShowtimeFixtures', 'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM dbo.__E2eShowtimeFixtures)
+BEGIN
+    DROP TABLE dbo.__E2eShowtimeFixtures;
+END
+
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM dbo.__E2eMovieSnapshots)
+BEGIN
+    DROP TABLE dbo.__E2eMovieSnapshots;
+END";
                 await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine("UI_FIXTURES_RESET");
                 return 0;
             case "hide-all-movies":
-                cmd.CommandText = "UPDATE dbo.Movies SET status = 'DRAFT' WHERE status = 'PUBLISHED';";
+                cmd.CommandText = @"
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.__E2eMovieSnapshots (
+        snapshot_scope NVARCHAR(64) NOT NULL,
+        movie_id BIGINT NOT NULL,
+        title NVARCHAR(250) NOT NULL,
+        duration_min SMALLINT NOT NULL,
+        genre_text NVARCHAR(160) NULL,
+        status VARCHAR(12) NOT NULL,
+        age_label NVARCHAR(24) NULL,
+        synopsis NVARCHAR(MAX) NULL,
+        poster_url NVARCHAR(500) NULL,
+        is_inserted_fixture BIT NOT NULL DEFAULT 0,
+        PRIMARY KEY (snapshot_scope, movie_id)
+    );
+END
+
+DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'hide-all';
+
+INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+SELECT 'hide-all', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 0
+FROM dbo.Movies
+WHERE status = 'PUBLISHED';
+
+UPDATE m
+SET m.status = 'DRAFT'
+FROM dbo.Movies m
+JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+WHERE s.snapshot_scope = 'hide-all';";
                 await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine("ALL_MOVIES_HIDDEN");
                 return 0;
             case "restore-all-movies":
-                cmd.CommandText = "UPDATE dbo.Movies SET status = 'PUBLISHED' WHERE status = 'DRAFT';";
+                cmd.CommandText = @"
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NOT NULL
+BEGIN
+    UPDATE m
+    SET m.status = s.status
+    FROM dbo.Movies m
+    JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+    WHERE s.snapshot_scope = 'hide-all';
+
+    DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'hide-all';
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.__E2eMovieSnapshots)
+    BEGIN
+        DROP TABLE dbo.__E2eMovieSnapshots;
+    END
+END";
                 await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine("ALL_MOVIES_RESTORED");
                 return 0;
             case "set-long-title":
-                cmd.CommandText = "UPDATE dbo.Movies SET title = 'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket (Ban Chieu Rap 3D Dac Biet IMAX)' WHERE movie_id = 1;";
+                cmd.CommandText = @"
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.__E2eMovieSnapshots (
+        snapshot_scope NVARCHAR(64) NOT NULL,
+        movie_id BIGINT NOT NULL,
+        title NVARCHAR(250) NOT NULL,
+        duration_min SMALLINT NOT NULL,
+        genre_text NVARCHAR(160) NULL,
+        status VARCHAR(12) NOT NULL,
+        age_label NVARCHAR(24) NULL,
+        synopsis NVARCHAR(MAX) NULL,
+        poster_url NVARCHAR(500) NULL,
+        is_inserted_fixture BIT NOT NULL DEFAULT 0,
+        PRIMARY KEY (snapshot_scope, movie_id)
+    );
+END
+
+DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'long-title';
+
+DECLARE @heroTargetId BIGINT;
+SELECT TOP (1) @heroTargetId = m.movie_id
+FROM dbo.Movies m
+WHERE m.status = 'PUBLISHED'
+ORDER BY CASE WHEN EXISTS (SELECT 1 FROM dbo.Showtimes st WHERE st.movie_id = m.movie_id AND st.status = 'ON_SALE' AND st.start_utc > SYSUTCDATETIME()) THEN 0 ELSE 1 END, m.title, m.movie_id;
+
+IF @heroTargetId IS NOT NULL
+BEGIN
+    INSERT INTO dbo.__E2eMovieSnapshots (snapshot_scope, movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, is_inserted_fixture)
+    SELECT 'long-title', movie_id, title, duration_min, genre_text, status, age_label, synopsis, poster_url, 0
+    FROM dbo.Movies
+    WHERE movie_id = @heroTargetId;
+
+    UPDATE dbo.Movies
+    SET title = N'Chien Binh Khong Gian - Vu Tru Huyen Thoai Dao Chieu Dot Pha Thoi Gian Khong Hoi Ket (Ban Chieu Rap 3D Dac Biet IMAX)'
+    WHERE movie_id = @heroTargetId;
+END";
                 await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine("LONG_TITLE_SET");
                 return 0;
             case "restore-title":
-                cmd.CommandText = "UPDATE dbo.Movies SET title = 'Phim mo phong - KHONG phai lich Beta' WHERE movie_id = 1;";
+                cmd.CommandText = @"
+IF OBJECT_ID('dbo.__E2eMovieSnapshots', 'U') IS NOT NULL
+BEGIN
+    UPDATE m
+    SET m.title = s.title
+    FROM dbo.Movies m
+    JOIN dbo.__E2eMovieSnapshots s ON m.movie_id = s.movie_id
+    WHERE s.snapshot_scope = 'long-title';
+
+    DELETE FROM dbo.__E2eMovieSnapshots WHERE snapshot_scope = 'long-title';
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.__E2eMovieSnapshots)
+    BEGIN
+        DROP TABLE dbo.__E2eMovieSnapshots;
+    END
+END";
                 await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine("TITLE_RESTORED");
+                return 0;
+            case "inspect-movies-state":
+                cmd.CommandText = "SELECT movie_id, status, title, ISNULL(age_label, 'NULL') AS age_label, ISNULL(poster_url, 'NULL') AS poster_url, CASE WHEN synopsis IS NULL THEN 'NULL' ELSE 'SET' END AS synopsis_state FROM dbo.Movies ORDER BY movie_id;";
+                await using (var stateReader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await stateReader.ReadAsync())
+                    {
+                        Console.WriteLine($"MOVIE_ROW|{stateReader["movie_id"]}|{stateReader["status"]}|{stateReader["title"]}|{stateReader["age_label"]}|{stateReader["poster_url"]}|{stateReader["synopsis_state"]}");
+                    }
+                }
                 return 0;
             default:
                 Console.Error.WriteLine($"Unknown e2e-sql action: {action}");

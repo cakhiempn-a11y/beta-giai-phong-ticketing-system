@@ -1,21 +1,22 @@
 import { test, expect } from '@playwright/test';
-import { loadE2eState, runRunnerCommand, E2eState } from '../e2e-env';
+import { loadE2eState, runRunnerCommandOrThrow, runRunnerCleanupSafe, E2eState } from '../e2e-env';
 
 let state: E2eState;
+let baselineMoviesSnapshot = '';
 
 test.describe('UI-02A: Cinematic Homepage & Movie Artwork Discovery E2E Suite', () => {
   test.beforeAll(() => {
     state = loadE2eState();
-    // Seed fixtures to ensure multiple movies, broken poster target, and zero-showtime movie exist
-    const res = runRunnerCommand(['e2e-sql', 'seed-ui-fixtures'], state);
-    if (res.status !== 0) {
-      console.warn(`[Fixtures] Failed to seed UI fixtures: ${res.stderr || res.stdout}`);
-    }
+    baselineMoviesSnapshot = runRunnerCommandOrThrow(['e2e-sql', 'inspect-movies-state'], state).stdout.trim();
+    // Seed fixtures to ensure multiple movies, broken poster target, draft movie, and zero-showtime movie exist
+    runRunnerCommandOrThrow(['e2e-sql', 'seed-ui-fixtures'], state);
   });
 
   test.afterAll(() => {
     if (state) {
-      runRunnerCommand(['e2e-sql', 'reset-ui-fixtures'], state);
+      runRunnerCommandOrThrow(['e2e-sql', 'reset-ui-fixtures'], state);
+      const postResetSnapshot = runRunnerCommandOrThrow(['e2e-sql', 'inspect-movies-state'], state).stdout.trim();
+      expect(postResetSnapshot).toBe(baselineMoviesSnapshot);
     }
   });
 
@@ -206,10 +207,14 @@ test.describe('UI-02A: Cinematic Homepage & Movie Artwork Discovery E2E Suite', 
     await isolatedContext.close();
   });
 
-  test('7.4 Empty State: gracefully handles zero movies with general cinema greeting and restored state', async ({ page }) => {
-    // 1. Hide all movies
-    runRunnerCommand(['e2e-sql', 'hide-all-movies'], state);
+  test('7.4 Empty State & Snapshot Restoration: gracefully handles zero movies and preserves pre-existing DRAFT movies on restore', async ({ page }) => {
+    const stateBeforeHide = runRunnerCommandOrThrow(['e2e-sql', 'inspect-movies-state'], state).stdout.trim();
+    expect(stateBeforeHide).toContain('|DRAFT|Phim Ban Nhap Chua Cong Bo|');
 
+    // 1. Hide all published movies via snapshot-backed command
+    runRunnerCommandOrThrow(['e2e-sql', 'hide-all-movies'], state);
+
+    let bodyError: unknown = null;
     try {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
@@ -230,15 +235,24 @@ test.describe('UI-02A: Cinematic Homepage & Movie Artwork Discovery E2E Suite', 
       const heroCta = page.locator('.bgp-hero-actions a.btn-primary');
       await expect(heroCta).toBeVisible();
       expect(await heroCta.getAttribute('href')).toBe('/movies');
+    } catch (err) {
+      bodyError = err;
+      throw err;
     } finally {
-      // 2. Restore all movies
-      runRunnerCommand(['e2e-sql', 'restore-all-movies'], state);
+      // 2. Restore published movies safely without masking bodyError
+      runRunnerCleanupSafe(['e2e-sql', 'restore-all-movies'], state, bodyError);
     }
 
-    // Verify restoration
+    // 3. Regression check: pre-existing DRAFT movie must still be DRAFT, and exact movie states restored
+    const stateAfterRestore = runRunnerCommandOrThrow(['e2e-sql', 'inspect-movies-state'], state).stdout.trim();
+    expect(stateAfterRestore).toBe(stateBeforeHide);
+    expect(stateAfterRestore).toContain('|DRAFT|Phim Ban Nhap Chua Cong Bo|');
+
+    // Verify UI restoration and ensure DRAFT movie is never shown on homepage
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await expect(page.locator('[data-testid="movie-card"]').first()).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('Phim Ban Nhap Chua Cong Bo');
   });
 
   test('7.5 Upcoming Showtimes: renders dark surface card with responsive table and valid seat map links', async ({ page }) => {

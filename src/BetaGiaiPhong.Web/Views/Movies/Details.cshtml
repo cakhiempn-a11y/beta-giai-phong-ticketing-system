@@ -1,97 +1,264 @@
 @model BetaGiaiPhong.Web.Models.ViewModels.MovieDetailViewModel
 @{
     ViewData["Title"] = Model.Movie.Title;
+    var hasShowtimes = Model.DateGroups.Count > 0;
 }
 
-<div class="container mt-4">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Index">Phim đang chiếu</a></li>
-            <li class="breadcrumb-item active" aria-current="page">@Model.Movie.Title</li>
-        </ol>
-    </nav>
+@section Styles {
+    <link rel="stylesheet" href="~/css/movie-discovery.css" asp-append-version="true" />
+}
 
-    <!-- Movie Banner Header -->
-    <div class="card shadow-sm border-0 mb-4 overflow-hidden">
-        <div class="row g-0">
-            <div class="col-md-4 col-lg-3">
-                <div class="movie-poster-placeholder h-100 py-5">
-                    <span class="badge bg-warning text-dark mb-2">@Model.Movie.GenreText</span>
-                    <h4 class="text-white px-3 fw-bold text-center">@Model.Movie.Title</h4>
+<div class="bgp-movie-detail">
+    <!-- 1. Hero Chi Tiết Phim (Cinematic Movie Detail Hero) -->
+    <section class="bgp-detail-hero" aria-labelledby="movie-detail-title">
+        <div class="bgp-detail-backdrop" style="background-image: url('/images/hero-cinema-backdrop.svg');">
+            <div class="bgp-detail-backdrop-overlay"></div>
+        </div>
+
+        <div class="container bgp-detail-hero-container">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Movies" asp-action="Index">Khám phá phim</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@Model.Movie.Title</li>
+                </ol>
+            </nav>
+
+            <div class="row align-items-start g-4 pt-2">
+                <!-- 2:3 Portrait Poster Frame (never stretched as horizontal banner) -->
+                <div class="col-12 col-md-4 col-lg-3 bgp-detail-poster-col">
+                    <div class="bgp-detail-poster-frame">
+                        <img src="@(string.IsNullOrWhiteSpace(Model.Movie.PosterUrl) ? "/images/poster-fallback.svg" : Model.Movie.PosterUrl)"
+                             alt="Poster phim @Model.Movie.Title"
+                             class="bgp-detail-poster-img"
+                             loading="eager"
+                             data-testid="detail-poster-img"
+                             onerror="this.onerror=null;this.src='/images/poster-fallback.svg';" />
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-8 col-lg-9">
-                <div class="card-body p-4 p-md-5 d-flex flex-column h-100">
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <span class="badge bg-primary">Đang chiếu</span>
-                        <span class="badge bg-secondary">Thời lượng: @Model.Movie.DurationMin phút</span>
-                        <span class="badge bg-info text-dark">Thể loại: @Model.Movie.GenreText</span>
+
+                <!-- Movie Metadata & Synopsis -->
+                <div class="col-12 col-md-8 col-lg-9">
+                    <div class="bgp-detail-eyebrow">
+                        @if (hasShowtimes)
+                        {
+                            <span class="bgp-detail-badge-live" data-testid="detail-status-badge">ĐANG MỞ BÁN VÉ</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary" data-testid="detail-status-badge">CHƯA CÓ LỊCH CHIẾU SẮP TỚI</span>
+                        }
+                        <span class="text-secondary small fw-semibold">BETA GIẢI PHÓNG</span>
                     </div>
 
-                    <h1 class="h2 fw-bold mb-3">@Model.Movie.Title</h1>
-                    <p class="text-muted lead mb-4">
-                        Tác phẩm điện ảnh đang được trình chiếu tại hệ thống phòng chiếu hiện đại của Beta Giải Phóng.
-                        Khán giả có thể theo dõi danh sách các suất chiếu dưới đây để xem sơ đồ chỗ ngồi.
+                    <h1 id="movie-detail-title" class="bgp-detail-title">@Model.Movie.Title</h1>
+
+                    <div class="bgp-detail-meta">
+                        @if (!string.IsNullOrWhiteSpace(Model.Movie.AgeLabel))
+                        {
+                            <span class="badge bg-warning text-dark fw-bold" data-testid="detail-age-label">@Model.Movie.AgeLabel</span>
+                        }
+                        <span data-testid="detail-duration">@Model.Movie.DurationMin phút</span>
+                        @if (!string.IsNullOrWhiteSpace(Model.Movie.GenreText))
+                        {
+                            <span>•</span>
+                            <span data-testid="detail-genre">@Model.Movie.GenreText</span>
+                        }
+                        <span>•</span>
+                        @if (hasShowtimes)
+                        {
+                            <span class="badge bg-success" data-testid="detail-showtime-count">@Model.Movie.UpcomingShowtimes.Count suất chiếu sắp tới</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary" data-testid="detail-showtime-count">Chưa có suất chiếu</span>
+                        }
+                    </div>
+
+                    <div class="bgp-detail-synopsis-label">Nội dung phim</div>
+                    <p class="bgp-detail-synopsis" data-testid="detail-synopsis">
+                        @if (!string.IsNullOrWhiteSpace(Model.Movie.Synopsis))
+                        {
+                            @Model.Movie.Synopsis
+                        }
+                        else
+                        {
+                            @:Nội dung tóm tắt của bộ phim đang được cập nhật.
+                        }
                     </p>
 
-                    <div class="mt-auto border-top pt-3 text-secondary small">
-                        <span>Lưu ý: Hệ thống đang vận hành ở giai đoạn <strong>BE-01 (Công bố lịch & Sơ đồ ghế Read-Only)</strong>. Tính năng đặt vé trực tuyến sẽ mở trong giai đoạn BE-02.</span>
+                    <div class="bgp-detail-actions">
+                        @if (hasShowtimes)
+                        {
+                            <a href="#showtimes-section"
+                               class="btn btn-primary btn-lg px-4"
+                               data-testid="detail-cta-scroll-showtimes">
+                                Chọn suất chiếu
+                            </a>
+                            <a asp-controller="Movies"
+                               asp-action="Index"
+                               class="btn btn-outline-light btn-lg px-4">
+                                Khám phá phim khác
+                            </a>
+                        }
+                        else
+                        {
+                            <a asp-controller="Movies"
+                               asp-action="Index"
+                               class="btn btn-outline-light btn-lg px-4"
+                               data-testid="detail-cta-back-catalog">
+                                &larr; Quay lại danh mục phim
+                            </a>
+                        }
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Showtimes by Date Section -->
-    <div class="card shadow-sm border-0 mb-5">
-        <div class="card-header bg-white py-3">
-            <h3 class="h4 fw-bold mb-0">Lịch Chiếu & Suất Chiếu Khả Dụng</h3>
-        </div>
-        <div class="card-body p-4">
-            @if (Model.ShowtimesByDate.Count == 0)
+    <!-- 2. Lịch Chiếu & Chọn Suất Chiếu Theo Ngày (Showtime Selector by Date in UTC+7) -->
+    <div class="container">
+        <section id="showtimes-section" class="bgp-showtimes-section" aria-labelledby="showtimes-heading">
+            <div class="bgp-showtimes-header">
+                <div>
+                    <h2 id="showtimes-heading" class="h4 fw-bold mb-1">Lịch Chiếu Tại Beta Giải Phóng</h2>
+                    <p class="text-secondary small mb-0">
+                        Chọn ngày và khung giờ chiếu phù hợp (Giờ Việt Nam UTC+7) để chuyển sang sơ đồ chọn ghế
+                    </p>
+                </div>
+            </div>
+
+            @if (!hasShowtimes)
             {
-                <div class="alert alert-info text-center py-4 mb-0">
-                    Hiện chưa có suất chiếu nào sắp tới cho bộ phim này. Vui lòng quay lại sau!
+                <div class="bgp-discovery-empty" data-testid="detail-no-showtimes">
+                    <div class="bgp-discovery-empty-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 fw-bold text-light mb-2">Hiện chưa có suất chiếu sắp tới</h3>
+                    <p class="text-secondary small mb-3">
+                        Bộ phim này hiện chưa có lịch chiếu mở bán trong thời gian tới. Mời bạn xem các bộ phim khác đang có suất chiếu tại rạp.
+                    </p>
+                    <a asp-controller="Movies"
+                       asp-action="Index"
+                       asp-route-filter="has-showtimes"
+                       class="btn btn-primary btn-sm px-4"
+                       data-testid="detail-no-showtimes-browse-btn">
+                        Xem các phim có lịch chiếu
+                    </a>
                 </div>
             }
             else
             {
-                @foreach (var (dateStr, showtimes) in Model.ShowtimesByDate)
+                <!-- Date Selector Tabs -->
+                <div class="bgp-date-tabs" role="tablist" aria-label="Chọn ngày chiếu">
+                    @foreach (var group in Model.DateGroups)
+                    {
+                        var isSelected = string.Equals(group.DateKey, Model.SelectedDateKey, StringComparison.OrdinalIgnoreCase);
+                        <a href="@Url.Action("Details", "Movies", new { id = Model.Movie.MovieId, date = group.DateKey })#showtimes-section"
+                           role="tab"
+                           id="tab-date-@group.DateKey"
+                           aria-selected="@(isSelected ? "true" : "false")"
+                           aria-controls="panel-date-@group.DateKey"
+                           data-date-key="@group.DateKey"
+                           data-testid="showtime-date-tab"
+                           class="bgp-date-tab @(isSelected ? "is-active" : "")">
+                            <span class="bgp-date-tab-dow">@group.DayOfWeekLabel</span>
+                            <span class="bgp-date-tab-date">@group.DateDisplayText</span>
+                            <span class="bgp-date-tab-count">@group.Showtimes.Count suất chiếu</span>
+                        </a>
+                    }
+                </div>
+
+                <!-- Showtimes Grouped by Date -->
+                @foreach (var group in Model.DateGroups)
                 {
-                    <div class="mb-4">
-                        <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                            📅 Ngày chiếu: @dateStr
-                        </h5>
-                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                            @foreach (var st in showtimes)
+                    var isSelected = string.Equals(group.DateKey, Model.SelectedDateKey, StringComparison.OrdinalIgnoreCase);
+                    <div id="panel-date-@group.DateKey"
+                         role="tabpanel"
+                         aria-labelledby="tab-date-@group.DateKey"
+                         data-date-panel="@group.DateKey"
+                         data-testid="showtime-date-panel"
+                         class="bgp-showtime-date-group @(isSelected ? "is-active" : "")">
+                        <h3 class="bgp-showtime-date-heading">
+                            <span>Ngày chiếu: @group.DayOfWeekLabel, @group.DateDisplayText</span>
+                            <span class="badge bg-dark">@group.Showtimes.Count suất</span>
+                        </h3>
+
+                        <div class="bgp-showtime-grid">
+                            @foreach (var item in group.Showtimes)
                             {
-                                <div class="col">
-                                    <div class="border rounded-3 p-3 bg-light h-100 d-flex flex-column">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <span class="badge bg-dark">@st.RoomName</span>
-                                            <span class="badge @(st.AvailableSeatsCount > 0 ? "bg-success" : "bg-danger")">
-                                                @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
-                                            </span>
+                                var st = item.Showtime;
+                                <div class="bgp-showtime-card @(item.IsSoldOut ? "bgp-showtime-card--soldout" : "")"
+                                     data-testid="showtime-card"
+                                     data-showtime-id="@st.ShowtimeId"
+                                     data-sold-out="@(item.IsSoldOut ? "true" : "false")">
+                                    <div class="bgp-showtime-top">
+                                        <div class="bgp-showtime-time-block">
+                                            <span class="bgp-showtime-start" data-testid="showtime-start">@item.StartTimeText</span>
+                                            <span class="bgp-showtime-end" data-testid="showtime-end">~ @item.EndTimeText</span>
+                                            @if (item.CrossesMidnight)
+                                            {
+                                                <span class="bgp-showtime-nextday"
+                                                      title="Kết thúc sang ngày hôm sau (@item.EndDateShortText)"
+                                                      data-testid="showtime-crosses-midnight">
+                                                    +1 ngày (@item.EndDateShortText)
+                                                </span>
+                                            }
                                         </div>
-                                        <div class="h5 fw-bold text-dark mb-1">
-                                            @st.StartVietnamText.Split(' ')[1]
-                                            <small class="text-muted fs-6 font-monospace">→ @st.EndVietnamText</small>
-                                        </div>
-                                        <div class="text-muted small mb-3">
-                                            Buffer dọn phòng: @st.BufferMinutes phút
-                                        </div>
-                                        <a class="btn btn-outline-primary btn-sm mt-auto w-100" asp-controller="Showtimes" asp-action="Seats" asp-route-id="@st.ShowtimeId">
-                                            Xem sơ đồ phòng & ghế &rarr;
-                                        </a>
+                                        <span class="bgp-showtime-room" data-testid="showtime-room">@st.RoomName</span>
                                     </div>
+
+                                    <div class="bgp-showtime-meta-row">
+                                        @if (!item.IsSoldOut)
+                                        {
+                                            <span class="bgp-showtime-seats bgp-showtime-seats--available" data-testid="showtime-seats">
+                                                Còn @st.AvailableSeatsCount / @st.SellableCapacity ghế trống
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="bgp-showtime-seats bgp-showtime-seats--soldout" data-testid="showtime-seats">
+                                                Hết ghế trống (0 / @st.SellableCapacity)
+                                            </span>
+                                        }
+                                    </div>
+
+                                    @if (!item.IsSoldOut)
+                                    {
+                                        <a class="btn btn-primary btn-sm bgp-showtime-cta"
+                                           data-testid="showtime-cta"
+                                           asp-controller="Showtimes"
+                                           asp-action="Seats"
+                                           asp-route-id="@st.ShowtimeId">
+                                            Chọn ghế &rarr;
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-outline-secondary btn-sm bgp-showtime-cta bgp-showtime-cta--soldout"
+                                           data-testid="showtime-cta"
+                                           asp-controller="Showtimes"
+                                           asp-action="Seats"
+                                           asp-route-id="@st.ShowtimeId">
+                                            Xem sơ đồ ghế
+                                        </a>
+                                    }
                                 </div>
                             }
                         </div>
                     </div>
                 }
             }
-        </div>
+        </section>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/movie-discovery.js" asp-append-version="true"></script>
+}

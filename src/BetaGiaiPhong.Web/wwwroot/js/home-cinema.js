@@ -76,24 +76,8 @@
         });
     }
 
-    function initPosterFallbacks() {
-        const fallbackPath = '/images/poster-fallback.svg';
-        const posters = document.querySelectorAll('.bgp-card-poster, .bgp-hero-poster-img');
-
-        posters.forEach((img) => {
-            img.addEventListener('error', function onPosterError() {
-                // Ensure this handler never triggers more than once per image
-                img.removeEventListener('error', onPosterError);
-                if (!img.src.endsWith(fallbackPath)) {
-                    img.src = fallbackPath;
-                }
-            }, { once: true });
-        });
-    }
-
     function init() {
         initMovieRails();
-        initPosterFallbacks();
     }
 
     if (document.readyState === 'loading') {
