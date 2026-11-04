@@ -26,8 +26,8 @@
     string ageCodeLower = (Model.MovieAgeLabel ?? "P").Trim().ToLowerInvariant();
 
     string expiresVnDisplay = !string.IsNullOrWhiteSpace(Model.ExpiresVietnamText)
-        ? $"{Model.ExpiresVietnamText} (UTC+7)"
-        : $"{Model.ExpiresUtc:dd/MM/yyyy HH:mm:ss} UTC";
+        ? Model.ExpiresVietnamText
+        : Model.ExpiresUtc.ToString("dd/MM/yyyy HH:mm:ss");
     string expiresTimeOnlyDisplay = !string.IsNullOrWhiteSpace(Model.ExpiresVietnamTimeOnlyText)
         ? Model.ExpiresVietnamTimeOnlyText
         : Model.ExpiresUtc.ToString("HH:mm:ss");
@@ -120,7 +120,7 @@
                 Xác nhận &amp; Thanh toán cho @Model.Seats.Count ghế (@seatCodesText)
             </h1>
             <p class="bgp-hold-banner__desc">
-                Máy chủ giữ khóa ghế tới <strong>@expiresTimeOnlyDisplay</strong> (@expiresVnDisplay &mdash; Nguồn: <code>HoldExpiresUtc</code>).
+                Thời hạn giữ ghế tới <strong>@expiresTimeOnlyDisplay</strong> (@expiresVnDisplay).
             </p>
         </div>
 
@@ -147,8 +147,7 @@
         <!-- Left Column: Order Summary + Perforated Post-Payment QR Pass Spec Preview -->
         <section class="bgp-tx-panel" aria-labelledby="checkout-summary-heading">
             <div class="bgp-tx-panel__head">
-                <h2 id="checkout-summary-heading" class="bgp-tx-panel__title">Chi tiết đơn đặt vé &amp; Cấu trúc vé điện tử</h2>
-                <span class="bgp-tx-panel__tz">Tất cả mốc giờ theo UTC+7</span>
+                <h2 id="checkout-summary-heading" class="bgp-tx-panel__title">Chi tiết đơn đặt vé</h2>
             </div>
 
             <div class="bgp-tx-film" data-testid="checkout-verified-film-card">
@@ -171,10 +170,6 @@
                         @if (hasVnClassification)
                         {
                             <span class="bgp-age-badge bgp-age-badge--@ageCodeLower">@Model.MovieAgeLabel</span>
-                        }
-                        else
-                        {
-                            <span class="bgp-badge bgp-badge--neutral">Chưa có phân loại tại VN</span>
                         }
 
                         @if (Model.MovieRating is not null)
@@ -211,13 +206,13 @@
 
                     <div class="bgp-tx-meta-grid">
                         <div>
-                            <span class="bgp-tx-meta-item__label">Ngày chiếu (VN)</span>
+                            <span class="bgp-tx-meta-item__label">Ngày chiếu</span>
                             <span class="bgp-tx-meta-item__val">
                                 @(string.IsNullOrWhiteSpace(Model.StartVietnamDateText) ? Model.FormattedStartUtc : Model.StartVietnamDateText)
                             </span>
                         </div>
                         <div>
-                            <span class="bgp-tx-meta-item__label">Khung giờ (UTC+7)</span>
+                            <span class="bgp-tx-meta-item__label">Khung giờ</span>
                             <span class="bgp-tx-meta-item__val bgp-tx-meta-item__val--mono">
                                 @if (!string.IsNullOrWhiteSpace(Model.StartVietnamTimeOnlyText) && !string.IsNullOrWhiteSpace(Model.EndVietnamTimeOnlyText))
                                 {
@@ -242,8 +237,7 @@
             </div>
 
             <div class="bgp-tx-section-label">
-                <span>Bảng đối chiếu ghế đã chọn (@Model.Seats.Count ghế)</span>
-                <span>VND nguyên</span>
+                <span>Danh sách ghế đã chọn (@Model.Seats.Count ghế)</span>
             </div>
 
             <div class="bgp-tx-seat-table-wrap">
@@ -300,7 +294,7 @@
                     <strong class="bgp-tx-totals__discount">-@Model.DiscountVnd.ToString("N0") đ</strong>
                 </div>
                 <div class="bgp-tx-totals__grand">
-                    <span class="bgp-tx-totals__grand-label">Tổng thanh toán (VND nguyên)</span>
+                    <span class="bgp-tx-totals__grand-label">Tổng thanh toán</span>
                     <strong class="bgp-tx-totals__grand-amount" data-testid="checkout-total-vnd">@Model.TotalVnd.ToString("N0") đ</strong>
                 </div>
             </div>
@@ -319,11 +313,11 @@
                             @Model.MovieTitle &bull; @Model.RoomName &bull; Ghế @sampleSeatLabel
                         </div>
                         <div class="bgp-qr-pass-preview__meta">
-                            Đơn #@Model.OrderCode &bull; Suất @Model.FormattedStartUtc (UTC+7)
+                            Đơn #@Model.OrderCode &bull; Suất @Model.FormattedStartUtc
                         </div>
                     </div>
                     <div class="bgp-qr-pass-preview__note">
-                        Khi giao dịch đạt <strong>PAID</strong>, mỗi ghế được cấp một mã QR độc lập khóa nền trắng tinh <code>#FFFFFF</code> + viền tĩnh <code>10px</code> không áp bộ lọc tối.
+                        Vé điện tử QR riêng cho từng ghế được phát hành tự động ngay sau khi giao dịch thành công.
                     </div>
                 </div>
                 <div class="bgp-qr-pass-preview__stub" aria-hidden="true">
@@ -338,24 +332,24 @@
             </div>
         </section>
 
-        <!-- Right Column: Unmistakably Honest Academic Mock Payment Simulator -->
+        <!-- Right Column: Sandbox Payment Gateway Simulator -->
         <aside class="bgp-tx-panel bgp-tx-panel--sticky"
                aria-labelledby="payment-sim-heading"
                data-testid="mis-payment-simulator">
             <div class="bgp-mis-header">
-                <span class="bgp-badge bgp-badge--warning">MÔI TRƯỜNG MÔ PHỎNG HỌC THUẬT (MIS)</span>
+                <span class="bgp-badge bgp-badge--warning">CỔNG THANH TOÁN THỬ NGHIỆM</span>
                 <span class="bgp-mis-proto-tag">HMAC-SHA256 Signed</span>
             </div>
 
             <h2 id="payment-sim-heading" class="bgp-tx-panel__title" style="margin-bottom: 10px;">
-                Trình mô phỏng Phản hồi Cổng Thanh toán
+                Xác nhận Cổng Thanh toán
             </h2>
 
             <div class="bgp-mis-disclosure" role="note" data-testid="mis-honest-disclosure">
-                <strong>Minh bạch giao dịch học thuật:</strong> Đây là bộ giả lập kết quả callback có chữ ký mật mã
-                <code>HMAC-SHA256</code> phục vụ đề án Hệ thống thông tin quản lý (MIS). Hệ thống
-                <strong>không thu tiền thật</strong>, <strong>không kết nối tổ chức tín dụng</strong> và
-                <strong>tuyệt đối không hiển thị ô nhập số thẻ ngân hàng giả</strong>.
+                <strong>Cổng thanh toán thử nghiệm:</strong> Xác thực phản hồi ký số
+                <code>HMAC-SHA256</code> — hệ thống <strong>không thu tiền thật</strong>,
+                <strong>không kết nối tổ chức tín dụng</strong> và
+                <strong>không yêu cầu nhập số thẻ ngân hàng</strong>.
             </div>
 
             @if (Model.IsSimulatorEnabled)

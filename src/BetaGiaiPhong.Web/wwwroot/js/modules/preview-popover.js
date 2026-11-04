@@ -44,6 +44,63 @@ function el(tag, className, text) {
   return node;
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function createPlayIconSvg() {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('aria-hidden', 'true');
+  const poly = document.createElementNS(SVG_NS, 'polygon');
+  poly.setAttribute('points', '6 4 20 12 6 20 6 4');
+  svg.appendChild(poly);
+  return svg;
+}
+
+function createTrailerIconSvg() {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const rect = document.createElementNS(SVG_NS, 'rect');
+  rect.setAttribute('x', '2');
+  rect.setAttribute('y', '4');
+  rect.setAttribute('width', '20');
+  rect.setAttribute('height', '16');
+  rect.setAttribute('rx', '2');
+  const poly = document.createElementNS(SVG_NS, 'polygon');
+  poly.setAttribute('points', '10 9 15 12 10 15 10 9');
+  poly.setAttribute('fill', 'currentColor');
+  svg.appendChild(rect);
+  svg.appendChild(poly);
+  return svg;
+}
+
+function createChevronDownIconSvg() {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '18');
+  svg.setAttribute('height', '18');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2.4');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const poly = document.createElementNS(SVG_NS, 'polyline');
+  poly.setAttribute('points', '6 9 12 15 18 9');
+  svg.appendChild(poly);
+  return svg;
+}
+
 export function initPreviewPopover() {
   const triggers = document.querySelectorAll('[data-preview-movie-id], [data-preview-trigger]');
   if (triggers.length === 0) return;
@@ -156,7 +213,7 @@ export function initPreviewPopover() {
       img.src = posterSrc;
       img.alt = `Poster phim ${data.title}`;
       img.style.objectFit = 'contain';
-      img.style.background = '#101015';
+      img.style.background = '#181818';
       img.loading = 'eager';
       img.addEventListener('error', () => {
         img.remove();
@@ -172,17 +229,7 @@ export function initPreviewPopover() {
     media.appendChild(el('div', 'bgp-preview-popover__scrim'));
 
     const topBar = el('div', 'bgp-preview-popover__top-bar');
-    if (data.ageLabel) {
-      const ageBadge = el(
-        'span',
-        `bgp-age-badge ${resolveAgeBadgeModifier(data.ageLabel)}`,
-        data.ageLabel
-      );
-      topBar.appendChild(ageBadge);
-    } else {
-      const unclassified = el('span', 'bgp-badge', 'Chưa phân loại VN');
-      topBar.appendChild(unclassified);
-    }
+    topBar.appendChild(el('span'));
 
     const closeBtn = el('button', 'bgp-preview-popover__close');
     closeBtn.type = 'button';
@@ -215,37 +262,105 @@ export function initPreviewPopover() {
     media.appendChild(headline);
     popover.appendChild(media);
 
-    // 2. Popover Body
+    // 2. Popover Body (Figma Node 109:9726 — #181818 surface, circular icon row + metadata + dot-separated genres)
     const body = el('div', 'bgp-preview-popover__body');
 
+    // Row 1: Netflix Circular Icon Action Row (Figma Node 109:9687)
+    const actionsRow = el('div', 'bgp-preview-popover__actions');
+    const actionsLeft = el('div', 'bgp-preview-popover__actions-left');
+
+    const primaryLabel =
+      data.upcomingShowtimesCount > 0 ? 'Chọn suất chiếu' : 'Chi tiết phim';
+    const detailLink = el('a', 'bgp-preview-circle-btn bgp-preview-circle-btn--primary');
+    detailLink.href = `/movies/${encodeURIComponent(data.movieId)}`;
+    detailLink.setAttribute('data-testid', 'quick-preview-detail-cta');
+    detailLink.setAttribute('aria-label', `${primaryLabel}: ${data.title}`);
+    detailLink.title = primaryLabel;
+    detailLink.appendChild(createPlayIconSvg());
+    actionsLeft.appendChild(detailLink);
+
+    if (data.officialTrailerYoutubeId) {
+      const trailerBtn = el('button', 'bgp-preview-circle-btn');
+      trailerBtn.type = 'button';
+      trailerBtn.setAttribute('data-testid', 'quick-preview-trailer-btn');
+      trailerBtn.setAttribute('data-trailer-open', data.officialTrailerYoutubeId);
+      trailerBtn.setAttribute('data-trailer-title', data.title);
+      trailerBtn.setAttribute('aria-label', `Xem trailer chính thức: ${data.title}`);
+      trailerBtn.title = 'Xem trailer chính thức';
+      trailerBtn.appendChild(createTrailerIconSvg());
+      actionsLeft.appendChild(trailerBtn);
+    }
+
+    actionsRow.appendChild(actionsLeft);
+
+    const expandLink = el('a', 'bgp-preview-circle-btn');
+    expandLink.href = `/movies/${encodeURIComponent(data.movieId)}#showtimes-section`;
+    expandLink.setAttribute('aria-label', `Chi tiết phim và lịch chiếu: ${data.title}`);
+    expandLink.title = 'Chi tiết phim & lịch chiếu';
+    expandLink.appendChild(createChevronDownIconSvg());
+    actionsRow.appendChild(expandLink);
+
+    body.appendChild(actionsRow);
+
+    // Row 2: Honest Cinema Status (#46D369) + VN Age Classification + Duration + IMDb Rating
     const metaRow = el('div', 'bgp-preview-popover__meta');
+    if (data.upcomingShowtimesCount > 0) {
+      metaRow.appendChild(
+        el('span', 'bgp-preview-popover__status', `${data.upcomingShowtimesCount} suất đang mở bán`)
+      );
+    } else {
+      metaRow.appendChild(el('span', '', 'Chưa mở lịch chiếu'));
+    }
+
+    if (data.ageLabel) {
+      const ageBadge = el(
+        'span',
+        `bgp-age-badge ${resolveAgeBadgeModifier(data.ageLabel)}`,
+        data.ageLabel
+      );
+      metaRow.appendChild(ageBadge);
+    }
+
+    if (data.durationMin) {
+      metaRow.appendChild(el('span', '', `${data.durationMin} phút`));
+    }
+
     if (data.rating && data.rating.displayText) {
       const ratingBadge = el('span', 'bgp-badge bgp-badge--imdb-solid', data.rating.displayText);
       ratingBadge.setAttribute('data-testid', 'quick-preview-rating');
       metaRow.appendChild(ratingBadge);
     }
-    if (data.durationMin) {
-      metaRow.appendChild(el('span', '', `${data.durationMin} phút`));
-    }
-    if (data.genreText) {
-      metaRow.appendChild(el('span', '', `• ${data.genreText}`));
-    }
     body.appendChild(metaRow);
 
-    if (data.directorNames) {
-      const dirLine = el('p', 'bgp-preview-popover__director', 'Đạo diễn: ');
-      dirLine.appendChild(el('strong', '', data.directorNames));
-      body.appendChild(dirLine);
+    // Row 3: Genre Tags Separated by 4px Grey Dots (Figma Node 109:9670)
+    if (data.genreText) {
+      const genreTokens = String(data.genreText)
+        .split(/[,•/]+/)
+        .map((g) => g.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      if (genreTokens.length > 0) {
+        const genresRow = el('div', 'bgp-preview-popover__genres');
+        genreTokens.forEach((token, idx) => {
+          if (idx > 0) {
+            const dot = el('span', 'bgp-preview-popover__genre-dot');
+            dot.setAttribute('aria-hidden', 'true');
+            genresRow.appendChild(dot);
+          }
+          genresRow.appendChild(el('span', '', token));
+        });
+        body.appendChild(genresRow);
+      }
     }
 
     const synopsisText =
       data.shortSynopsis || 'Nội dung tóm tắt của tác phẩm hiện đang được cập nhật.';
     body.appendChild(el('p', 'bgp-preview-popover__synopsis', synopsisText));
 
-    // Quick UTC+7 Showtime Pills -> /showtimes/{id}/seats
+    // Row 4: Quick UTC+7 Showtime Pills -> /showtimes/{id}/seats
     const pillsWrap = el('div', 'bgp-time-pills');
     pillsWrap.setAttribute('data-testid', 'quick-preview-showtimes');
-    const chips = Array.isArray(data.nextShowtimes) ? data.nextShowtimes.slice(0, 4) : [];
+    const chips = Array.isArray(data.nextShowtimes) ? data.nextShowtimes.slice(0, 3) : [];
 
     if (chips.length > 0) {
       chips.forEach((chip) => {
@@ -262,27 +377,6 @@ export function initPreviewPopover() {
     }
     body.appendChild(pillsWrap);
 
-    // Footer Actions
-    const footer = el('div', 'bgp-preview-popover__footer');
-    const detailLink = el(
-      'a',
-      'bgp-btn bgp-btn--primary bgp-btn--sm',
-      data.upcomingShowtimesCount > 0 ? 'Chọn suất chiếu' : 'Chi tiết phim'
-    );
-    detailLink.href = `/movies/${encodeURIComponent(data.movieId)}`;
-    detailLink.setAttribute('data-testid', 'quick-preview-detail-cta');
-    footer.appendChild(detailLink);
-
-    if (data.officialTrailerYoutubeId) {
-      const trailerBtn = el('button', 'bgp-btn bgp-btn--glass bgp-btn--sm', 'Xem trailer');
-      trailerBtn.type = 'button';
-      trailerBtn.setAttribute('data-testid', 'quick-preview-trailer-btn');
-      trailerBtn.setAttribute('data-trailer-open', data.officialTrailerYoutubeId);
-      trailerBtn.setAttribute('data-trailer-title', data.title);
-      footer.appendChild(trailerBtn);
-    }
-
-    body.appendChild(footer);
     popover.appendChild(body);
   }
 

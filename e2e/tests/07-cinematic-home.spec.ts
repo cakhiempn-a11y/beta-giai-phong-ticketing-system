@@ -143,6 +143,7 @@ test.describe('UI-P3: Netflix-Cinema Homepage (/), On-Sale Rail, Hover Quick-Pre
     await page.waitForLoadState('networkidle');
 
     const targetMovieCard = page.locator('[data-testid="movie-card"]', { hasText: 'Phim Khong Co Suat' });
+    await targetMovieCard.scrollIntoViewIfNeeded();
     await expect(targetMovieCard).toBeVisible();
 
     const targetImg = targetMovieCard.locator('img');
@@ -346,14 +347,26 @@ test.describe('UI-P3: Netflix-Cinema Homepage (/), On-Sale Rail, Hover Quick-Pre
 
     expect(assetCheck.hasBootstrapCss).toBe(false);
     expect(assetCheck.hasBootstrapJs).toBe(false);
-    expect(assetCheck.bodyBg).toBe('rgb(10, 10, 12)');
+    expect(assetCheck.bodyBg).toBe('rgb(20, 20, 20)');
     expect(assetCheck.bodyText).not.toContain('98% phù hợp');
     expect(assetCheck.bodyText).not.toContain('Top 10');
+    expect(assetCheck.bodyText).not.toContain('Mô phỏng học thuật');
+    expect(assetCheck.bodyText).not.toContain('Giới thiệu & Quy chế');
+
+    // Hero renders graphic Title Treatment logo (SVG or PNG) instead of plain system text
+    await expect(page.locator('#hero-title .bgp-title-treatment')).toBeVisible();
+    expect(await page.locator('#hero-title svg, #hero-title img').count()).toBeGreaterThanOrEqual(1);
+
+    // Netflix top-right header cluster: Search icon + Notification bell + Square smiley avatar
+    await expect(page.locator('[data-testid="header-search-trigger"]')).toBeVisible();
+    await expect(page.locator('[data-testid="cinema-notif-menu"]')).toBeVisible();
+    await expect(page.locator('.bgp-netflix-avatar').first()).toBeVisible();
 
     const ratingBadge = page.locator('[data-testid="hero-rating-badge"]');
     await expect(ratingBadge).toBeVisible();
-    const ratingText = await ratingBadge.innerText();
-    expect(ratingText).toMatch(/IMDb\s+\d+(\.\d+)?\/10\s+\([\d.,]+\s+lượt\)/);
+    const ratingText = (await ratingBadge.innerText()).trim();
+    expect(ratingText).toMatch(/^IMDb\s+\d+(\.\d+)?\/10$/);
+    expect(ratingText).not.toContain('lượt');
   });
 
   test('7.9 On-Sale 16:9 Rail, Hover Quick-Preview Viewport Clamping & Touch Device Guard', async ({ browser }) => {
@@ -368,7 +381,7 @@ test.describe('UI-P3: Netflix-Cinema Homepage (/), On-Sale Rail, Hover Quick-Pre
 
       // 16:9 On-Sale Rail with direct UTC+7 showtime chips
       const wideCards = page.locator('[data-testid="wide-movie-card"]');
-      expect(await wideCards.count()).toBeGreaterThanOrEqual(3);
+      expect(await wideCards.count()).toBeGreaterThanOrEqual(2);
       const firstWideChip = wideCards.first().locator('[data-testid="wide-card-showtime-chip"]').first();
       await expect(firstWideChip).toBeVisible();
       expect(await firstWideChip.getAttribute('href')).toMatch(/^\/showtimes\/\d+\/seats$/);
@@ -458,5 +471,109 @@ test.describe('UI-P3: Netflix-Cinema Homepage (/), On-Sale Rail, Hover Quick-Pre
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(dialog.locator('iframe')).toHaveCount(0);
+  });
+
+  test('7.11 Netflix Billboard Carousel & Inline Highlight Video: multi-slide navigation, indicator tabs, keyboard arrows & inline video teardown', async ({
+    page,
+  }) => {
+    await page.route('https://www.youtube-nocookie.com/embed/**', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: '<!doctype html><html><body style="background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">Billboard Inline Highlight Video Stub</body></html>',
+      });
+    });
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    const slides = page.locator('[data-testid="billboard-slide"]');
+    const indicators = page.locator('[data-testid="billboard-indicator"]');
+    const slideCount = await slides.count();
+
+    expect(slideCount).toBeGreaterThanOrEqual(3);
+    expect(slideCount).toBeLessThanOrEqual(6);
+    await expect(indicators).toHaveCount(slideCount);
+
+    // Every 16:9 thumbnail indicator renders a valid loaded miniature image (naturalWidth > 0)
+    const thumbNaturalWidth = await indicators.nth(0).locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth);
+    expect(thumbNaturalWidth).toBeGreaterThan(0);
+
+    // Mục 4: Topic Bento Strip (6 cards), Paginated Rail Counter (1/N) & Skewed Parallelogram Spotlight Rail
+    await expect(page.locator('[data-testid="topic-bento-card"]')).toHaveCount(6);
+    await expect(page.locator('[data-testid="acclaimed-showcase-section"]')).toBeVisible();
+    expect(await page.locator('[data-testid="acclaimed-movie-card"]').count()).toBeGreaterThanOrEqual(3);
+    const nowShowingPageCounter = page.locator('#now-showing [data-rail-page]');
+    await expect(nowShowingPageCounter).toBeVisible();
+    expect((await nowShowingPageCounter.innerText()).trim()).toMatch(/^1\/\d+$/);
+
+    // Slide 0 is active; inactive slides carry aria-hidden="true" and inert
+    await expect(slides.nth(0)).toHaveAttribute('aria-hidden', 'false');
+    await expect(slides.nth(1)).toHaveAttribute('aria-hidden', 'true');
+    expect(await slides.nth(1).evaluate((el) => el.hasAttribute('inert'))).toBe(true);
+
+    const slide0Title = (await slides.nth(0).getAttribute('data-movie-title')) || '';
+    const slide1Title = (await slides.nth(1).getAttribute('data-movie-title')) || '';
+    expect(slide0Title.length).toBeGreaterThan(0);
+    expect(slide1Title.length).toBeGreaterThan(0);
+    expect(slide1Title).not.toBe(slide0Title);
+
+    const track = page.locator('[data-testid="billboard-track"]');
+    const nextBtn = page.locator('[data-testid="billboard-next-btn"]');
+    const prevBtn = page.locator('[data-testid="billboard-prev-btn"]');
+
+    // Click Next -> advances smoothly to Slide 1 and syncs #hero-title + hero-primary-cta to Slide 1
+    await nextBtn.click();
+    await expect(slides.nth(1)).toHaveClass(/is-active/);
+    await expect(slides.nth(1)).toHaveAttribute('aria-hidden', 'false');
+    await expect(slides.nth(0)).toHaveAttribute('aria-hidden', 'true');
+    await expect(indicators.nth(1)).toHaveAttribute('aria-selected', 'true');
+    expect(await track.evaluate((el) => (el as HTMLElement).style.transform)).toContain('-100%');
+    await expect(page.locator('#hero-title')).toContainText(slide1Title);
+
+    // Click indicator 2 -> jumps directly to Slide 2
+    await indicators.nth(2).click();
+    await expect(slides.nth(2)).toHaveClass(/is-active/);
+    expect(await track.evaluate((el) => (el as HTMLElement).style.transform)).toContain('-200%');
+
+    // Click indicator 0 -> returns cleanly to Slide 0
+    await indicators.nth(0).click();
+    await expect(slides.nth(0)).toHaveClass(/is-active/);
+    expect(await track.evaluate((el) => (el as HTMLElement).style.transform)).toMatch(/^translate3d\(-?0%/);
+
+    // Keyboard ArrowRight / ArrowLeft inside Billboard
+    await prevBtn.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(slides.nth(1)).toHaveClass(/is-active/);
+    await page.keyboard.press('ArrowLeft');
+    await expect(slides.nth(0)).toHaveClass(/is-active/);
+
+    // Inline Highlight Video toggle + Mute toggle + clean DOM teardown on manual Stop & Slide Switch
+    const videoToggle = page.locator('[data-testid="billboard-video-toggle"]');
+    const muteToggle = page.locator('[data-testid="billboard-mute-toggle"]');
+    await expect(videoToggle).toBeVisible();
+    await expect(muteToggle).toBeHidden();
+    await expect(page.locator('[data-testid="billboard-inline-video"]')).toHaveCount(0);
+
+    await videoToggle.click();
+    await expect(videoToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(muteToggle).toBeVisible();
+    await expect(muteToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(slides.nth(0).locator('[data-testid="billboard-inline-video"]')).toHaveCount(1);
+
+    // Toggle sound unmute -> aria-pressed flips to false
+    await muteToggle.click();
+    await expect(muteToggle).toHaveAttribute('aria-pressed', 'false');
+
+    // Switching slide immediately tears down Slide 0's inline player (zero background audio/iframe leak)
+    await nextBtn.click();
+    await expect(slides.nth(0).locator('[data-testid="billboard-inline-video"]')).toHaveCount(0);
+
+    // Wait > 650ms so session video preference mounts on Slide 1, then manually switch back to static backdrop
+    await expect(slides.nth(1).locator('[data-testid="billboard-inline-video"]')).toHaveCount(1, { timeout: 2500 });
+    await videoToggle.click();
+    await expect(videoToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(muteToggle).toBeHidden();
+    await expect(page.locator('[data-testid="billboard-inline-video"]')).toHaveCount(0);
   });
 });

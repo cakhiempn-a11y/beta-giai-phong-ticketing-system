@@ -59,7 +59,7 @@ public static class DemoSeeder
 
         var room = await EnsureRoomWithSeatsAsync(db, "PHONG_DEMO", "Phòng 01 — Beta Giải Phóng", rows: 2, cols: 5, vipStartRow: 1);
 
-        // Sync 11 real verified films (Wikidata + IMDb Non-Commercial + Wikimedia Open Assets + VN Cinema Age Labels)
+        // Sync 31 real verified films (Wikidata + IMDb + TMDB Theatrical Assets + VN Cinema Age Labels)
         var clock = new SystemClock();
         var syncService = new MovieContentSyncService(db, clock);
         await syncService.SyncVerifiedShowcaseCatalogAsync(publishAll: true);
@@ -82,7 +82,7 @@ public static class DemoSeeder
                 new[] { new SeatPriceInput("STANDARD", 70000), new SeatPriceInput("VIP", 90000) });
             Console.WriteLine($"Created verified film showtime #{showtimeId} for '{heroMovie.Title}' ({heroMovie.OriginalTitle}, {heroMovie.ReleaseYear}).");
         }
-        Console.WriteLine("Verified film catalog (11 real works) and academic schedule ready.");
+        Console.WriteLine("Verified film catalog (31 real works) and academic schedule ready.");
     }
 
     public static async Task SeedVerifiedShowcaseAsync(BetaDbContext db)
@@ -91,6 +91,8 @@ public static class DemoSeeder
 
         var room2 = await EnsureRoomWithSeatsAsync(db, "PHONG_02", "Phòng 02 — Điện ảnh Tiêu chuẩn", rows: 4, cols: 8, vipStartRow: 2);
         var room3 = await EnsureRoomWithSeatsAsync(db, "PHONG_03", "Phòng 03 — Chuyên đề Nghệ thuật", rows: 3, cols: 6, vipStartRow: 2);
+        var room4 = await EnsureRoomWithSeatsAsync(db, "PHONG_04", "Phòng 04 — IMAX Laser", rows: 4, cols: 8, vipStartRow: 2);
+        var room5 = await EnsureRoomWithSeatsAsync(db, "PHONG_05", "Phòng 05 — Dolby Atmos", rows: 4, cols: 7, vipStartRow: 2);
 
         var managerId = await db.Users.Where(u => u.NormalizedEmail == "MANAGER@DEMO.INVALID")
             .Select(u => u.UserId).SingleAsync();
@@ -103,18 +105,38 @@ public static class DemoSeeder
         var tomorrowVnDate = nowVn.Date.AddDays(1);
         var dayAfterVnDate = nowVn.Date.AddDays(2);
 
-        // Schedule 7 verified showcase films across PHONG_02 and PHONG_03; keep 4 films (Cosmos Laundromat, The General, Mai, Đào phở và piano) at 0 showtimes.
+        // Schedule 16 verified showcase films across PHONG_02..PHONG_05; keep 15 films at 0 showtimes for realistic catalogue filtering & pagination.
         var schedulePlan = new (string WikidataQid, long RoomId, DateTime LocalDate, int Hour, int Minute, long StdPrice, long VipPrice)[]
         {
-            ("Q496266", room2.RoomId, tomorrowVnDate, 19, 30, 75000, 95000),     // Mê trong mê (Charade, 1963)
-            ("Q496266", room3.RoomId, tomorrowVnDate, 23, 15, 75000, 95000),     // Mê trong mê (Late showtime crossing midnight +1d)
-            ("Q496266", room2.RoomId, dayAfterVnDate, 20, 0, 75000, 95000),      // Mê trong mê (Day +2)
-            ("Q1066714", room2.RoomId, tomorrowVnDate, 14, 0, 70000, 90000),     // His Girl Friday (1940)
-            ("Q623051", room2.RoomId, tomorrowVnDate, 22, 15, 80000, 100000),    // Night of the Living Dead (1968)
-            ("Q115715270", room3.RoomId, tomorrowVnDate, 15, 0, 60000, 80000),   // Charge (2022)
-            ("Q1173161", room3.RoomId, tomorrowVnDate, 16, 30, 60000, 80000),    // Tears of Steel (2012)
-            ("Q925587", room3.RoomId, dayAfterVnDate, 15, 0, 60000, 80000),      // Sintel (2010)
-            ("Q62770443", room3.RoomId, dayAfterVnDate, 17, 0, 60000, 80000)     // Spring (2019)
+            // Classic & Open-Movie Repertory (PHONG_02 & PHONG_03)
+            ("Q496266", room2.RoomId, tomorrowVnDate, 19, 30, 75000, 95000),      // Mê trong mê (Charade, 1963)
+            ("Q496266", room3.RoomId, tomorrowVnDate, 23, 15, 75000, 95000),      // Mê trong mê (Late showtime crossing midnight +1d)
+            ("Q496266", room2.RoomId, dayAfterVnDate, 20, 0, 75000, 95000),       // Mê trong mê (Day +2)
+            ("Q1066714", room2.RoomId, tomorrowVnDate, 14, 0, 70000, 90000),      // His Girl Friday (1940)
+            ("Q623051", room2.RoomId, tomorrowVnDate, 22, 15, 80000, 100000),     // Night of the Living Dead (1968)
+            ("Q115715270", room3.RoomId, tomorrowVnDate, 15, 0, 60000, 80000),    // Charge (2022)
+            ("Q1173161", room3.RoomId, tomorrowVnDate, 16, 30, 60000, 80000),     // Tears of Steel (2012)
+            ("Q925587", room3.RoomId, dayAfterVnDate, 15, 0, 60000, 80000),       // Sintel (2010)
+            ("Q62770443", room3.RoomId, dayAfterVnDate, 17, 0, 60000, 80000),     // Spring (2019)
+
+            // 2024–2025 Theatrical Blockbusters (PHONG_04 — IMAX Laser & PHONG_05 — Dolby Atmos)
+            ("Q124694260", room4.RoomId, tomorrowVnDate, 10, 0, 95000, 125000),   // Địa Đạo: Mặt Trời Trong Bóng Tối (2025)
+            ("Q124694260", room4.RoomId, tomorrowVnDate, 19, 30, 105000, 135000), // Địa Đạo: Mặt Trời Trong Bóng Tối (2025)
+            ("Q124694260", room5.RoomId, dayAfterVnDate, 18, 30, 95000, 125000),  // Địa Đạo: Mặt Trời Trong Bóng Tối (2025)
+            ("Q114246242", room4.RoomId, tomorrowVnDate, 13, 0, 110000, 145000),  // F1 (2025)
+            ("Q114246242", room4.RoomId, dayAfterVnDate, 19, 45, 110000, 145000), // F1 (2025)
+            ("Q116547790", room4.RoomId, tomorrowVnDate, 16, 15, 105000, 135000), // Superman (2025)
+            ("Q116547790", room4.RoomId, dayAfterVnDate, 16, 30, 105000, 135000), // Superman (2025)
+            ("Q109228991", room4.RoomId, dayAfterVnDate, 12, 45, 110000, 145000), // Dune: Hành Tinh Cát — Phần Hai (2024)
+            ("Q102180106", room4.RoomId, tomorrowVnDate, 22, 15, 105000, 135000), // Deadpool & Wolverine (2024, +1d)
+            ("Q133863621", room5.RoomId, tomorrowVnDate, 10, 15, 90000, 115000),  // Mưa Đỏ (2025)
+            ("Q133863621", room5.RoomId, dayAfterVnDate, 15, 30, 90000, 115000),  // Mưa Đỏ (2025)
+            ("Q136652736", room5.RoomId, tomorrowVnDate, 13, 15, 95000, 120000),  // Thám Tử Kiên: Kỳ Án Không Đầu (2025)
+            ("Q136652736", room5.RoomId, dayAfterVnDate, 21, 15, 95000, 120000),  // Thám Tử Kiên: Kỳ Án Không Đầu (2025)
+            ("Q112977213", room5.RoomId, tomorrowVnDate, 16, 15, 95000, 125000),  // Mickey 17 (2025)
+            ("Q102180106", room5.RoomId, tomorrowVnDate, 19, 15, 100000, 130000), // Deadpool & Wolverine (2024)
+            ("Q117322466", room5.RoomId, tomorrowVnDate, 22, 0, 95000, 120000),   // Quật Mộ Trùng Ma — Exhuma (2024, +1d)
+            ("Q117322466", room5.RoomId, dayAfterVnDate, 12, 30, 90000, 115000)   // Quật Mộ Trùng Ma — Exhuma (2024)
         };
 
         int createdShowtimes = 0;
@@ -152,7 +174,7 @@ public static class DemoSeeder
             }
         }
 
-        Console.WriteLine($"SEED_VERIFIED_SHOWCASE_READY: {createdShowtimes} additional showcase showtime(s) published across PHONG_02 and PHONG_03.");
+        Console.WriteLine($"SEED_VERIFIED_SHOWCASE_READY: {createdShowtimes} additional showcase showtime(s) published across PHONG_02..PHONG_05.");
     }
 
     private static async Task<Room> EnsureRoomWithSeatsAsync(

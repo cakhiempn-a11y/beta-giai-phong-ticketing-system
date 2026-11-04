@@ -6,8 +6,6 @@
                         && currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase);
     bool isMoviesActive = currentController.Equals("Movies", StringComparison.OrdinalIgnoreCase);
     bool isOrdersActive = currentController.Equals("Orders", StringComparison.OrdinalIgnoreCase);
-    bool isPrivacyActive = currentController.Equals("Home", StringComparison.OrdinalIgnoreCase)
-                           && currentAction.Equals("Privacy", StringComparison.OrdinalIgnoreCase);
 
     bool isHeroOverlay = ViewData["HeaderOverlay"] as bool?
         ?? (isHomeActive || (isMoviesActive && currentAction.Equals("Details", StringComparison.OrdinalIgnoreCase)));
@@ -20,9 +18,6 @@
 
     string roleClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "USER";
     string displayName = User.Identity?.Name ?? "Tài khoản";
-    string avatarInitial = !string.IsNullOrWhiteSpace(displayName)
-        ? char.ToUpperInvariant(displayName.Trim()[0]).ToString()
-        : "U";
 
     string currentSearchQ = Context.Request.Query["q"].ToString();
     bool hasSearchValue = !string.IsNullOrWhiteSpace(currentSearchQ);
@@ -79,17 +74,23 @@
                                    asp-action="Index">Đơn hàng của tôi</a>
                             </li>
                         }
-                        <li>
-                            <a class="bgp-cinema-nav__link @(isPrivacyActive ? "is-active" : "")"
-                               aria-current="@(isPrivacyActive ? "page" : null)"
-                               asp-controller="Home"
-                               asp-action="Privacy">Giới thiệu &amp; Quy chế</a>
-                        </li>
                     </ul>
                 </nav>
             </div>
 
             <div class="bgp-cinema-header__right">
+                @if (isOperationalRole)
+                {
+                    <a class="bgp-ops-switch-pill"
+                       asp-controller="@opsConsoleController"
+                       asp-action="@opsConsoleAction"
+                       data-testid="ops-console-switch">
+                        <span>Console Vận hành</span>
+                        <span aria-hidden="true">&rarr;</span>
+                    </a>
+                }
+
+                <!-- 1. Netflix Expandable Search Icon -> Rectangular Input -->
                 <form method="get"
                       asp-controller="Movies"
                       asp-action="Index"
@@ -102,9 +103,9 @@
                             data-search-trigger
                             data-testid="header-search-trigger"
                             aria-label="Tìm kiếm phim">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7.5"></circle>
+                            <line x1="20.5" y1="20.5" x2="16.4" y2="16.4"></line>
                         </svg>
                     </button>
                     <label for="cinemaHeaderSearchInput" class="bgp-sr-only">Tìm phim theo tên hoặc thể loại</label>
@@ -113,39 +114,75 @@
                            name="q"
                            value="@currentSearchQ"
                            class="bgp-header-search__input"
-                           placeholder="Tìm tên phim, thể loại..."
+                           placeholder="Tên phim, diễn viên, thể loại..."
                            autocomplete="off"
                            data-search-input
                            data-testid="header-search-input" />
                 </form>
 
-                <span class="bgp-sim-pill" title="Hệ thống đồ án học thuật MIS — Dữ liệu vận hành rạp độc lập">
-                    Mô phỏng học thuật
-                </span>
+                <!-- 2. Netflix Notification Bell Dropdown -->
+                <details class="bgp-notif-menu" data-notif-menu data-testid="cinema-notif-menu">
+                    <summary class="bgp-notif-menu__trigger" aria-label="Thông báo lịch chiếu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="bgp-notif-menu__dot" aria-hidden="true"></span>
+                    </summary>
+                    <div class="bgp-notif-menu__dropdown">
+                        <div class="bgp-notif-menu__head">Lịch chiếu &amp; Cập nhật</div>
+                        <a class="bgp-notif-item" href="/#on-sale-today">
+                            <span class="bgp-notif-item__badge" aria-hidden="true">MỚI</span>
+                            <span class="bgp-notif-item__body">
+                                <span class="bgp-notif-item__title">Suất chiếu đang mở bán vé</span>
+                                <span class="bgp-notif-item__sub">Chọn nhanh khung giờ chiếu và ghế ngồi trực tuyến</span>
+                            </span>
+                        </a>
+                        <a class="bgp-notif-item" asp-controller="Movies" asp-action="Index" asp-route-filter="has-showtimes">
+                            <span class="bgp-notif-item__badge bgp-notif-item__badge--subtle" aria-hidden="true">PHIM</span>
+                            <span class="bgp-notif-item__body">
+                                <span class="bgp-notif-item__title">Danh mục phim tại rạp</span>
+                                <span class="bgp-notif-item__sub">Khám phá toàn bộ các bộ phim đang có lịch chiếu</span>
+                            </span>
+                        </a>
+                        @if (isCustomer)
+                        {
+                            <a class="bgp-notif-item" asp-controller="Orders" asp-action="Index">
+                                <span class="bgp-notif-item__badge bgp-notif-item__badge--subtle" aria-hidden="true">VÉ QR</span>
+                                <span class="bgp-notif-item__body">
+                                    <span class="bgp-notif-item__title">Đơn hàng &amp; Vé điện tử của tôi</span>
+                                    <span class="bgp-notif-item__sub">Tra cứu trạng thái giữ chỗ và mở nhanh mã QR</span>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                </details>
 
-                @if (isOperationalRole)
-                {
-                    <a class="bgp-ops-switch-pill"
-                       asp-controller="@opsConsoleController"
-                       asp-action="@opsConsoleAction"
-                       data-testid="ops-console-switch">
-                        <span>Console Vận hành</span>
-                        <span aria-hidden="true">&rarr;</span>
-                    </a>
-                }
-
+                <!-- 3. Netflix Square Smiley Avatar + Caret -->
                 @if (isAuthenticated)
                 {
                     <details class="bgp-user-menu" data-user-menu data-testid="cinema-user-menu">
                         <summary class="bgp-user-menu__trigger" aria-label="Menu tài khoản @displayName">
-                            <span class="bgp-user-menu__avatar" aria-hidden="true">@avatarInitial</span>
-                            <span class="bgp-user-menu__name">@displayName</span>
+                            <span class="bgp-netflix-avatar" aria-hidden="true">
+                                <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+                                    <rect width="36" height="36" rx="4" fill="url(#bgpAvatarRed)" />
+                                    <defs>
+                                        <linearGradient id="bgpAvatarRed" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="#E50914" />
+                                            <stop offset="1" stop-color="#991B1B" />
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="11.5" cy="14" r="2.1" fill="#FFFFFF" />
+                                    <circle cx="24.5" cy="14" r="2.1" fill="#FFFFFF" />
+                                    <path d="M11 22.2C13.6 25.4 22.4 25.4 25 22.2" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" />
+                                </svg>
+                            </span>
                             <span class="bgp-user-menu__caret" aria-hidden="true">&#9662;</span>
                         </summary>
                         <div class="bgp-user-menu__dropdown">
                             <div class="bgp-user-menu__header">
                                 <div class="bgp-user-menu__email" title="@displayName">@displayName</div>
-                                <div class="bgp-user-menu__role">VAI TRÒ: @roleClaim</div>
+                                <div class="bgp-user-menu__role">@roleClaim</div>
                             </div>
                             <a class="bgp-user-menu__item" asp-controller="Account" asp-action="Profile">
                                 Hồ sơ tài khoản
@@ -167,10 +204,28 @@
                 }
                 else
                 {
-                    <a class="bgp-header-login-btn"
+                    <a class="bgp-user-menu__trigger bgp-user-menu__trigger--guest"
                        asp-controller="Account"
                        asp-action="Login"
-                       data-testid="cinema-login-btn">Đăng nhập</a>
+                       data-testid="cinema-login-btn"
+                       aria-label="Đăng nhập tài khoản"
+                       title="Đăng nhập tài khoản">
+                        <span class="bgp-netflix-avatar bgp-netflix-avatar--guest" aria-hidden="true">
+                            <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+                                <rect width="36" height="36" rx="4" fill="url(#bgpAvatarGuest)" />
+                                <defs>
+                                    <linearGradient id="bgpAvatarGuest" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                                        <stop stop-color="#E50914" />
+                                        <stop offset="1" stop-color="#B20710" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="11.5" cy="14" r="2.1" fill="#FFFFFF" />
+                                <circle cx="24.5" cy="14" r="2.1" fill="#FFFFFF" />
+                                <path d="M11 22.2C13.6 25.4 22.4 25.4 25 22.2" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" />
+                            </svg>
+                        </span>
+                        <span class="bgp-user-menu__caret" aria-hidden="true">&#9662;</span>
+                    </a>
                 }
             </div>
 
@@ -275,12 +330,6 @@
                     <span>Đơn hàng của tôi</span>
                 </a>
             }
-            <a class="bgp-cinema-drawer__link @(isPrivacyActive ? "is-active" : "")"
-               aria-current="@(isPrivacyActive ? "page" : null)"
-               asp-controller="Home"
-               asp-action="Privacy">
-                <span>Giới thiệu &amp; Quy chế</span>
-            </a>
 
             @if (isOperationalRole)
             {
@@ -327,16 +376,18 @@
     <footer class="bgp-cinema-footer" data-testid="cinema-footer">
         <div class="bgp-container bgp-cinema-footer__grid">
             <div class="bgp-cinema-footer__brand">
-                <div class="bgp-cinema-footer__title">Beta Giải Phóng — Đề án Học thuật MIS Capstone &copy; 2026</div>
+                <div class="bgp-cinema-footer__title">Beta Giải Phóng Cinema &copy; 2026</div>
                 <p class="bgp-cinema-footer__desc">
-                    Hệ thống nghiên cứu kiến trúc đặt giữ ghế thời gian thực, thanh toán mô phỏng ký số HMAC-SHA256 và vé điện tử AES-256-GCM.
-                    Lịch chiếu, phòng chiếu và giá vé là dữ liệu vận hành độc lập phục vụ học thuật, không đại diện dịch vụ thương mại của Beta Cinemas.
-                    Dữ liệu tác phẩm điện ảnh tuân thủ ghi nhận nguồn mở (Wikidata / Wikimedia Commons, IMDb Non-Commercial Datasets &amp; TMDB API).
+                    Đặt vé rạp trực tuyến &bull; Chọn ghế thời gian thực &bull; Vé điện tử QR
                 </p>
             </div>
             <div class="bgp-cinema-footer__links">
+                <a class="bgp-cinema-footer__link" href="/">Trang chủ</a>
                 <a class="bgp-cinema-footer__link" asp-controller="Movies" asp-action="Index">Danh mục phim</a>
-                <a class="bgp-cinema-footer__link" asp-controller="Home" asp-action="Privacy">Giới thiệu, Quy chế &amp; Nguồn dữ liệu</a>
+                @if (isCustomer)
+                {
+                    <a class="bgp-cinema-footer__link" asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a>
+                }
             </div>
         </div>
     </footer>

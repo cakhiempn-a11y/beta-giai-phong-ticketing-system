@@ -34,14 +34,19 @@ test.describe('UI-P1: Netflix-Cinema Design System Foundation & Dual-Shell Navig
 
       await expect
         .poll(async () => header.evaluate((el) => window.getComputedStyle(el).backgroundColor))
-        .toContain('10, 10, 12');
+        .toContain('20, 20, 20');
 
       // Scroll back to top -> returns to translucent overlay mode
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }));
       await expect(header).not.toHaveClass(/bgp-cinema-header--scrolled/);
 
-      // Inline header search navigates to /movies?q=... and preserves keyword in header & catalog inputs
+      // Netflix expandable header search: click search icon to expand, then submit to /movies?q=...
+      const headerForm = page.locator('[data-testid="header-search-form"]');
       const headerInput = page.locator('[data-testid="header-search-input"]');
+      await expect(headerForm).not.toHaveClass(/is-expanded/);
+      await page.click('[data-testid="header-search-trigger"]');
+      await expect(headerForm).toHaveClass(/is-expanded/);
+      await expect(headerInput).toBeVisible();
       await headerInput.fill('Hành động');
       await Promise.all([
         page.waitForURL(/\/movies\?q=/, { waitUntil: 'networkidle' }),
@@ -176,7 +181,7 @@ test.describe('UI-P1: Netflix-Cinema Design System Foundation & Dual-Shell Navig
         expect(pageAudit.hasBootstrapCss, `Bootstrap CSS must not load on ${route}`).toBe(false);
         expect(pageAudit.hasDarkCompatCss, `dark-compat.css must not load on ${route}`).toBe(false);
         expect(pageAudit.hasJquery, `jQuery must not load on ${route}`).toBe(false);
-        expect(pageAudit.bodyBg).toBe('rgb(10, 10, 12)');
+        expect(pageAudit.bodyBg).toBe('rgb(20, 20, 20)');
         expect(pageAudit.fontFamily).toContain('Be Vietnam Pro');
         expect(pageAudit.beVietnamLoaded).toBe(true);
       }

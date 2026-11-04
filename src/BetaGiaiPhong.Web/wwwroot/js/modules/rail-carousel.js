@@ -1,9 +1,9 @@
 /**
- * Beta Giải Phóng — Horizontal Cinema Rail Carousel (UI-P3)
+ * Beta Giải Phóng — Horizontal Cinema Rail Carousel & Header Page Counter (UI-P3 / RapPhim Style)
  * Pure ES Module — Zero jQuery / Zero Bootstrap JS dependencies.
  * Supports multiple rails per page ([data-rail-root] or .bgp-rail-wrapper),
- * boundary button disabling, ResizeObserver sync, keyboard ArrowLeft/Right,
- * and prefers-reduced-motion: reduce.
+ * dynamic header page indicator (1/N), boundary button disabling, ResizeObserver sync,
+ * keyboard ArrowLeft/Right, and prefers-reduced-motion: reduce.
  */
 
 function prefersReducedMotion() {
@@ -13,16 +13,21 @@ function prefersReducedMotion() {
 }
 
 export function initRailCarousels() {
-  const wrappers = document.querySelectorAll('[data-rail-root], .bgp-rail-wrapper');
+  const roots = document.querySelectorAll(
+    '[data-rail-root], .bgp-rail-wrapper:not([data-rail-root] .bgp-rail-wrapper)'
+  );
 
-  wrappers.forEach((wrapper) => {
-    const scroller = wrapper.querySelector(
-      '[data-rail-scroller], .bgp-movie-rail, .bgp-wide-rail'
+  roots.forEach((root) => {
+    const scroller = root.querySelector(
+      '[data-rail-scroller], .bgp-movie-rail, .bgp-wide-rail, .bgp-skew-rail'
     );
-    const btnPrev = wrapper.querySelector('[data-rail-prev], .bgp-rail-btn--prev');
-    const btnNext = wrapper.querySelector('[data-rail-next], .bgp-rail-btn--next');
+    const btnPrev = root.querySelector('[data-rail-prev]');
+    const btnNext = root.querySelector('[data-rail-next]');
+    const pageBadge = root.querySelector('[data-rail-page]');
 
     if (!scroller || !btnPrev || !btnNext) return;
+
+    const getStepWidth = () => Math.max(Math.round(scroller.clientWidth * 0.82), 240);
 
     const syncButtons = () => {
       const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
@@ -31,17 +36,32 @@ export function initRailCarousels() {
       if (!isScrollable) {
         btnPrev.disabled = true;
         btnNext.disabled = true;
-        wrapper.classList.add('bgp-rail-wrapper--static');
+        root.classList.add('bgp-rail-wrapper--static');
+        if (pageBadge) {
+          pageBadge.textContent = '1/1';
+          pageBadge.hidden = true;
+        }
         return;
       }
 
-      wrapper.classList.remove('bgp-rail-wrapper--static');
+      root.classList.remove('bgp-rail-wrapper--static');
       btnPrev.disabled = scroller.scrollLeft <= 8;
       btnNext.disabled = scroller.scrollLeft >= maxScrollLeft - 8;
+
+      if (pageBadge) {
+        const step = getStepWidth();
+        const totalPages = Math.max(2, Math.ceil(maxScrollLeft / step) + 1);
+        const rawPage =
+          scroller.scrollLeft >= maxScrollLeft - 8
+            ? totalPages
+            : Math.min(totalPages, Math.floor((scroller.scrollLeft + step * 0.35) / step) + 1);
+        pageBadge.textContent = `${rawPage}/${totalPages}`;
+        pageBadge.hidden = false;
+      }
     };
 
     const scrollByStep = (direction) => {
-      const step = Math.max(Math.round(scroller.clientWidth * 0.78), 220);
+      const step = getStepWidth();
       scroller.scrollBy({
         left: direction * step,
         behavior: prefersReducedMotion() ? 'auto' : 'smooth',
@@ -76,7 +96,7 @@ export function initRailCarousels() {
     if (typeof ResizeObserver !== 'undefined') {
       const ro = new ResizeObserver(syncButtons);
       ro.observe(scroller);
-      ro.observe(wrapper);
+      ro.observe(root);
     }
 
     syncButtons();

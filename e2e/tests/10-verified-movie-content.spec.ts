@@ -8,9 +8,26 @@ test.describe('BE/DATA-P2: Verified Real Movie Content, Local Media Pipeline & Q
     expect(resp.ok()).toBe(true);
     const movies = (await resp.json()) as any[];
 
-    expect(movies.length).toBeGreaterThanOrEqual(11);
+    expect(movies.length).toBeGreaterThanOrEqual(31);
     for (const m of movies) {
       expect(String(m.title)).not.toContain('Phim mo phong');
+    }
+
+    const diaDao = movies.find((m) => m.provenance?.wikidataQid === 'Q124694260');
+    expect(diaDao).toBeTruthy();
+    expect(diaDao.title).toBe('Địa Đạo: Mặt Trời Trong Bóng Tối');
+    expect(diaDao.releaseYear).toBe(2025);
+    expect(diaDao.isHeroEligible).toBe(true);
+    for (const assetUrl of [
+      diaDao.artwork.posterUrl,
+      diaDao.artwork.posterW342Url,
+      diaDao.artwork.backdropUrl,
+      diaDao.artwork.backdropW780Url,
+    ]) {
+      expect(assetUrl).toMatch(/^\/media\/movies\/verified\//);
+      const assetResp = await request.get(assetUrl);
+      expect(assetResp.status()).toBe(200);
+      expect((await assetResp.body()).byteLength).toBeGreaterThan(2000);
     }
 
     const charade = movies.find((m) => m.provenance?.wikidataQid === 'Q496266');

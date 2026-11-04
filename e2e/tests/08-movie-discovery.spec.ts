@@ -7,7 +7,7 @@ import {
 
 function parseRgb(colorStr: string): [number, number, number] {
   const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  if (!match) return [10, 10, 12];
+  if (!match) return [20, 20, 20];
   return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
 }
 
@@ -56,12 +56,12 @@ test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movi
     });
 
     try {
-      await page.goto('/movies', { waitUntil: 'networkidle' });
+      await page.goto('/movies?pageSize=48', { waitUntil: 'networkidle' });
 
-      // Heading & Zero-Bootstrap obsidian dark canvas (#0A0A0C -> rgb(10, 10, 12))
+      // Heading & Zero-Bootstrap Netflix dark canvas (#141414 -> rgb(20, 20, 20))
       await expect(page.locator('h1.bgp-catalog-title')).toHaveText('Khám phá phim');
       const bg = await page.evaluate(() => window.getComputedStyle(document.body).backgroundColor);
-      expect(bg).toBe('rgb(10, 10, 12)');
+      expect(bg).toBe('rgb(20, 20, 20)');
 
       // Never displays DRAFT movie
       await expect(page.locator('body')).not.toContainText('Phim Ban Nhap Chua Cong Bo');
@@ -250,7 +250,7 @@ test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movi
     const page = await context.newPage();
 
     try {
-      await page.goto('/movies', { waitUntil: 'networkidle' });
+      await page.goto('/movies?pageSize=48', { waitUntil: 'networkidle' });
 
       const activeHref = (await page
         .locator('[data-testid="catalog-movie-card"]', { hasText: 'Chien Binh Khong Gian' })
@@ -342,7 +342,7 @@ test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movi
     const page = await context.newPage();
 
     try {
-      await page.goto('/movies', { waitUntil: 'networkidle' });
+      await page.goto('/movies?pageSize=48', { waitUntil: 'networkidle' });
       const activeHref = (await page
         .locator('[data-testid="catalog-movie-card"]', { hasText: 'Chien Binh Khong Gian' })
         .getAttribute('href'))!;
@@ -574,16 +574,16 @@ test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movi
       await expect(page.locator('[data-testid="detail-identity"]')).toContainText('Charade');
       await expect(page.locator('[data-testid="detail-identity"]')).toContainText('1963');
       await expect(page.locator('[data-testid="detail-rating-badge"]')).toContainText('IMDb 7.8/10');
-      await expect(page.locator('[data-testid="detail-age-unclassified"]')).toContainText('Chưa có phân loại tại VN');
+      await expect(page.locator('[data-testid="detail-rating-badge"]')).not.toContainText('lượt');
+      await expect(page.locator('[data-testid="detail-age-label"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="detail-age-unclassified"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="detail-director"]')).toContainText('Stanley Donen');
       await expect(page.locator('[data-testid="detail-cast-grid"]')).toContainText('Cary Grant');
       await expect(page.locator('[data-testid="detail-cast-grid"]')).toContainText('Audrey Hepburn');
 
-      const provenanceCard = page.locator('[data-testid="detail-provenance-card"]');
-      await expect(provenanceCard).toBeVisible();
-      await expect(provenanceCard).toContainText('Q496266');
-      await expect(provenanceCard).toContainText('tt0056923');
-      await expect(provenanceCard).toContainText('WIKIMEDIA_COMMONS');
+      // Consumer detail page NEVER renders the internal Provenance Dossier card
+      await expect(page.locator('[data-testid="detail-provenance-card"]')).toHaveCount(0);
+      await expect(page.locator('body')).not.toContainText('Hồ sơ Nguồn Dữ liệu Tác phẩm');
 
       // Official YouTube Trailer modal on Details page
       const trailerBtn = page.locator('[data-testid="detail-trailer-btn"]');
@@ -601,7 +601,7 @@ test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movi
       await expect(dialog).toBeHidden();
       await expect(dialog.locator('iframe')).toHaveCount(0);
 
-      // Zero-showtime real movie ("Mai") displays T18 (VN) age classification + suggested on-sale movies
+      // Zero-showtime real movie ("Mai") displays T18 (VN) age classification + suggested on-sale movies (zero provenance card)
       await page.goto('/movies?q=Tr%E1%BA%A5n+Th%C3%A0nh', { waitUntil: 'networkidle' });
       const maiHref = (await page
         .locator('[data-testid="catalog-movie-card"]', { hasText: 'Mai' })
@@ -609,10 +609,180 @@ test.describe('UI-P3: Cinematic Movie Catalogue (/movies) & Movie Details (/movi
       await page.goto(maiHref, { waitUntil: 'networkidle' });
 
       await expect(page.locator('[data-testid="detail-age-label"]')).toHaveText('T18');
-      await expect(page.locator('[data-testid="detail-provenance-card"]')).toContainText('T18 (VN)');
+      await expect(page.locator('[data-testid="detail-provenance-card"]')).toHaveCount(0);
       const suggestedBlock = page.locator('[data-testid="detail-suggested-movies"]');
       await expect(suggestedBlock).toBeVisible();
       expect(await suggestedBlock.locator('a.bgp-suggested-card').count()).toBeGreaterThanOrEqual(2);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('8. RapPhim Browse Upgrade (/movies): 5-column auto-submit <select> bar, 6-column desktop grid, IMDb sort, and numbered pagination', async ({
+    browser,
+  }) => {
+    const state = loadE2eState();
+    const context = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 1440, height: 900 },
+    });
+    const page = await context.newPage();
+
+    const mutatingRequests: string[] = [];
+    page.on('request', (req) => {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method().toUpperCase())) {
+        mutatingRequests.push(`${req.method()} ${req.url()}`);
+      }
+    });
+
+    try {
+      await page.goto('/movies', { waitUntil: 'networkidle' });
+
+      // Verify 5-column select bar & 6-column poster grid at 1440px
+      await expect(page.locator('[data-testid="catalog-select-bar"]')).toBeVisible();
+      const layoutMetrics = await page.evaluate(() => {
+        const selectGrid = document.querySelector('[data-testid="catalog-select-bar"]')!;
+        const movieGrid = document.querySelector('[data-testid="catalog-grid"]')!;
+        return {
+          selectCols: window.getComputedStyle(selectGrid).gridTemplateColumns.split(' ').length,
+          movieCols: window.getComputedStyle(movieGrid).gridTemplateColumns.split(' ').length,
+        };
+      });
+      expect(layoutMetrics.selectCols).toBe(5);
+      expect(layoutMetrics.movieCols).toBe(6);
+
+      // Auto-submit on Year select -> 1963 filters directly to Charade ("Mê trong mê")
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle' }),
+        page.selectOption('[data-testid="catalog-select-year"]', '1963'),
+      ]);
+      expect(page.url()).toContain('year=1963');
+      await expect(page.locator('[data-testid="catalog-movie-card"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="catalog-movie-card"]').first()).toContainText('Mê trong mê');
+
+      // Clear filters via summary reset link
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle' }),
+        page.click('[data-testid="catalog-clear-filters"]'),
+      ]);
+      expect(page.url()).toMatch(/\/movies$/);
+
+      // Auto-submit on Sort select -> rating orders cards by IMDb score descending
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle' }),
+        page.selectOption('[data-testid="catalog-select-sort"]', 'rating'),
+      ]);
+      expect(page.url()).toContain('sort=rating');
+      const cardScores = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('[data-testid="catalog-movie-card"] .bgp-catalog-inline-rating'))
+          .map((el) => parseFloat((el.textContent || '').replace(/[^\d.]/g, '')))
+          .filter((n) => !Number.isNaN(n));
+      });
+      expect(cardScores.length).toBeGreaterThanOrEqual(4);
+      for (let i = 1; i < cardScores.length; i++) {
+        expect(cardScores[i - 1]).toBeGreaterThanOrEqual(cardScores[i]);
+      }
+
+      // Pagination bar navigates cleanly across pages while preserving sort=rating
+      await page.goto('/movies?sort=rating&pageSize=6', { waitUntil: 'networkidle' });
+      await expect(page.locator('[data-testid="catalog-movie-card"]')).toHaveCount(6);
+      await expect(page.locator('[data-testid="catalog-result-count"]')).toContainText('Trang 1/');
+
+      const page1FirstHref = await page.locator('[data-testid="catalog-movie-card"]').first().getAttribute('href');
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle' }),
+        page.click('[data-testid="catalog-page-next"]'),
+      ]);
+      expect(page.url()).toContain('page=2');
+      expect(page.url()).toContain('sort=rating');
+      await expect(page.locator('[data-testid="catalog-result-count"]')).toContainText('Trang 2/');
+      const page2FirstHref = await page.locator('[data-testid="catalog-movie-card"]').first().getAttribute('href');
+      expect(page2FirstHref).not.toBe(page1FirstHref);
+
+      expect(mutatingRequests).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('9. RapPhim Detail Upgrade (/movies/{id}): 3-column asymmetric workspace, sub-tab switching (Info / Cast / Dossier / Recommended), share toast, and ranked 1->8 sidebar', async ({
+    browser,
+  }) => {
+    const state = loadE2eState();
+    const context = await browser.newContext({
+      baseURL: state.baseUrl,
+      viewport: { width: 1440, height: 900 },
+    });
+    const page = await context.newPage();
+
+    const mutatingRequests: string[] = [];
+    page.on('request', (req) => {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method().toUpperCase())) {
+        mutatingRequests.push(`${req.method()} ${req.url()}`);
+      }
+    });
+
+    try {
+      await page.goto('/movies?year=1963', { waitUntil: 'networkidle' });
+      const charadeHref = (await page
+        .locator('[data-testid="catalog-movie-card"]')
+        .first()
+        .getAttribute('href'))!;
+      await page.goto(charadeHref, { waitUntil: 'networkidle' });
+
+      // 1. Verify 3-column asymmetric grid at 1440px (260px Left Dossier + 1fr Center + 304px Ranked Sidebar)
+      const workspaceCols = await page.evaluate(() => {
+        const ws = document.querySelector('[data-testid="detail-workspace"]')!;
+        return window.getComputedStyle(ws).gridTemplateColumns.split(' ').length;
+      });
+      expect(workspaceCols).toBe(3);
+
+      // 2. Verify Ranked 1->8 "Phim đề xuất" sidebar
+      const rankedSidebar = page.locator('[data-testid="detail-ranked-sidebar"]');
+      await expect(rankedSidebar).toBeVisible();
+      const rankedItems = rankedSidebar.locator('[data-testid="detail-ranked-item"]');
+      const rankedCount = await rankedItems.count();
+      expect(rankedCount).toBeGreaterThanOrEqual(4);
+      expect(rankedCount).toBeLessThanOrEqual(8);
+      await expect(rankedItems.nth(0).locator('.bgp-rank-num')).toHaveText('1');
+      await expect(rankedItems.nth(1).locator('.bgp-rank-num')).toHaveText('2');
+      await expect(rankedItems.nth(2).locator('.bgp-rank-num')).toHaveText('3');
+
+      // 3. Sub-tab switching: Default "info" shows showtimes + cast, with zero provenance card
+      await expect(page.locator('[data-testid="detail-tab-info"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('#showtimes-section')).toBeVisible();
+      await expect(page.locator('[data-testid="detail-cast-grid"]')).toBeVisible();
+      await expect(page.locator('[data-testid="detail-provenance-card"]')).toHaveCount(0);
+
+      // Switch to "Diễn viên & Đoàn phim" -> isolates Cast card, hides Showtimes
+      await page.click('[data-testid="detail-tab-cast"]');
+      await expect(page.locator('[data-testid="detail-tab-cast"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('#showtimes-section')).toBeHidden();
+      await expect(page.locator('[data-testid="detail-cast-grid"]')).toBeVisible();
+
+      // Switch to "Trailer" -> reveals inline trailer trigger card cleanly without provenance dossier
+      await page.click('[data-testid="detail-tab-trailer"]');
+      await expect(page.locator('[data-testid="detail-tab-trailer"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('[data-detail-card="trailer-inline"]')).toBeVisible();
+      await expect(page.locator('[data-testid="detail-provenance-card"]')).toHaveCount(0);
+      await expect(page.locator('#showtimes-section')).toBeHidden();
+
+      // Switch to "Đề xuất" -> reveals 2:3 recommended poster grid
+      await page.click('[data-testid="detail-tab-recommended"]');
+      await expect(page.locator('[data-testid="detail-tab-recommended"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('[data-testid="detail-recommended-tab-panel"]')).toBeVisible();
+
+      // Clicking Hero CTA "Chọn Suất Chiếu" automatically resets active tab back to "info" & reveals #showtimes-section
+      await page.click('[data-testid="detail-cta-scroll-showtimes"]');
+      await expect(page.locator('[data-testid="detail-tab-info"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('#showtimes-section')).toBeVisible();
+
+      // 4. Share button triggers feedback toast
+      await page.click('[data-testid="detail-share-btn"]');
+      await expect(page.locator('[data-detail-share-feedback]')).toBeVisible();
+      await expect(page.locator('[data-detail-share-feedback]')).toContainText('Đã sao chép liên kết');
+
+      expect(mutatingRequests).toEqual([]);
     } finally {
       await context.close();
     }

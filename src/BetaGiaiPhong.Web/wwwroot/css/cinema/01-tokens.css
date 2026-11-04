@@ -6,46 +6,47 @@
    ========================================================================== */
 
 :root {
-  /* 1. Multi-Layered Obsidian Cinema Surfaces */
-  --bgp-bg-canvas: #0A0A0C;
-  --bgp-bg-ops-canvas: #0B0B0E;
-  --bgp-bg-elevated-0: #101014;
-  --bgp-bg-surface-1: #16161B;
-  --bgp-bg-surface-2: #1E1E25;
-  --bgp-bg-surface-3: #272731;
-  --bgp-bg-popover: #18181F;
-  --bgp-bg-footer: #070709;
-  --bgp-bg-glass: rgba(16, 16, 20, 0.86);
+  /* 1. Authentic Netflix 2024 Neutral Surfaces (Figma Node 178:14158) */
+  --bgp-bg-canvas: #141414;        /* Grey-900: rgb(20, 20, 20) */
+  --bgp-bg-ops-canvas: #111111;
+  --bgp-bg-elevated-0: #141414;
+  --bgp-bg-surface-1: #181818;     /* Grey-850: Modal / Detail / Card surface */
+  --bgp-bg-surface-2: #232323;     /* Grey-800: Elevated control / row */
+  --bgp-bg-surface-3: #2F2F2F;     /* Grey-650: More-Like-This / Chip fill */
+  --bgp-bg-popover: #181818;       /* Grey-850: Quick-Preview mini-modal */
+  --bgp-bg-footer: #141414;
+  --bgp-bg-glass: rgba(24, 24, 24, 0.88);
   --bgp-bg-header-top: linear-gradient(
     180deg,
-    rgba(8, 8, 10, 0.90) 0%,
-    rgba(8, 8, 10, 0.52) 62%,
-    rgba(8, 8, 10, 0) 100%
+    rgba(0, 0, 0, 0.72) 12.5%,
+    rgba(0, 0, 0, 0) 100%
   );
-  --bgp-bg-header-solid: rgba(10, 10, 12, 0.95);
+  --bgp-bg-header-solid: #141414;
 
-  /* 2. Text Contrast Hierarchy (Verified against #0A0A0C & #16161B) */
-  --bgp-text-primary: #F5F5F7;     /* 18.1:1 on #0A0A0C (AAA) */
-  --bgp-text-secondary: #B8B8C2;   /* 10.1:1 on #0A0A0C (AAA) */
-  --bgp-text-muted: #8E8E9D;       /* 5.9:1 on #0A0A0C, 4.9:1 on #16161B (AA) */
-  --bgp-text-inverse: #0A0A0C;
+  /* 2. Text Contrast Hierarchy (WCAG 2.1 AA / AAA Verified on #141414 & #181818) */
+  --bgp-text-primary: #FFFFFF;     /* 18.4:1 on #141414 (AAA) */
+  --bgp-text-secondary: #D2D2D2;   /* Grey-25: 12.1:1 on #141414 (AAA) */
+  --bgp-text-muted: #979797;       /* Grey-150: 6.3:1 on #141414, 5.9:1 on #181818 (AA) */
+  --bgp-text-inverse: #000000;
 
-  /* 3. Brand & Semantic Accents (Zero Bootstrap #0d6efd Royal Blue) */
+  /* 3. Brand & Semantic Accents (Figma Node 178:14156 & 120:3124) */
   --bgp-brand-red: #E50914;
-  --bgp-brand-red-hover: #F40612;
-  --bgp-brand-red-active: #B80710;
+  --bgp-accent-red: #E50914;
+  --bgp-brand-red-hover: #C11119;
+  --bgp-brand-red-active: #990810;
   --bgp-brand-red-soft: rgba(229, 9, 20, 0.16);
-  --bgp-brand-red-border: rgba(229, 9, 20, 0.48);
+  --bgp-brand-red-border: rgba(229, 9, 20, 0.5);
+  --bgp-netflix-green: #46D369;    /* Secondary/Green: availability highlight */
 
   --bgp-accent-gold: #F5C518;      /* IMDb & VIP warm gold */
   --bgp-accent-gold-soft: rgba(245, 197, 24, 0.14);
   --bgp-accent-gold-border: rgba(245, 197, 24, 0.38);
 
   /* 4. Operational & Booking Status Tokens (WCAG AA Foreground/Background) */
-  --bgp-status-success: #22C55E;
-  --bgp-status-success-fg: #86EFAC;
-  --bgp-status-success-bg: rgba(34, 197, 94, 0.14);
-  --bgp-status-success-border: rgba(34, 197, 94, 0.38);
+  --bgp-status-success: #46D369;
+  --bgp-status-success-fg: #6EE787;
+  --bgp-status-success-bg: rgba(70, 211, 105, 0.14);
+  --bgp-status-success-border: rgba(70, 211, 105, 0.38);
 
   --bgp-status-warning: #F59E0B;
   --bgp-status-warning-fg: #FCD34D;
@@ -64,19 +65,19 @@
 
   /* 5. Borders, Dividers & Dual-Contrast Keyboard Focus Ring */
   --bgp-border-subtle: rgba(255, 255, 255, 0.08);
-  --bgp-border-default: rgba(255, 255, 255, 0.15);
-  --bgp-border-control: #7A7A88;   /* >= 3.8:1 non-text contrast on #16161B */
+  --bgp-border-default: rgba(255, 255, 255, 0.14);
+  --bgp-border-control: #808080;   /* Grey-200: >= 4.6:1 non-text contrast on #181818 */
   --bgp-border-strong: rgba(255, 255, 255, 0.28);
-  --bgp-focus-ring: 0 0 0 2px #0A0A0C, 0 0 0 4px #F5F5F7;
+  --bgp-focus-ring: 0 0 0 2px #141414, 0 0 0 4px #FFFFFF;
 
   /* 6. Vietnamese-Optimized Typography Stack & Scale */
   --bgp-font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --bgp-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  --bgp-text-hero: clamp(2.25rem, 4.2vw, 3.65rem);
-  --bgp-text-h1: clamp(1.6rem, 2.5vw, 2.35rem);
-  --bgp-text-h2: clamp(1.2rem, 1.8vw, 1.45rem);
-  --bgp-text-h3: 1.08rem;
+  --bgp-text-hero: clamp(2.15rem, 4vw, 3.45rem);
+  --bgp-text-h1: clamp(1.6rem, 2.5vw, 2.25rem);
+  --bgp-text-h2: clamp(1.15rem, 1.5vw, 1.32rem);
+  --bgp-text-h3: 1.05rem;
   --bgp-text-body: 0.95rem;
   --bgp-text-sm: 0.85rem;
   --bgp-text-xs: 0.75rem;
@@ -93,27 +94,29 @@
   --bgp-sp-12: 48px;
   --bgp-sp-16: 64px;
 
-  /* 8. Radii, Shadows & Shell Metrics */
-  --bgp-radius-xs: 4px;
-  --bgp-radius-sm: 6px;
-  --bgp-radius-md: 10px;
-  --bgp-radius-lg: 14px;
+  /* 8. Crisp Netflix 2024 Radii (2px–4px), Shadows & Shell Metrics */
+  --bgp-radius-xs: 2px;
+  --bgp-radius-sm: 4px;
+  --bgp-radius-md: 4px;
+  --bgp-radius-lg: 6px;
   --bgp-radius-pill: 999px;
 
-  --bgp-shadow-card: 0 10px 28px rgba(0, 0, 0, 0.55);
-  --bgp-shadow-elevated: 0 18px 44px rgba(0, 0, 0, 0.72);
-  --bgp-shadow-popover: 0 22px 54px rgba(0, 0, 0, 0.82), 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --bgp-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.52);
+  --bgp-shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.74);
+  --bgp-shadow-popover: 0 6px 24px rgba(0, 0, 0, 0.82), 0 0 0 1px rgba(255, 255, 255, 0.12);
 
   --bgp-header-h: 68px;
   --bgp-header-h-mobile: 60px;
   --bgp-ops-sidebar-w: 248px;
   --bgp-ops-topbar-h: 60px;
-  --bgp-target-min: 44px;
-  --bgp-gutter: clamp(16px, 4vw, 56px);
+  --bgp-target-min: 42px;
+  --bgp-gutter: clamp(16px, 4vw, 58px);
+  --bgp-gutter-x: var(--bgp-gutter);
 
   /* 9. Subtle Cinema Motion */
   --bgp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --bgp-duration-fast: 160ms;
+  --bgp-dur-fast: 160ms;
   --bgp-duration-base: 220ms;
 }
 

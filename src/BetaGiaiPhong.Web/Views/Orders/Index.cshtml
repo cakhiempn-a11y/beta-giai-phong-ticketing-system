@@ -28,9 +28,6 @@
     <header class="bgp-orders-hero">
         <div>
             <h1 class="bgp-orders-hero__title">Đơn hàng &amp; Vé điện tử của tôi</h1>
-            <p class="bgp-orders-hero__sub">
-                Tra cứu lịch sử đặt ghế, tiếp tục thanh toán các đơn đang giữ chỗ và mở thẻ vé QR độ tương phản cao (chuẩn giờ UTC+7).
-            </p>
         </div>
         <div>
             <a class="bgp-btn bgp-btn--primary" asp-controller="Movies" asp-action="Index" asp-route-filter="has-showtimes">
@@ -223,7 +220,7 @@
                             {
                                 <span>Phòng: <strong>@order.RoomName</strong></span>
                             }
-                            <span>Suất chiếu: <strong class="bgp-tk-mono">@order.StartVietnamText (UTC+7)</strong></span>
+                            <span>Suất chiếu: <strong class="bgp-tk-mono">@order.StartVietnamText</strong></span>
                             <span>
                                 Số ghế:
                                 <strong>
@@ -232,7 +229,7 @@
                             </span>
                             @if (!string.IsNullOrWhiteSpace(order.CreatedVietnamText))
                             {
-                                <span>Tạo lúc: <span class="bgp-tk-mono">@order.CreatedVietnamText (UTC+7)</span></span>
+                                <span>Tạo lúc: <span class="bgp-tk-mono">@order.CreatedVietnamText</span></span>
                             }
                         </div>
                     </div>

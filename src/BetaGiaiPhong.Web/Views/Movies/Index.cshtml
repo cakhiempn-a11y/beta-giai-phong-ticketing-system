@@ -1,8 +1,15 @@
+@using System.Globalization
 @using BetaGiaiPhong.Web.Models.Responses
 @model BetaGiaiPhong.Web.Models.ViewModels.MovieCatalogViewModel
 @{
     ViewData["Title"] = "Khám phá phim";
     var queryParam = string.IsNullOrWhiteSpace(Model.SearchQuery) ? null : Model.SearchQuery;
+    var genreParam = string.IsNullOrWhiteSpace(Model.SelectedGenre) ? null : Model.SelectedGenre;
+    var ageParam = string.IsNullOrWhiteSpace(Model.SelectedAge) ? null : Model.SelectedAge;
+    var yearParam = Model.SelectedYear?.ToString(CultureInfo.InvariantCulture);
+    var sortParam = string.Equals(Model.SortBy, "default", StringComparison.OrdinalIgnoreCase) ? null : Model.SortBy;
+    var filterParam = string.Equals(Model.ActiveFilter, "all", StringComparison.OrdinalIgnoreCase) ? null : Model.ActiveFilter;
+    var pageSizeParam = Model.PageSize == 24 ? null : Model.PageSize.ToString(CultureInfo.InvariantCulture);
 }
 
 @functions {
@@ -30,6 +37,52 @@
         }
         return null;
     }
+
+    private static string FormatPrimaryGenre(string? genreText)
+    {
+        if (string.IsNullOrWhiteSpace(genreText)) return "Điện ảnh";
+        var parts = genreText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length > 0 ? parts[0] : genreText;
+    }
+
+    private static IReadOnlyList<int?> BuildPaginationSlots(int currentPage, int totalPages)
+    {
+        if (totalPages <= 7)
+        {
+            return Enumerable.Range(1, totalPages).Select(p => (int?)p).ToList();
+        }
+
+        var slots = new List<int?> { 1 };
+        int windowStart = Math.Max(2, currentPage - 1);
+        int windowEnd = Math.Min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 3)
+        {
+            windowEnd = Math.Min(totalPages - 1, 4);
+        }
+        else if (currentPage >= totalPages - 2)
+        {
+            windowStart = Math.Max(2, totalPages - 3);
+        }
+
+        if (windowStart > 2)
+        {
+            slots.Add(null);
+        }
+
+        for (int p = windowStart; p <= windowEnd; p++)
+        {
+            slots.Add(p);
+        }
+
+        if (windowEnd < totalPages - 1)
+        {
+            slots.Add(null);
+        }
+
+        slots.Add(totalPages);
+        return slots;
+    }
 }
 
 @section Styles {
@@ -38,124 +91,229 @@
 
 <div class="bgp-movies-catalog">
     <div class="bgp-container">
-        <!-- Catalogue Hero Header -->
-        <header class="bgp-catalog-header">
-            <div class="bgp-catalog-eyebrow">BETA GIẢI PHÓNG CINEMA</div>
-            <h1 class="bgp-catalog-title">Khám phá phim</h1>
-            <p class="bgp-catalog-subtitle">
-                Danh mục các bộ phim thật đã công bố trên hệ thống kèm nguồn xác minh và tình trạng suất chiếu thực tế tại rạp
-            </p>
-        </header>
+        <form method="get"
+              asp-controller="Movies"
+              asp-action="Index"
+              class="bgp-catalog-filter-shell"
+              role="search"
+              aria-label="Công cụ tìm kiếm và duyệt phim"
+              data-catalog-filter-form>
+            @if (Model.PageSize != 24)
+            {
+                <input type="hidden" name="pageSize" value="@Model.PageSize" />
+            }
 
-        <!-- Search & Filter Toolbar (GET-based for URL persistence, reload & Back button) -->
-        <section class="bgp-catalog-toolbar" aria-label="Công cụ tìm kiếm và lọc phim">
-            <form method="get" asp-controller="Movies" asp-action="Index" class="bgp-catalog-search-form" role="search">
-                @if (!string.Equals(Model.ActiveFilter, "all", StringComparison.OrdinalIgnoreCase))
-                {
-                    <input type="hidden" name="filter" value="@Model.ActiveFilter" />
-                }
-                <div class="bgp-catalog-search-field">
-                    <label for="movieSearchInput" class="bgp-sr-only">Tìm kiếm theo tên phim, tên gốc, đạo diễn hoặc thể loại</label>
-                    <svg class="bgp-catalog-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="search"
-                           id="movieSearchInput"
-                           name="q"
-                           value="@Model.SearchQuery"
-                           class="bgp-catalog-search-input"
-                           placeholder="Tìm theo tên phim, tên gốc, đạo diễn hoặc thể loại..."
-                           data-testid="catalog-search-input" />
-                </div>
-                <button type="submit" class="bgp-btn bgp-btn--primary bgp-catalog-search-btn" data-testid="catalog-search-submit">
-                    Tìm kiếm
-                </button>
-            </form>
+            <!-- 1. Content-First Compact Top Row: Title + Quick Showtime Pills + Compact Search -->
+            <div class="bgp-catalog-top-row">
+                <div class="bgp-catalog-heading-cluster">
+                    <h1 class="bgp-catalog-title">Khám phá phim</h1>
 
-            <div class="bgp-catalog-filter-row">
-                <div class="bgp-catalog-filter-group" role="group" aria-label="Lọc theo tình trạng suất chiếu">
-                    <a asp-controller="Movies"
-                       asp-action="Index"
-                       asp-route-q="@queryParam"
-                       asp-route-filter="all"
-                       class="bgp-filter-pill @(Model.ActiveFilter == "all" ? "is-active" : "")"
-                       aria-current="@(Model.ActiveFilter == "all" ? "true" : null)"
-                       data-testid="catalog-filter-all">
-                        <span>Tất cả</span>
-                        <span class="bgp-filter-pill-count">@Model.TotalPublishedCount</span>
-                    </a>
-                    <a asp-controller="Movies"
-                       asp-action="Index"
-                       asp-route-q="@queryParam"
-                       asp-route-filter="has-showtimes"
-                       class="bgp-filter-pill @(Model.ActiveFilter == "has-showtimes" ? "is-active" : "")"
-                       aria-current="@(Model.ActiveFilter == "has-showtimes" ? "true" : null)"
-                       data-testid="catalog-filter-has-showtimes">
-                        <span>Có lịch chiếu</span>
-                        <span class="bgp-filter-pill-count">@Model.WithShowtimesCount</span>
-                    </a>
-                    <a asp-controller="Movies"
-                       asp-action="Index"
-                       asp-route-q="@queryParam"
-                       asp-route-filter="no-showtimes"
-                       class="bgp-filter-pill @(Model.ActiveFilter == "no-showtimes" ? "is-active" : "")"
-                       aria-current="@(Model.ActiveFilter == "no-showtimes" ? "true" : null)"
-                       data-testid="catalog-filter-no-showtimes">
-                        <span>Chưa có lịch chiếu</span>
-                        <span class="bgp-filter-pill-count">@Model.WithoutShowtimesCount</span>
-                    </a>
-                </div>
-
-                @if (Model.AvailableGenres.Count > 0)
-                {
-                    <div class="bgp-catalog-genre-chips" aria-label="Gợi ý thể loại">
-                        @foreach (var genre in Model.AvailableGenres)
-                        {
-                            bool isGenreSelected = string.Equals(Model.SearchQuery, genre, StringComparison.OrdinalIgnoreCase);
-                            <a asp-controller="Movies"
-                               asp-action="Index"
-                               asp-route-q="@(isGenreSelected ? null : genre)"
-                               asp-route-filter="@(Model.ActiveFilter == "all" ? null : Model.ActiveFilter)"
-                               class="bgp-genre-chip @(isGenreSelected ? "is-active" : "")"
-                               data-testid="catalog-genre-chip">
-                                @genre
-                            </a>
-                        }
+                    <div class="bgp-catalog-filter-group" role="group" aria-label="Lọc nhanh tình trạng suất chiếu">
+                        <a asp-controller="Movies"
+                           asp-action="Index"
+                           asp-route-q="@queryParam"
+                           asp-route-genre="@genreParam"
+                           asp-route-age="@ageParam"
+                           asp-route-year="@yearParam"
+                           asp-route-sort="@sortParam"
+                           asp-route-pageSize="@pageSizeParam"
+                           asp-route-filter="all"
+                           class="bgp-filter-pill @(Model.ActiveFilter == "all" ? "is-active" : "")"
+                           aria-current="@(Model.ActiveFilter == "all" ? "true" : null)"
+                           data-testid="catalog-filter-all">
+                            <span>Tất cả</span>
+                            <span class="bgp-filter-pill-count">@Model.TotalPublishedCount</span>
+                        </a>
+                        <a asp-controller="Movies"
+                           asp-action="Index"
+                           asp-route-q="@queryParam"
+                           asp-route-genre="@genreParam"
+                           asp-route-age="@ageParam"
+                           asp-route-year="@yearParam"
+                           asp-route-sort="@sortParam"
+                           asp-route-pageSize="@pageSizeParam"
+                           asp-route-filter="has-showtimes"
+                           class="bgp-filter-pill @(Model.ActiveFilter == "has-showtimes" ? "is-active" : "")"
+                           aria-current="@(Model.ActiveFilter == "has-showtimes" ? "true" : null)"
+                           data-testid="catalog-filter-has-showtimes">
+                            <span>Có lịch chiếu</span>
+                            <span class="bgp-filter-pill-count">@Model.WithShowtimesCount</span>
+                        </a>
+                        <a asp-controller="Movies"
+                           asp-action="Index"
+                           asp-route-q="@queryParam"
+                           asp-route-genre="@genreParam"
+                           asp-route-age="@ageParam"
+                           asp-route-year="@yearParam"
+                           asp-route-sort="@sortParam"
+                           asp-route-pageSize="@pageSizeParam"
+                           asp-route-filter="no-showtimes"
+                           class="bgp-filter-pill @(Model.ActiveFilter == "no-showtimes" ? "is-active" : "")"
+                           aria-current="@(Model.ActiveFilter == "no-showtimes" ? "true" : null)"
+                           data-testid="catalog-filter-no-showtimes">
+                            <span>Chưa có lịch chiếu</span>
+                            <span class="bgp-filter-pill-count">@Model.WithoutShowtimesCount</span>
+                        </a>
                     </div>
-                }
-            </div>
-        </section>
+                </div>
 
-        <!-- Result Count & Active Filter Reset -->
+                <div class="bgp-catalog-search-box">
+                    <div class="bgp-catalog-search-field">
+                        <label for="movieSearchInput" class="bgp-sr-only">Tìm kiếm theo tên phim, tên gốc, đạo diễn hoặc thể loại</label>
+                        <svg class="bgp-catalog-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="search"
+                               id="movieSearchInput"
+                               name="q"
+                               value="@Model.SearchQuery"
+                               class="bgp-catalog-search-input"
+                               placeholder="Tìm phim, tên gốc, đạo diễn..."
+                               data-testid="catalog-search-input" />
+                    </div>
+                    <button type="submit" class="bgp-catalog-search-btn" data-testid="catalog-search-submit">
+                        Tìm kiếm
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. RapPhim 5-Column Structured Dropdown Filter Row (Swipeable on Mobile) -->
+            <div class="bgp-catalog-select-scroller">
+                <div class="bgp-catalog-select-grid" data-testid="catalog-select-bar">
+                    <div class="bgp-catalog-select-item">
+                        <label for="catalogSelectGenre" class="bgp-catalog-select-label">Thể loại</label>
+                        <div class="bgp-catalog-select-wrap">
+                            <select id="catalogSelectGenre"
+                                    name="genre"
+                                    class="bgp-catalog-select"
+                                    data-catalog-auto-submit
+                                    data-testid="catalog-select-genre">
+                                <option value="" selected="@(string.IsNullOrWhiteSpace(Model.SelectedGenre) ? "selected" : null)">Tất cả</option>
+                                @foreach (var g in Model.AvailableGenres)
+                                {
+                                    bool isSelected = string.Equals(Model.SelectedGenre, g, StringComparison.OrdinalIgnoreCase);
+                                    <option value="@g" selected="@(isSelected ? "selected" : null)">@g</option>
+                                }
+                            </select>
+                            <svg class="bgp-catalog-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m6 9 6 6 6-6"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="bgp-catalog-select-item">
+                        <label for="catalogSelectAge" class="bgp-catalog-select-label">Độ tuổi</label>
+                        <div class="bgp-catalog-select-wrap">
+                            <select id="catalogSelectAge"
+                                    name="age"
+                                    class="bgp-catalog-select"
+                                    data-catalog-auto-submit
+                                    data-testid="catalog-select-age">
+                                <option value="" selected="@(string.IsNullOrWhiteSpace(Model.SelectedAge) ? "selected" : null)">Tất cả</option>
+                                @foreach (var ageOpt in Model.AvailableAges)
+                                {
+                                    bool isSelected = string.Equals(Model.SelectedAge, ageOpt.Value, StringComparison.OrdinalIgnoreCase);
+                                    <option value="@ageOpt.Value" selected="@(isSelected ? "selected" : null)">@ageOpt.Label</option>
+                                }
+                            </select>
+                            <svg class="bgp-catalog-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m6 9 6 6 6-6"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="bgp-catalog-select-item">
+                        <label for="catalogSelectYear" class="bgp-catalog-select-label">Năm</label>
+                        <div class="bgp-catalog-select-wrap">
+                            <select id="catalogSelectYear"
+                                    name="year"
+                                    class="bgp-catalog-select"
+                                    data-catalog-auto-submit
+                                    data-testid="catalog-select-year">
+                                <option value="" selected="@(!Model.SelectedYear.HasValue ? "selected" : null)">Tất cả</option>
+                                @foreach (var yr in Model.AvailableYears)
+                                {
+                                    bool isSelected = Model.SelectedYear == yr;
+                                    <option value="@yr" selected="@(isSelected ? "selected" : null)">@yr</option>
+                                }
+                            </select>
+                            <svg class="bgp-catalog-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m6 9 6 6 6-6"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="bgp-catalog-select-item">
+                        <label for="catalogSelectFilter" class="bgp-catalog-select-label">Lịch chiếu</label>
+                        <div class="bgp-catalog-select-wrap">
+                            <select id="catalogSelectFilter"
+                                    name="filter"
+                                    class="bgp-catalog-select"
+                                    data-catalog-auto-submit
+                                    data-testid="catalog-select-filter">
+                                <option value="all" selected="@(Model.ActiveFilter == "all" ? "selected" : null)">Tất cả</option>
+                                <option value="has-showtimes" selected="@(Model.ActiveFilter == "has-showtimes" ? "selected" : null)">Đang mở bán suất chiếu</option>
+                                <option value="no-showtimes" selected="@(Model.ActiveFilter == "no-showtimes" ? "selected" : null)">Chưa xếp lịch chiếu</option>
+                            </select>
+                            <svg class="bgp-catalog-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m6 9 6 6 6-6"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="bgp-catalog-select-item">
+                        <label for="catalogSelectSort" class="bgp-catalog-select-label">Sắp xếp</label>
+                        <div class="bgp-catalog-select-wrap">
+                            <select id="catalogSelectSort"
+                                    name="sort"
+                                    class="bgp-catalog-select"
+                                    data-catalog-auto-submit
+                                    data-testid="catalog-select-sort">
+                                <option value="default" selected="@(Model.SortBy == "default" ? "selected" : null)">Đề xuất (Ưu tiên mở bán)</option>
+                                <option value="rating" selected="@(Model.SortBy == "rating" ? "selected" : null)">Đánh giá cao (IMDb)</option>
+                                <option value="year-desc" selected="@(Model.SortBy == "year-desc" ? "selected" : null)">Năm phát hành mới nhất</option>
+                                <option value="showtimes" selected="@(Model.SortBy == "showtimes" ? "selected" : null)">Nhiều suất chiếu nhất</option>
+                                <option value="title" selected="@(Model.SortBy == "title" ? "selected" : null)">Tên phim (A → Z)</option>
+                            </select>
+                            <svg class="bgp-catalog-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m6 9 6 6 6-6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- 3. Unboxed Minimalist Result & Page Status Line -->
         <div class="bgp-catalog-summary-bar">
-            <div data-testid="catalog-result-count">
-                @if (Model.HasActiveFilterOrSearch)
+            <div class="bgp-catalog-summary-text" data-testid="catalog-result-count">
+                <span>Tìm thấy <strong>@Model.TotalFilteredCount</strong> phim</span>
+                @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
                 {
-                    <span>Tìm thấy <strong>@Model.Movies.Count</strong> / @Model.TotalPublishedCount phim phù hợp</span>
-                    @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
-                    {
-                        <span>với từ khóa "<strong>@Model.SearchQuery</strong>"</span>
-                    }
+                    <span>với từ khóa "<strong>@Model.SearchQuery</strong>"</span>
                 }
-                else
-                {
-                    <span>Hiển thị <strong>@Model.Movies.Count</strong> bộ phim đã công bố</span>
-                }
+                <span class="bgp-catalog-summary-sep" aria-hidden="true">·</span>
+                <span>Trang <strong>@Model.CurrentPage/@Model.TotalPages</strong></span>
             </div>
 
             @if (Model.HasActiveFilterOrSearch)
             {
                 <a asp-controller="Movies"
                    asp-action="Index"
-                   class="bgp-btn bgp-btn--outline bgp-btn--sm"
+                   asp-route-pageSize="@pageSizeParam"
+                   class="bgp-catalog-reset-link"
                    data-testid="catalog-clear-filters">
-                    Xóa bộ lọc
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>Xóa bộ lọc</span>
                 </a>
             }
         </div>
 
-        <!-- Movie Grid or Empty States -->
+        <!-- 4. High-Density 6-Column Detached-Footer 2:3 Poster Grid or Empty States -->
         @if (Model.TotalPublishedCount == 0)
         {
             <div class="bgp-discovery-empty" data-testid="catalog-empty-system">
@@ -199,6 +357,10 @@
         }
         else
         {
+            var paginationSlots = BuildPaginationSlots(Model.CurrentPage, Model.TotalPages);
+            bool hasPrevPage = Model.CurrentPage > 1;
+            bool hasNextPage = Model.CurrentPage < Model.TotalPages;
+
             <div class="bgp-catalog-grid" data-testid="catalog-grid">
                 @foreach (var movie in Model.Movies)
                 {
@@ -206,6 +368,10 @@
                         ? "/images/poster-fallback.svg"
                         : movie.PosterUrl;
                     string? posterSrcSet = BuildPosterSrcSet(movie);
+                    string origSubtitle = !string.IsNullOrWhiteSpace(movie.OriginalTitle)
+                        && !string.Equals(movie.OriginalTitle, movie.Title, StringComparison.OrdinalIgnoreCase)
+                        ? movie.OriginalTitle
+                        : "Phim điện ảnh";
 
                     <a class="bgp-catalog-card"
                        data-testid="catalog-movie-card"
@@ -217,24 +383,12 @@
                         <div class="bgp-catalog-poster-wrap">
                             <img src="@posterSrc"
                                  srcset="@posterSrcSet"
-                                 sizes="(max-width: 575px) 46vw, (max-width: 991px) 30vw, (max-width: 1279px) 23vw, 220px"
+                                 sizes="(max-width: 575px) 46vw, (max-width: 767px) 31vw, (max-width: 1023px) 23vw, (max-width: 1279px) 19vw, 206px"
                                  alt="Poster phim @movie.Title"
                                  class="bgp-catalog-poster-img"
                                  loading="lazy"
                                  decoding="async"
                                  onerror="this.onerror=null;if(!this.src.endsWith('/images/poster-fallback.svg')){this.removeAttribute('srcset');this.src='/images/poster-fallback.svg';}" />
-
-                            @if (!string.IsNullOrWhiteSpace(movie.AgeLabel))
-                            {
-                                <span class="bgp-catalog-badge-age @GetAgeBadgeClass(movie.AgeLabel)">@movie.AgeLabel</span>
-                            }
-
-                            @if (movie.Rating != null)
-                            {
-                                <span class="bgp-catalog-badge-rating" title="@movie.Rating.DisplayText">
-                                    ★ @movie.Rating.Score.ToString("0.0")
-                                </span>
-                            }
 
                             @if (movie.UpcomingShowtimesCount > 0)
                             {
@@ -248,43 +402,124 @@
                                     Chưa có lịch chiếu
                                 </span>
                             }
+
+                            @if (!string.IsNullOrWhiteSpace(movie.AgeLabel))
+                            {
+                                <span class="bgp-catalog-badge-age @GetAgeBadgeClass(movie.AgeLabel)">@movie.AgeLabel</span>
+                            }
+
+                            <span class="bgp-catalog-pill-duration">@movie.DurationMin phút</span>
                         </div>
 
                         <div class="bgp-catalog-card-info">
                             <h2 class="bgp-catalog-card-title">@movie.Title</h2>
-
-                            @if (!string.IsNullOrWhiteSpace(movie.OriginalTitle)
-                                 && !string.Equals(movie.OriginalTitle, movie.Title, StringComparison.OrdinalIgnoreCase))
-                            {
-                                <div class="bgp-catalog-card-orig">
-                                    @movie.OriginalTitle@(movie.ReleaseYear.HasValue ? $" ({movie.ReleaseYear.Value})" : "")
-                                </div>
-                            }
-                            else if (movie.ReleaseYear.HasValue)
-                            {
-                                <div class="bgp-catalog-card-orig">@movie.ReleaseYear.Value</div>
-                            }
-
+                            <div class="bgp-catalog-card-orig">@origSubtitle</div>
                             <div class="bgp-catalog-card-meta">
-                                <span>@movie.DurationMin phút</span>
-                                @if (!string.IsNullOrWhiteSpace(movie.GenreText))
-                                {
-                                    <span>•</span>
-                                    <span class="bgp-catalog-card-genre">@movie.GenreText</span>
-                                }
+                                <span class="bgp-catalog-card-year-score">
+                                    <span>@(movie.ReleaseYear?.ToString(CultureInfo.InvariantCulture) ?? "Rạp")</span>
+                                    @if (movie.Rating != null)
+                                    {
+                                        <span class="bgp-catalog-inline-rating" title="@movie.Rating.DisplayText">
+                                            <span class="bgp-catalog-star" aria-hidden="true">★</span> @movie.Rating.Score.ToString("0.0", CultureInfo.InvariantCulture)
+                                        </span>
+                                    }
+                                </span>
+                                <span class="bgp-catalog-card-genre">@FormatPrimaryGenre(movie.GenreText)</span>
                             </div>
-                            @if (movie.UpcomingShowtimesCount > 0)
-                            {
-                                <span class="bgp-catalog-card-cta">Xem lịch chiếu &rarr;</span>
-                            }
-                            else
-                            {
-                                <span class="bgp-catalog-card-cta bgp-catalog-card-cta--muted">Chi tiết phim &rarr;</span>
-                            }
                         </div>
                     </a>
                 }
             </div>
+
+            <!-- 5. Centered RapPhim Square/Rounded-lg Pagination Bar -->
+            <nav class="bgp-catalog-pagination" aria-label="Phân trang danh mục phim" data-testid="catalog-pagination">
+                @if (hasPrevPage)
+                {
+                    <a class="bgp-page-btn"
+                       asp-controller="Movies"
+                       asp-action="Index"
+                       asp-route-q="@queryParam"
+                       asp-route-filter="@filterParam"
+                       asp-route-genre="@genreParam"
+                       asp-route-age="@ageParam"
+                       asp-route-year="@yearParam"
+                       asp-route-sort="@sortParam"
+                       asp-route-pageSize="@pageSizeParam"
+                       asp-route-page="@(Model.CurrentPage - 1)"
+                       aria-label="Trang trước"
+                       data-testid="catalog-page-prev">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="m15 18-6-6 6-6"></path>
+                        </svg>
+                    </a>
+                }
+                else
+                {
+                    <span class="bgp-page-btn is-disabled" aria-disabled="true" data-testid="catalog-page-prev">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="m15 18-6-6 6-6"></path>
+                        </svg>
+                    </span>
+                }
+
+                @foreach (var slot in paginationSlots)
+                {
+                    if (!slot.HasValue)
+                    {
+                        <span class="bgp-page-ellipsis" aria-hidden="true">&hellip;</span>
+                    }
+                    else if (slot.Value == Model.CurrentPage)
+                    {
+                        <span class="bgp-page-btn is-active"
+                              aria-current="page"
+                              data-testid="catalog-page-number">@slot.Value</span>
+                    }
+                    else
+                    {
+                        <a class="bgp-page-btn"
+                           asp-controller="Movies"
+                           asp-action="Index"
+                           asp-route-q="@queryParam"
+                           asp-route-filter="@filterParam"
+                           asp-route-genre="@genreParam"
+                           asp-route-age="@ageParam"
+                           asp-route-year="@yearParam"
+                           asp-route-sort="@sortParam"
+                           asp-route-pageSize="@pageSizeParam"
+                           asp-route-page="@slot.Value"
+                           data-testid="catalog-page-number">@slot.Value</a>
+                    }
+                }
+
+                @if (hasNextPage)
+                {
+                    <a class="bgp-page-btn"
+                       asp-controller="Movies"
+                       asp-action="Index"
+                       asp-route-q="@queryParam"
+                       asp-route-filter="@filterParam"
+                       asp-route-genre="@genreParam"
+                       asp-route-age="@ageParam"
+                       asp-route-year="@yearParam"
+                       asp-route-sort="@sortParam"
+                       asp-route-pageSize="@pageSizeParam"
+                       asp-route-page="@(Model.CurrentPage + 1)"
+                       aria-label="Trang tiếp theo"
+                       data-testid="catalog-page-next">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                    </a>
+                }
+                else
+                {
+                    <span class="bgp-page-btn is-disabled" aria-disabled="true" data-testid="catalog-page-next">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                    </span>
+                }
+            </nav>
         }
     </div>
 </div>
@@ -314,7 +549,6 @@
     </div>
     <div class="bgp-trailer-dialog__stage" data-trailer-stage></div>
     <div class="bgp-trailer-dialog__footer">
-        <span>Trình phát bảo vệ quyền riêng tư (youtube-nocookie.com) — chỉ tải khi người dùng yêu cầu</span>
         <a href="https://www.youtube.com"
            target="_blank"
            rel="noopener noreferrer"
@@ -328,6 +562,7 @@
 <script type="application/json" id="bgp-quick-preview-island">@Html.Raw(Model.QuickPreviewJson)</script>
 
 @section Scripts {
+    <script type="module" src="~/js/modules/catalog-filters.js" asp-append-version="true"></script>
     <script type="module" src="~/js/modules/preview-popover.js" asp-append-version="true"></script>
     <script type="module" src="~/js/modules/trailer-dialog.js" asp-append-version="true"></script>
 }

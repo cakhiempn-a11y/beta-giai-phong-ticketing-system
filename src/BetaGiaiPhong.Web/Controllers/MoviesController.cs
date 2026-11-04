@@ -17,9 +17,29 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
         Encoder = JavaScriptEncoder.Default
     };
 
+    private const int DefaultCatalogPageSize = 24;
+
+    private static readonly IReadOnlyList<CatalogSelectOption> StandardAgeOptions =
+    [
+        new("P", "P — Mọi độ tuổi"),
+        new("K", "K — Dưới 13 tuổi"),
+        new("T13", "T13 — Từ 13 tuổi"),
+        new("T16", "T16 — Từ 16 tuổi"),
+        new("T18", "T18 — Từ 18 tuổi")
+    ];
+
     [HttpGet("")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> Index([FromQuery] string? q, [FromQuery] string? filter, CancellationToken ct)
+    public async Task<IActionResult> Index(
+        [FromQuery] string? q,
+        [FromQuery] string? filter,
+        [FromQuery] string? genre,
+        [FromQuery] string? age,
+        [FromQuery] int? year,
+        [FromQuery] string? sort,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        CancellationToken ct)
     {
         var allPublished = await catalogService.GetPublishedMoviesAsync(ct);
 
@@ -30,6 +50,11 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
         }
 
         var trimmedQuery = (q ?? string.Empty).Trim();
+        var trimmedGenre = (genre ?? string.Empty).Trim();
+        var normalizedAge = NormalizeAgeFilter(age);
+        var normalizedYear = year is >= 1888 and <= 2100 ? year : null;
+        var normalizedSort = NormalizeSortOption(sort);
+        var effectivePageSize = pageSize is >= 6 and <= 48 ? pageSize.Value : DefaultCatalogPageSize;
 
         IEnumerable<MovieSummaryDto> filtered = allPublished;
 
@@ -42,6 +67,21 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
                 (!string.IsNullOrWhiteSpace(m.DirectorNames) && m.DirectorNames.Contains(trimmedQuery, StringComparison.OrdinalIgnoreCase)));
         }
 
+        if (!string.IsNullOrWhiteSpace(trimmedGenre))
+        {
+            filtered = filtered.Where(m => MatchesGenre(m.GenreText, trimmedGenre));
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedAge))
+        {
+            filtered = filtered.Where(m => MatchesAgeClassification(m.AgeLabel, normalizedAge));
+        }
+
+        if (normalizedYear.HasValue)
+        {
+            filtered = filtered.Where(m => m.ReleaseYear == normalizedYear.Value);
+        }
+
         filtered = normalizedFilter switch
         {
             "has-showtimes" => filtered.Where(m => m.UpcomingShowtimesCount > 0),
@@ -49,8 +89,38 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
             _ => filtered
         };
 
+        filtered = normalizedSort switch
+        {
+            "rating" => filtered
+                .OrderByDescending(m => m.Rating != null)
+                .ThenByDescending(m => m.Rating?.Score ?? 0m)
+                .ThenByDescending(m => m.UpcomingShowtimesCount)
+                .ThenBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
+            "year-desc" => filtered
+                .OrderByDescending(m => m.ReleaseYear.HasValue)
+                .ThenByDescending(m => m.ReleaseYear ?? 0)
+                .ThenByDescending(m => m.Rating?.Score ?? 0m)
+                .ThenBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
+            "showtimes" => filtered
+                .OrderByDescending(m => m.UpcomingShowtimesCount)
+                .ThenByDescending(m => m.Rating?.Score ?? 0m)
+                .ThenBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
+            "title" => filtered
+                .OrderBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
+            _ => filtered
+        };
+
         var filteredList = filtered.ToList();
-        var previewMap = await catalogService.GetMoviesQuickPreviewMapAsync(filteredList.Select(m => m.MovieId), ct);
+        var totalFilteredCount = filteredList.Count;
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalFilteredCount / (double)effectivePageSize));
+        var currentPage = Math.Clamp(page ?? 1, 1, totalPages);
+
+        var pagedMovies = filteredList
+            .Skip((currentPage - 1) * effectivePageSize)
+            .Take(effectivePageSize)
+            .ToList();
+
+        var previewMap = await catalogService.GetMoviesQuickPreviewMapAsync(pagedMovies.Select(m => m.MovieId), ct);
         var stringKeyMap = previewMap.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value);
 
         var availableGenres = allPublished
@@ -58,22 +128,80 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
             .SelectMany(m => m.GenreText!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Where(g => g.Length > 1)
             .Distinct(StringComparer.CurrentCultureIgnoreCase)
-            .Take(8)
+            .OrderBy(g => g, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        var availableYears = allPublished
+            .Where(m => m.ReleaseYear.HasValue)
+            .Select(m => m.ReleaseYear!.Value)
+            .Distinct()
+            .OrderByDescending(y => y)
             .ToList();
 
         var vm = new MovieCatalogViewModel
         {
-            Movies = filteredList,
+            Movies = pagedMovies,
             TotalPublishedCount = allPublished.Count,
             WithShowtimesCount = allPublished.Count(m => m.UpcomingShowtimesCount > 0),
             WithoutShowtimesCount = allPublished.Count(m => m.UpcomingShowtimesCount == 0),
+            TotalFilteredCount = totalFilteredCount,
             SearchQuery = trimmedQuery,
             ActiveFilter = normalizedFilter,
+            SelectedGenre = trimmedGenre,
+            SelectedAge = normalizedAge,
+            SelectedYear = normalizedYear,
+            SortBy = normalizedSort,
+            CurrentPage = currentPage,
+            TotalPages = totalPages,
+            PageSize = effectivePageSize,
             AvailableGenres = availableGenres,
+            AvailableAges = StandardAgeOptions,
+            AvailableYears = availableYears,
             QuickPreviewJson = JsonSerializer.Serialize(stringKeyMap, PreviewJsonOptions)
         };
 
         return View(vm);
+    }
+
+    private static string NormalizeAgeFilter(string? rawAge)
+    {
+        if (string.IsNullOrWhiteSpace(rawAge)) return string.Empty;
+        return rawAge.Trim().ToUpperInvariant() switch
+        {
+            "P" => "P",
+            "K" => "K",
+            "T13" or "C13" => "T13",
+            "T16" or "C16" => "T16",
+            "T18" or "C18" => "T18",
+            _ => string.Empty
+        };
+    }
+
+    private static string NormalizeSortOption(string? rawSort)
+    {
+        if (string.IsNullOrWhiteSpace(rawSort)) return "default";
+        return rawSort.Trim().ToLowerInvariant() switch
+        {
+            "rating" => "rating",
+            "year-desc" => "year-desc",
+            "showtimes" => "showtimes",
+            "title" => "title",
+            _ => "default"
+        };
+    }
+
+    private static bool MatchesGenre(string? movieGenreText, string selectedGenre)
+    {
+        if (string.IsNullOrWhiteSpace(movieGenreText)) return false;
+        var tokens = movieGenreText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.Any(t => string.Equals(t, selectedGenre, StringComparison.OrdinalIgnoreCase))
+            || movieGenreText.Contains(selectedGenre, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesAgeClassification(string? movieAgeLabel, string normalizedAge)
+    {
+        if (string.IsNullOrWhiteSpace(movieAgeLabel)) return false;
+        return string.Equals(NormalizeAgeFilter(movieAgeLabel), normalizedAge, StringComparison.OrdinalIgnoreCase);
     }
 
     [HttpGet("{id:long}")]
@@ -135,23 +263,53 @@ public sealed class MoviesController(ICatalogService catalogService) : Controlle
             selectedDateKey = (matchingGroup ?? dateGroups[0]).DateKey;
         }
 
-        IReadOnlyList<MovieSummaryDto> suggestedOnSale = [];
-        if (dateGroups.Count == 0)
-        {
-            var allPublished = await catalogService.GetPublishedMoviesAsync(ct);
-            suggestedOnSale = allPublished
-                .Where(m => m.MovieId != id && m.UpcomingShowtimesCount > 0)
-                .Take(4)
-                .ToList();
-        }
+        var allPublished = await catalogService.GetPublishedMoviesAsync(ct);
+
+        var suggestedOnSale = allPublished
+            .Where(m => m.MovieId != id && m.UpcomingShowtimesCount > 0)
+            .Take(6)
+            .ToList();
+
+        var rankedRecommendations = allPublished
+            .Where(m => m.MovieId != id)
+            .OrderByDescending(m => m.UpcomingShowtimesCount > 0 ? 1 : 0)
+            .ThenByDescending(m => m.Rating?.Score ?? 0m)
+            .ThenByDescending(m => m.UpcomingShowtimesCount)
+            .ThenBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        var titleSummary = new MovieSummaryDto(
+            MovieId: movie.MovieId,
+            Title: movie.Title,
+            DurationMin: movie.DurationMin,
+            GenreText: movie.GenreText,
+            Status: movie.Status,
+            UpcomingShowtimesCount: movie.UpcomingShowtimes.Count,
+            AgeLabel: movie.AgeLabel,
+            Synopsis: movie.Synopsis,
+            PosterUrl: movie.PosterUrl,
+            OriginalTitle: movie.OriginalTitle,
+            ReleaseYear: movie.ReleaseYear,
+            ReleaseDateVn: movie.ReleaseDateVn,
+            OriginCountry: movie.OriginCountry,
+            OriginalLanguage: movie.OriginalLanguage,
+            DirectorNames: movie.DirectorNames,
+            OfficialTrailerYoutubeId: movie.OfficialTrailerYoutubeId,
+            IsHeroEligible: movie.IsHeroEligible,
+            Rating: movie.Rating,
+            Artwork: movie.Artwork,
+            Provenance: movie.Provenance);
 
         var vm = new MovieDetailViewModel
         {
             Movie = movie,
+            TitleSummary = titleSummary,
             ShowtimesByDate = groupedLegacy,
             DateGroups = dateGroups,
             SelectedDateKey = selectedDateKey,
-            SuggestedOnSaleMovies = suggestedOnSale
+            SuggestedOnSaleMovies = suggestedOnSale,
+            RankedRecommendations = rankedRecommendations
         };
 
         return View(vm);
