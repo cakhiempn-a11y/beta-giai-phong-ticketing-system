@@ -62,11 +62,11 @@
     string ageCodeLower = (order.MovieAgeLabel ?? "P").Trim().ToLowerInvariant();
 
     string createdVnDisplay = !string.IsNullOrWhiteSpace(order.CreatedVietnamText)
-        ? $"{order.CreatedVietnamText} (UTC+7)"
-        : $"{order.CreatedUtc:dd/MM/yyyy HH:mm:ss} UTC";
+        ? order.CreatedVietnamText
+        : order.CreatedUtc.ToString("dd/MM/yyyy HH:mm:ss");
     string expiresVnDisplay = !string.IsNullOrWhiteSpace(order.ExpiresVietnamText)
-        ? $"{order.ExpiresVietnamText} (UTC+7)"
-        : $"{order.ExpiresUtc:dd/MM/yyyy HH:mm:ss} UTC";
+        ? order.ExpiresVietnamText
+        : order.ExpiresUtc.ToString("dd/MM/yyyy HH:mm:ss");
     string expiresTimeOnlyDisplay = !string.IsNullOrWhiteSpace(order.ExpiresVietnamTimeOnlyText)
         ? order.ExpiresVietnamTimeOnlyText
         : order.ExpiresUtc.ToString("HH:mm:ss");
@@ -221,10 +221,10 @@
             @if (isPendingActive)
             {
                 <h1 class="bgp-hold-banner__title">
-                    Máy chủ đang khóa tạm @order.Seats.Count ghế (@seatCodesText)
+                    Đang khóa tạm @order.Seats.Count ghế (@seatCodesText)
                 </h1>
                 <p class="bgp-hold-banner__desc">
-                    Hết hạn giữ chỗ lúc <strong>@expiresTimeOnlyDisplay</strong> (@expiresVnDisplay &mdash; Nguồn chuẩn máy chủ: <code>HoldExpiresUtc</code>).
+                    Hết hạn giữ chỗ lúc <strong>@expiresTimeOnlyDisplay</strong> (@expiresVnDisplay).
                 </p>
             }
             else if (isPaid)
@@ -233,7 +233,7 @@
                     Giao dịch thanh toán thành công &mdash; Đã phát hành @order.Seats.Count vé điện tử QR
                 </h1>
                 <p class="bgp-hold-banner__desc">
-                    Thời điểm xác nhận thanh toán: <strong>@(order.PaidVietnamText ?? order.CreatedVietnamText) (UTC+7)</strong>. Quý khách có thể mở mã QR để soát vé tại cổng rạp.
+                    Thời điểm xác nhận thanh toán: <strong>@(order.PaidVietnamText ?? order.CreatedVietnamText)</strong>. Quý khách có thể mở mã QR để soát vé tại cổng rạp.
                 </p>
             }
             else if (isExpiredEffective)
@@ -325,7 +325,6 @@
         <section class="bgp-tx-panel" aria-labelledby="order-screening-heading">
             <div class="bgp-tx-panel__head">
                 <h2 id="order-screening-heading" class="bgp-tx-panel__title">Thông tin tác phẩm, suất chiếu &amp; ghế giữ chỗ</h2>
-                <span class="bgp-tx-panel__tz">Hiển thị chuẩn Giờ Việt Nam (UTC+7)</span>
             </div>
 
             <div class="bgp-tx-film" data-testid="order-verified-film-card">
@@ -348,10 +347,6 @@
                         @if (hasVnClassification)
                         {
                             <span class="bgp-age-badge bgp-age-badge--@ageCodeLower">@order.MovieAgeLabel</span>
-                        }
-                        else
-                        {
-                            <span class="bgp-badge bgp-badge--neutral">Chưa có phân loại tại VN</span>
                         }
 
                         @if (order.MovieRating is not null)
@@ -402,13 +397,13 @@
 
                     <div class="bgp-tx-meta-grid">
                         <div>
-                            <span class="bgp-tx-meta-item__label">Ngày chiếu (VN)</span>
+                            <span class="bgp-tx-meta-item__label">Ngày chiếu</span>
                             <span class="bgp-tx-meta-item__val">
                                 @(string.IsNullOrWhiteSpace(order.StartVietnamDateText) ? order.StartVietnamText : order.StartVietnamDateText)
                             </span>
                         </div>
                         <div>
-                            <span class="bgp-tx-meta-item__label">Khung giờ (UTC+7)</span>
+                            <span class="bgp-tx-meta-item__label">Khung giờ</span>
                             <span class="bgp-tx-meta-item__val bgp-tx-meta-item__val--mono">
                                 @if (!string.IsNullOrWhiteSpace(order.StartVietnamTimeOnlyText) && !string.IsNullOrWhiteSpace(order.EndVietnamTimeOnlyText))
                                 {
@@ -433,8 +428,7 @@
             </div>
 
             <div class="bgp-tx-section-label">
-                <span>Danh sách ghế chụp nhanh giá (@order.Seats.Count ghế)</span>
-                <span>VND nguyên</span>
+                <span>Danh sách ghế đã chọn (@order.Seats.Count ghế)</span>
             </div>
 
             <div class="bgp-tx-seat-table-wrap">

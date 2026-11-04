@@ -1,0 +1,290 @@
+@using BetaGiaiPhong.Web.Models.Responses
+@model (MovieSummaryDto? Movie, string Variant)
+@{
+    var movie = Model.Movie;
+    string variant = string.IsNullOrWhiteSpace(Model.Variant) ? "hero" : Model.Variant;
+    bool isHero = string.Equals(variant, "hero", StringComparison.OrdinalIgnoreCase);
+
+    string rawTitle = movie?.Title ?? "Điện Ảnh Đích Thực";
+    string? logoUrl = movie?.Artwork?.TitleLogoUrl;
+    string qid = movie?.Provenance?.WikidataQid?.Trim() ?? "";
+    string uid = $"bgp-tt-{variant}-{movie?.MovieId ?? 0}";
+}
+
+<span class="bgp-sr-only">@(movie?.Title ?? "Điện Ảnh Đích Thực Tại Beta Giải Phóng")</span>
+
+@if (!string.IsNullOrWhiteSpace(logoUrl))
+{
+    <span class="bgp-title-treatment bgp-title-treatment--@variant bgp-title-treatment--img" aria-hidden="true">
+        <img src="@logoUrl"
+             alt=""
+             class="bgp-title-treatment__img"
+             loading="@(isHero ? "eager" : "lazy")"
+             decoding="async"
+             onerror="this.onerror=null;this.parentElement.classList.add('is-fallback');this.remove();" />
+        <span class="bgp-title-treatment__img-fallback">@rawTitle</span>
+    </span>
+}
+else if (string.Equals(qid, "Q496266", StringComparison.OrdinalIgnoreCase))
+{
+    @* Charade / Mê trong mê (1963) — 1960s Maurice Binder Technicolor Spy-Romance Geometric Title Treatment *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 460 116" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFDF7" />
+                    <stop offset="55%" stop-color="#F6DE9D" />
+                    <stop offset="100%" stop-color="#DDA64B" />
+                </linearGradient>
+            </defs>
+            <g transform="translate(4, 8)">
+                <polygon points="18,12 30,0 42,12 30,24" fill="none" stroke="#E50914" stroke-width="2.4" />
+                <polygon points="18,12 30,4 42,12 30,20" fill="#F6DE9D" opacity="0.9" />
+                <line x1="52" y1="12" x2="152" y2="12" stroke="#F6DE9D" stroke-width="1.2" opacity="0.65" />
+                <text x="160" y="16" fill="#F6DE9D" font-family="Georgia, 'Times New Roman', serif" font-size="12" font-weight="700" letter-spacing="4.5">PARIS • 1963</text>
+            </g>
+            <text x="5" y="73" fill="#991B1B" opacity="0.62" font-family="Georgia, 'Times New Roman', serif" font-size="60" font-weight="900" letter-spacing="6">CHARADE</text>
+            <text x="2" y="70" fill="url(#@(uid)-gold)" font-family="Georgia, 'Times New Roman', serif" font-size="60" font-weight="900" letter-spacing="6">CHARADE</text>
+            <line x1="4" y1="84" x2="422" y2="84" stroke="#E50914" stroke-width="2" opacity="0.88" />
+            <text x="4" y="107" fill="#FFFFFF" opacity="0.94" font-family="'Be Vietnam Pro', sans-serif" font-size="18.5" font-weight="800" letter-spacing="6.5">MÊ TRONG MÊ</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q1066714", StringComparison.OrdinalIgnoreCase))
+{
+    @* His Girl Friday (1940) — Classic 1940s Broadsheet Press Masthead Title Treatment *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 460 112" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-ivory" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFFFF" />
+                    <stop offset="100%" stop-color="#E4D5B7" />
+                </linearGradient>
+            </defs>
+            <line x1="2" y1="8" x2="410" y2="8" stroke="#E4D5B7" stroke-width="2" opacity="0.8" />
+            <line x1="2" y1="13" x2="410" y2="13" stroke="#E4D5B7" stroke-width="0.8" opacity="0.6" />
+            <text x="4" y="44" fill="#F5C518" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="30" font-weight="700" letter-spacing="1.5">His Girl</text>
+            <text x="4" y="94" fill="url(#@(uid)-ivory)" font-family="Georgia, 'Times New Roman', serif" font-size="56" font-weight="900" letter-spacing="5">FRIDAY</text>
+            <line x1="2" y1="105" x2="410" y2="105" stroke="#E50914" stroke-width="2.2" opacity="0.85" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q1173161", StringComparison.OrdinalIgnoreCase))
+{
+    @* Tears of Steel (2012) — Cybernetic Sci-Fi Metallic Stencil Title Treatment *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 470 110" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-steel" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFFFF" />
+                    <stop offset="52%" stop-color="#BAE6FD" />
+                    <stop offset="100%" stop-color="#64748B" />
+                </linearGradient>
+            </defs>
+            <text x="4" y="32" fill="#7DD3FC" font-family="'JetBrains Mono', monospace" font-size="20" font-weight="800" letter-spacing="8">TEARS OF</text>
+            <line x1="178" y1="25" x2="418" y2="25" stroke="#38BDF8" stroke-width="1.6" opacity="0.65" />
+            <text x="2" y="92" fill="url(#@(uid)-steel)" font-family="Impact, 'Arial Black', sans-serif" font-size="66" font-weight="900" letter-spacing="7">STEEL</text>
+            <rect x="4" y="100" width="290" height="3" fill="#38BDF8" opacity="0.85" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q925587", StringComparison.OrdinalIgnoreCase))
+{
+    @* Sintel (2010) — Epic Dragon-Blade Fantasy Gold-Ember Crest *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 420 104" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-ember" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFBEB" />
+                    <stop offset="55%" stop-color="#FCD34D" />
+                    <stop offset="100%" stop-color="#D97706" />
+                </linearGradient>
+            </defs>
+            <text x="5" y="75" fill="#7C2D12" opacity="0.65" font-family="Georgia, 'Times New Roman', serif" font-size="68" font-weight="900" letter-spacing="9">SINTEL</text>
+            <text x="2" y="72" fill="url(#@(uid)-ember)" font-family="Georgia, 'Times New Roman', serif" font-size="68" font-weight="900" letter-spacing="9">SINTEL</text>
+            <polygon points="2,86 355,89 2,92" fill="#F59E0B" opacity="0.9" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q62770443", StringComparison.OrdinalIgnoreCase))
+{
+    @* Spring (2019) — Poetic Botanical Fairytale Serif Wordmark *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 420 104" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-spring" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFFFF" />
+                    <stop offset="65%" stop-color="#DCFCE7" />
+                    <stop offset="100%" stop-color="#86EFAC" />
+                </linearGradient>
+            </defs>
+            <path d="M6,88 Q155,76 330,88" fill="none" stroke="#86EFAC" stroke-width="2" opacity="0.75" />
+            <text x="4" y="72" fill="url(#@(uid)-spring)" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="66" font-weight="900" letter-spacing="6">SPRING</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q623051", StringComparison.OrdinalIgnoreCase))
+{
+    @* Night of the Living Dead (1968) — Stark 1968 Drive-In Horror Condensed Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 480 114" role="presentation" focusable="false">
+            <text x="4" y="34" fill="#E50914" font-family="Impact, 'Arial Black', sans-serif" font-size="25" font-weight="900" letter-spacing="5">NIGHT OF THE</text>
+            <text x="6" y="93" fill="#450A0A" font-family="Impact, 'Arial Black', sans-serif" font-size="56" font-weight="900" letter-spacing="3.5">LIVING DEAD</text>
+            <text x="2" y="89" fill="#F4F4F5" font-family="Impact, 'Arial Black', sans-serif" font-size="56" font-weight="900" letter-spacing="3.5">LIVING DEAD</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q20968125", StringComparison.OrdinalIgnoreCase))
+{
+    @* Cosmos Laundromat (2015) — Retro-Cosmic Orbital Title Treatment *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 480 112" role="presentation" focusable="false">
+            <text x="4" y="46" fill="#FDE047" font-family="Georgia, 'Times New Roman', serif" font-size="40" font-weight="900" letter-spacing="6">COSMOS</text>
+            <text x="4" y="90" fill="#FFFFFF" font-family="'JetBrains Mono', monospace" font-size="31" font-weight="800" letter-spacing="4.5">LAUNDROMAT</text>
+            <line x1="4" y1="100" x2="365" y2="100" stroke="#38BDF8" stroke-width="2" opacity="0.8" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q850159", StringComparison.OrdinalIgnoreCase))
+{
+    @* The General (1926) — Silent-Era Brass Railway Plaque Title Treatment *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 460 108" role="presentation" focusable="false">
+            <line x1="4" y1="12" x2="390" y2="12" stroke="#F6DE9D" stroke-width="2" opacity="0.75" />
+            <text x="4" y="72" fill="#F6DE9D" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="900" letter-spacing="4">THE GENERAL</text>
+            <line x1="4" y1="90" x2="390" y2="90" stroke="#F6DE9D" stroke-width="2" opacity="0.75" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q124694260", StringComparison.OrdinalIgnoreCase))
+{
+    @* Địa Đạo: Mặt Trời Trong Bóng Tối (2025) — Heroic Bronze-Torch Vietnamese War Epic Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 500 120" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-torch" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFBEB" />
+                    <stop offset="52%" stop-color="#FCD34D" />
+                    <stop offset="100%" stop-color="#B45309" />
+                </linearGradient>
+            </defs>
+            <text x="4" y="24" fill="#F59E0B" font-family="'Be Vietnam Pro', sans-serif" font-size="12.5" font-weight="800" letter-spacing="4.5">CỦ CHI • 1967 • BÙI THẠC CHUYÊN</text>
+            <text x="6" y="80" fill="#451A03" opacity="0.7" font-family="'Be Vietnam Pro', Impact, sans-serif" font-size="60" font-weight="900" letter-spacing="5">ĐỊA ĐẠO</text>
+            <text x="2" y="76" fill="url(#@(uid)-torch)" font-family="'Be Vietnam Pro', Impact, sans-serif" font-size="60" font-weight="900" letter-spacing="5">ĐỊA ĐẠO</text>
+            <line x1="4" y1="90" x2="430" y2="90" stroke="#DC2626" stroke-width="2.2" opacity="0.9" />
+            <text x="4" y="112" fill="#F4F4F5" font-family="'Be Vietnam Pro', sans-serif" font-size="16.5" font-weight="800" letter-spacing="4.2">MẶT TRỜI TRONG BÓNG TỐI</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q114246242", StringComparison.OrdinalIgnoreCase))
+{
+    @* F1 (2025) — Aerodynamic Carbon-Crimson Grand Prix Speed Emblem *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 460 112" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-f1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#FFFFFF" />
+                    <stop offset="65%" stop-color="#F1F5F9" />
+                    <stop offset="100%" stop-color="#94A3B8" />
+                </linearGradient>
+            </defs>
+            <polygon points="4,18 190,18 178,24 4,24" fill="#E50914" />
+            <text x="4" y="88" fill="url(#@(uid)-f1)" font-family="Impact, 'Arial Black', sans-serif" font-style="italic" font-size="78" font-weight="900" letter-spacing="6">F1</text>
+            <text x="128" y="64" fill="#E50914" font-family="'Be Vietnam Pro', sans-serif" font-size="15" font-weight="900" letter-spacing="5.5">APEX GRAND PRIX</text>
+            <text x="128" y="87" fill="#FFFFFF" font-family="'Be Vietnam Pro', sans-serif" font-size="22" font-weight="800" letter-spacing="5">THE MOVIE</text>
+            <polygon points="4,98 370,98 360,103 4,103" fill="#E50914" opacity="0.9" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q109228991", StringComparison.OrdinalIgnoreCase))
+{
+    @* Dune: Part Two (2024) — Arrakis Golden-Sand Monolith Sci-Fi Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 490 118" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-dune" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFFBEB" />
+                    <stop offset="55%" stop-color="#FDE68A" />
+                    <stop offset="100%" stop-color="#D97706" />
+                </linearGradient>
+            </defs>
+            <text x="4" y="70" fill="url(#@(uid)-dune)" font-family="'Be Vietnam Pro', Georgia, serif" font-size="64" font-weight="300" letter-spacing="18">DUNE</text>
+            <circle cx="298" cy="48" r="14" fill="none" stroke="#F59E0B" stroke-width="2.2" opacity="0.85" />
+            <line x1="4" y1="84" x2="430" y2="84" stroke="#F59E0B" stroke-width="1.6" opacity="0.72" />
+            <text x="4" y="108" fill="#F8FAFC" font-family="'Be Vietnam Pro', sans-serif" font-size="16.5" font-weight="800" letter-spacing="5.2">HÀNH TINH CÁT • PHẦN HAI</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q102180106", StringComparison.OrdinalIgnoreCase))
+{
+    @* Deadpool & Wolverine (2024) — Crimson & Adamantium Gold Dual-Slash Title Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 500 116" role="presentation" focusable="false">
+            <text x="4" y="54" fill="#EF4444" font-family="Impact, 'Arial Black', sans-serif" font-size="48" font-weight="900" letter-spacing="3.5">DEADPOOL</text>
+            <text x="252" y="54" fill="#FFFFFF" font-family="Georgia, serif" font-size="42" font-weight="900">&amp;</text>
+            <text x="4" y="102" fill="#FACC15" font-family="Impact, 'Arial Black', sans-serif" font-size="50" font-weight="900" letter-spacing="4">WOLVERINE</text>
+            <line x1="352" y1="18" x2="328" y2="108" stroke="#FACC15" stroke-width="2.5" opacity="0.75" />
+            <line x1="364" y1="18" x2="340" y2="108" stroke="#FACC15" stroke-width="2.5" opacity="0.75" />
+            <line x1="376" y1="18" x2="352" y2="108" stroke="#FACC15" stroke-width="2.5" opacity="0.75" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q112977213", StringComparison.OrdinalIgnoreCase))
+{
+    @* Mickey 17 (2025) — Niflheim Cryo-Stencil Sci-Fi Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 470 112" role="presentation" focusable="false">
+            <text x="4" y="24" fill="#38BDF8" font-family="'JetBrains Mono', monospace" font-size="12.5" font-weight="800" letter-spacing="5">BONG JOON-HO • EXPENDABLE</text>
+            <text x="4" y="88" fill="#FFFFFF" font-family="Impact, 'Arial Black', sans-serif" font-size="66" font-weight="900" letter-spacing="5">MICKEY <tspan fill="#38BDF8">17</tspan></text>
+            <line x1="4" y1="100" x2="380" y2="100" stroke="#38BDF8" stroke-width="2" opacity="0.8" />
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q117322466", StringComparison.OrdinalIgnoreCase))
+{
+    @* Exhuma: Quật Mộ Trùng Ma (2024) — Occult Crimson-Ivory Ritual Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 490 118" role="presentation" focusable="false">
+            <text x="4" y="64" fill="#F8FAFC" font-family="Georgia, 'Times New Roman', serif" font-size="56" font-weight="900" letter-spacing="8">EXHUMA</text>
+            <line x1="4" y1="78" x2="415" y2="78" stroke="#DC2626" stroke-width="2.4" opacity="0.92" />
+            <text x="4" y="104" fill="#FCA5A5" font-family="'Be Vietnam Pro', sans-serif" font-size="18.5" font-weight="800" letter-spacing="5">QUẬT MỘ TRÙNG MA</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q136652736", StringComparison.OrdinalIgnoreCase))
+{
+    @* Thám Tử Kiên: Kỳ Án Không Đầu (2025) — Period Noir Gold-Crimson Mystery Crest *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 500 118" role="presentation" focusable="false">
+            <text x="4" y="24" fill="#FCD34D" font-family="'Be Vietnam Pro', sans-serif" font-size="12" font-weight="800" letter-spacing="4.5">VICTOR VŨ • TRINH THÁM CỔ TRANG</text>
+            <text x="4" y="74" fill="#FDE68A" font-family="'Be Vietnam Pro', Georgia, serif" font-size="48" font-weight="900" letter-spacing="3.5">THÁM TỬ KIÊN</text>
+            <line x1="4" y1="87" x2="430" y2="87" stroke="#DC2626" stroke-width="2.2" opacity="0.9" />
+            <text x="4" y="110" fill="#FFFFFF" font-family="'Be Vietnam Pro', sans-serif" font-size="17" font-weight="800" letter-spacing="4.8">KỲ ÁN KHÔNG ĐẦU</text>
+        </svg>
+    </span>
+}
+else if (string.Equals(qid, "Q113877606", StringComparison.OrdinalIgnoreCase))
+{
+    @* Inside Out 2 / Những Mảnh Ghép Cảm Xúc 2 (2024) — Vibrant Pixar Joy-Amber & Anxiety-Orange Lockup *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant" aria-hidden="true">
+        <svg class="bgp-title-treatment__svg" viewBox="0 0 500 118" role="presentation" focusable="false">
+            <defs>
+                <linearGradient id="@(uid)-io2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#FDE047" />
+                    <stop offset="50%" stop-color="#FB923C" />
+                    <stop offset="100%" stop-color="#38BDF8" />
+                </linearGradient>
+            </defs>
+            <text x="4" y="66" fill="url(#@(uid)-io2)" font-family="'Be Vietnam Pro', Impact, sans-serif" font-size="52" font-weight="900" letter-spacing="3">INSIDE OUT 2</text>
+            <text x="4" y="102" fill="#FFFFFF" font-family="'Be Vietnam Pro', sans-serif" font-size="18.5" font-weight="800" letter-spacing="3.2">NHỮNG MẢNH GHÉP CẢM XÚC 2</text>
+        </svg>
+    </span>
+}
+else
+{
+    @* Stylized Theatrical Display Lockup Fallback for Dynamic / Custom Catalog Films *@
+    <span class="bgp-title-treatment bgp-title-treatment--@variant bgp-title-treatment--display" aria-hidden="true">
+        <span class="bgp-title-treatment__kicker">BETA CINEMA FEATURE</span>
+        <span class="bgp-title-treatment__wordmark">@rawTitle</span>
+    </span>
+}

@@ -143,7 +143,7 @@ test.describe('UI-P4: Multi-Cue Auditorium Seat Map & Full 2D Keyboard Accessibi
 
       await page.goto(`/showtimes/${activeShowtimeId}/seats`, { waitUntil: 'networkidle' });
 
-      // 1. Zero-Bootstrap isolation & obsidian canvas (#0A0A0C -> rgb(10, 10, 12))
+      // 1. Zero-Bootstrap isolation & Netflix dark canvas (#141414 -> rgb(20, 20, 20))
       const shellCheck = await page.evaluate(() => ({
         bg: window.getComputedStyle(document.body).backgroundColor,
         hasBootstrapCss: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some((l) =>
@@ -156,7 +156,7 @@ test.describe('UI-P4: Multi-Cue Auditorium Seat Map & Full 2D Keyboard Accessibi
           (s.getAttribute('src') || '').includes('jquery')
         ),
       }));
-      expect(shellCheck.bg).toBe('rgb(10, 10, 12)');
+      expect(shellCheck.bg).toBe('rgb(20, 20, 20)');
       expect(shellCheck.hasBootstrapCss).toBe(false);
       expect(shellCheck.hasBootstrapJs).toBe(false);
       expect(shellCheck.hasJQuery).toBe(false);

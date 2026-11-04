@@ -14,6 +14,7 @@ public interface ICatalogService
     Task<MovieDetailDto?> GetMovieDetailAsync(long movieId, CancellationToken ct = default);
     Task<MovieQuickPreviewDto?> GetMovieQuickPreviewAsync(long movieId, CancellationToken ct = default);
     Task<IReadOnlyDictionary<long, MovieQuickPreviewDto>> GetMoviesQuickPreviewMapAsync(IEnumerable<long> movieIds, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<long, IReadOnlyList<MovieCastMemberDto>>> GetMoviesCastMapAsync(IEnumerable<long> movieIds, CancellationToken ct = default);
     Task<IReadOnlyList<ShowtimeDto>> GetMovieShowtimesAsync(long movieId, CancellationToken ct = default);
     Task<ShowtimeDetailDto?> GetShowtimeDetailAsync(long showtimeId, CancellationToken ct = default);
     Task<SeatMapDto?> GetShowtimeSeatMapAsync(long showtimeId, CancellationToken ct = default);
@@ -65,8 +66,7 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
         var scaleText = scaleMax.Value % 1m == 0m
             ? ((int)scaleMax.Value).ToString(CultureInfo.InvariantCulture)
             : scaleMax.Value.ToString("0.0", CultureInfo.InvariantCulture);
-        var votesText = voteCount.Value.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"));
-        var displayText = $"{normalizedSource} {scoreText}/{scaleText} ({votesText} lượt)";
+        var displayText = $"{normalizedSource} {scoreText}/{scaleText}";
 
         return new MovieRatingDto(
             source.Trim().ToUpperInvariant(),
@@ -428,6 +428,31 @@ public sealed class CatalogService(BetaDbContext db, ISystemClock clock) : ICata
                 NextShowtimes: chips,
                 Rating: BuildRatingDto(m.RatingSource, m.RatingValue, m.RatingScaleMax, m.RatingVoteCount, m.RatingFetchedUtc),
                 Artwork: BuildArtworkDto(m));
+        }
+
+        return dict;
+    }
+
+    public async Task<IReadOnlyDictionary<long, IReadOnlyList<MovieCastMemberDto>>> GetMoviesCastMapAsync(
+        IEnumerable<long> movieIds,
+        CancellationToken ct = default)
+    {
+        var ids = movieIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<long, IReadOnlyList<MovieCastMemberDto>>();
+        }
+
+        var rows = await db.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.MovieId) && m.Status == "PUBLISHED")
+            .Select(m => new { m.MovieId, m.CastJson })
+            .ToListAsync(ct);
+
+        var dict = new Dictionary<long, IReadOnlyList<MovieCastMemberDto>>(rows.Count);
+        foreach (var row in rows)
+        {
+            dict[row.MovieId] = ParseCastList(row.CastJson);
         }
 
         return dict;

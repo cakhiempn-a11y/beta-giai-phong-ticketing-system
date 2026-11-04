@@ -26,29 +26,35 @@ public sealed class HomeController(ICatalogService catalogService) : Controller
         var upcomingShowtimes = await catalogService.GetUpcomingShowtimesAsync(8, ct);
         var previewMap = await catalogService.GetMoviesQuickPreviewMapAsync(movies.Select(m => m.MovieId), ct);
 
-        // Deterministic Grounded Hero Movie Selection:
-        // 1. Prefer Hero-eligible published movies (verified BackdropUrl + PosterUrl + Synopsis) that have upcoming showtimes,
+        // Deterministic Grounded Billboard Carousel Selection (up to 6 Hero-eligible works for 16:9 Thumbnail Strip):
+        // 1. Prefer Hero-eligible published movies (verified BackdropUrl + PosterUrl + Synopsis) with upcoming showtimes,
         //    ranking movies with an official trailer and rich multi-slot schedule first.
-        // 2. Fallback to the first Hero-eligible published movie.
-        // 3. Movies lacking real backdrop/poster/synopsis (e.g. PENDING_TMDB_API_KEY) are strictly excluded from Hero.
-        var heroMovie = movies
-            .Where(m => m.IsHeroEligible && m.UpcomingShowtimesCount > 0)
-            .OrderByDescending(m => !string.IsNullOrWhiteSpace(m.OfficialTrailerYoutubeId) ? 1 : 0)
-            .ThenByDescending(m => m.UpcomingShowtimesCount)
-            .FirstOrDefault()
-            ?? movies.FirstOrDefault(m => m.IsHeroEligible);
+        // 2. Fallback to remaining Hero-eligible published movies.
+        // 3. Movies lacking real backdrop/poster/synopsis (e.g. PENDING_TMDB_API_KEY) are strictly excluded from Billboard.
+        const int MaxBillboardSlides = 6;
 
-        IReadOnlyList<MovieCastMemberDto> heroCast = [];
-        IReadOnlyList<QuickPreviewShowtimeChipDto> heroNextShowtimes = [];
-        if (heroMovie is not null)
-        {
-            var heroDetail = await catalogService.GetMovieDetailAsync(heroMovie.MovieId, ct);
-            heroCast = heroDetail?.Cast ?? [];
-            if (previewMap.TryGetValue(heroMovie.MovieId, out var heroPreview))
+        var billboardMovies = movies
+            .Where(m => m.IsHeroEligible)
+            .OrderByDescending(m => m.UpcomingShowtimesCount > 0 ? 1 : 0)
+            .ThenByDescending(m => !string.IsNullOrWhiteSpace(m.OfficialTrailerYoutubeId) ? 1 : 0)
+            .ThenByDescending(m => m.ReleaseYear ?? 0)
+            .ThenByDescending(m => m.UpcomingShowtimesCount)
+            .ThenByDescending(m => m.Rating?.Score ?? 0m)
+            .Take(MaxBillboardSlides)
+            .ToList();
+
+        var castMap = await catalogService.GetMoviesCastMapAsync(billboardMovies.Select(m => m.MovieId), ct);
+
+        var billboardSlides = billboardMovies
+            .Select(m =>
             {
-                heroNextShowtimes = heroPreview.NextShowtimes;
-            }
-        }
+                var cast = castMap.TryGetValue(m.MovieId, out var c) ? c : [];
+                var nextSlots = previewMap.TryGetValue(m.MovieId, out var p) ? p.NextShowtimes : [];
+                return new HomeBillboardSlideViewModel(m, cast, nextSlots);
+            })
+            .ToList();
+
+        var primarySlide = billboardSlides.FirstOrDefault();
 
         var onSaleMovies = movies
             .Where(m => m.UpcomingShowtimesCount > 0)
@@ -61,14 +67,23 @@ public sealed class HomeController(ICatalogService catalogService) : Controller
             })
             .ToList();
 
+        var acclaimedMovies = movies
+            .Where(m => m.Artwork?.HasVerifiedPoster == true && m.Rating != null)
+            .OrderByDescending(m => m.Rating!.Score)
+            .ThenByDescending(m => m.UpcomingShowtimesCount)
+            .Take(8)
+            .ToList();
+
         var stringKeyMap = previewMap.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value);
 
         var vm = new HomeViewModel
         {
-            HeroMovie = heroMovie,
-            HeroCast = heroCast,
-            HeroNextShowtimes = heroNextShowtimes,
+            HeroMovie = primarySlide?.Movie,
+            HeroCast = primarySlide?.Cast ?? [],
+            HeroNextShowtimes = primarySlide?.NextShowtimes ?? [],
+            BillboardSlides = billboardSlides,
             OnSaleMovies = onSaleMovies,
+            AcclaimedMovies = acclaimedMovies,
             FeaturedMovies = movies,
             UpcomingShowtimes = upcomingShowtimes,
             QuickPreviewJson = JsonSerializer.Serialize(stringKeyMap, PreviewJsonOptions)

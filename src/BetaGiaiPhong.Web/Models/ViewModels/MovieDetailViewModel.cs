@@ -28,8 +28,10 @@ public sealed class ShowtimeDateGroupViewModel
 public sealed class MovieDetailViewModel
 {
     public MovieDetailDto Movie { get; set; } = null!;
+    public MovieSummaryDto? TitleSummary { get; set; }
     public IReadOnlyDictionary<string, List<ShowtimeDto>> ShowtimesByDate { get; set; } = new Dictionary<string, List<ShowtimeDto>>();
     public IReadOnlyList<ShowtimeDateGroupViewModel> DateGroups { get; set; } = [];
     public string SelectedDateKey { get; set; } = string.Empty;
     public IReadOnlyList<MovieSummaryDto> SuggestedOnSaleMovies { get; set; } = [];
+    public IReadOnlyList<MovieSummaryDto> RankedRecommendations { get; set; } = [];
 }

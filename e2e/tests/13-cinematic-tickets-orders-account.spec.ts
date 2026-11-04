@@ -44,7 +44,7 @@ async function assertZeroBootstrapAndNoBootstrapBlue(page: Page) {
     };
   });
 
-  expect(audit.bodyBg).toBe('rgb(10, 10, 12)');
+  expect(audit.bodyBg).toBe('rgb(20, 20, 20)');
   expect(audit.hasBootstrapCss).toBe(false);
   expect(audit.hasDarkCompatCss).toBe(false);
   expect(audit.hasBootstrapJs).toBe(false);
@@ -160,7 +160,8 @@ test.describe('UI-P6: High-Contrast QR Boarding Passes, Order History & Cinema I
       expect(await dossierPoster.getAttribute('srcset')).toContain('342w');
 
       const mainText = await custPage.locator('main').innerText();
-      expect(mainText).toContain('UTC+7');
+      expect(mainText).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+      expect(mainText).not.toContain('Chuẩn quang học cổng soát vé Beta Giải Phóng');
       expect(mainText).not.toMatch(/\d{2}:\d{2}\s+UTC\b/);
 
       // 3. Verify 2 perforated boarding pass cards in ISSUED state + Hard-Locked #FFFFFF Optical QR Quiet Zone
@@ -224,7 +225,7 @@ test.describe('UI-P6: High-Contrast QR Boarding Passes, Order History & Cinema I
       await expect(custPage.locator('[data-testid="ticket-status-used"]')).toHaveCount(1);
       await expect(custPage.locator('[data-testid="ticket-status-used"]')).toContainText('ĐÃ SOÁT VÉ (USED)');
       await expect(custPage.locator('[data-testid="ticket-used-timestamp"]')).toHaveCount(1);
-      await expect(custPage.locator('[data-testid="ticket-used-timestamp"]')).toContainText('UTC+7');
+      await expect(custPage.locator('[data-testid="ticket-used-timestamp"]')).toContainText(/\d{2}\/\d{2}\/\d{4}/);
       await expect(custPage.locator('[data-testid="ticket-status-issued"]')).toHaveCount(1);
 
       // 6. Emulate @media print and verify clean black-on-white boarding pass layout
@@ -314,12 +315,12 @@ test.describe('UI-P6: High-Contrast QR Boarding Passes, Order History & Cinema I
       const cards = cust1Page.locator('[data-testid="order-list-card"]');
       expect(await cards.count()).toBeGreaterThanOrEqual(2);
 
-      // Verify poster, UTC+7 timestamp, seat codes, and Xem vé QR CTA on PAID order card
+      // Verify poster, formatted date/time, seat codes, and Xem vé QR CTA on PAID order card
       const paidCard = cust1Page.locator('[data-testid="order-list-card"][data-order-status="PAID"]').first();
       await expect(paidCard).toBeVisible();
       const cardPoster = paidCard.locator('img.bgp-order-card__poster');
       expect(await cardPoster.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
-      await expect(paidCard).toContainText('UTC+7');
+      await expect(paidCard).toContainText(/\d{2}\/\d{2}\/\d{4}/);
       await expect(paidCard.locator('[data-testid="order-card-tickets-cta"]')).toBeVisible();
 
       // 2. Filter ?status=paid
@@ -421,12 +422,12 @@ test.describe('UI-P6: High-Contrast QR Boarding Passes, Order History & Cinema I
       ]);
       await expect(page).toHaveURL(/\/orders$/);
 
-      // 6. Visit /account/profile -> Zero-Bootstrap, role chip, UTC+7 creation time, paid stats, and POST logout
+      // 6. Visit /account/profile -> Zero-Bootstrap, role chip, creation time, paid stats, and POST logout
       await page.goto('/account/profile', { waitUntil: 'networkidle' });
       await assertZeroBootstrapAndNoBootstrapBlue(page);
       await expect(page.locator('[data-testid="profile-page"]')).toBeVisible();
       await expect(page.locator('body')).toContainText('customer1@demo.invalid');
-      await expect(page.locator('body')).toContainText('UTC+7');
+      await expect(page.locator('body')).toContainText(/\d{2}\/\d{2}\/\d{4}/);
       await expect(page.locator('[data-testid="profile-role-chip"]')).toContainText('CUSTOMER');
       await expect(page.locator('body')).toContainText('đơn PAID');
 

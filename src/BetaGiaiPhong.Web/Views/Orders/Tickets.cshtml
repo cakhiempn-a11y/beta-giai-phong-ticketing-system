@@ -110,10 +110,6 @@
                     {
                         <span class="bgp-age-badge bgp-age-badge--@ageCodeLower">@Model.MovieAgeLabel</span>
                     }
-                    else
-                    {
-                        <span class="bgp-badge bgp-badge--neutral">Chưa có phân loại tại VN</span>
-                    }
 
                     @if (Model.MovieRating is not null)
                     {
@@ -155,7 +151,7 @@
                         Ngày chiếu: <strong>@(string.IsNullOrWhiteSpace(Model.StartVietnamDateText) ? Model.FormattedStartUtc : Model.StartVietnamDateText)</strong>
                     </span>
                     <span>
-                        Khung giờ (UTC+7):
+                        Khung giờ:
                         <strong class="bgp-tk-mono">
                             @if (!string.IsNullOrWhiteSpace(Model.StartVietnamTimeOnlyText) && !string.IsNullOrWhiteSpace(Model.EndVietnamTimeOnlyText))
                             {
@@ -177,7 +173,7 @@
                     @if (!string.IsNullOrWhiteSpace(Model.PaidVietnamText))
                     {
                         <span>
-                            Xác nhận lúc: <strong class="bgp-tk-mono">@Model.PaidVietnamText (UTC+7)</strong>
+                            Xác nhận lúc: <strong class="bgp-tk-mono">@Model.PaidVietnamText</strong>
                         </span>
                     }
                 </div>
@@ -207,14 +203,6 @@
         </div>
     </section>
 
-    <!-- Optical Scanning Instruction Banner -->
-    <div class="bgp-tk-scan-guide" role="note" data-testid="qr-optical-quiet-zone-note">
-        <span>
-            <strong>Chuẩn quang học cổng soát vé Beta Giải Phóng:</strong> Mỗi ghế có một mã QR độc lập được khóa cứng trên nền trắng tinh <strong>#FFFFFF</strong> kèm viền tĩnh &ge; <code>12px</code> (không áp bộ lọc tối) để máy quét đọc tức thì ở mọi độ sáng màn hình.
-        </span>
-        <span class="bgp-tk-mono">Múi giờ hiển thị: UTC+7</span>
-    </div>
-
     <!-- 3. Perforated Cinema Boarding Pass Grid -->
     <div class="bgp-tickets-grid" data-testid="tickets-grid">
         @foreach (var ticket in Model.Tickets)
@@ -222,8 +210,8 @@
             bool isUsed = string.Equals(ticket.Status, "USED", StringComparison.OrdinalIgnoreCase);
             bool isVip = string.Equals(ticket.SeatType, "VIP", StringComparison.OrdinalIgnoreCase);
             string issuedDisplay = !string.IsNullOrWhiteSpace(ticket.IssuedVietnamText)
-                ? $"{ticket.IssuedVietnamText} (UTC+7)"
-                : $"{ticket.IssuedUtc:dd/MM/yyyy HH:mm} UTC";
+                ? ticket.IssuedVietnamText
+                : $"{ticket.IssuedUtc:dd/MM/yyyy HH:mm}";
 
             <article class="ticket-card @(isUsed ? "ticket-card--used" : "ticket-card--issued")"
                      data-ticket-status="@ticket.Status"
@@ -285,7 +273,7 @@
                             </div>
                             <div class="bgp-ticket-kv">
                                 <span class="bgp-ticket-kv__label">Suất chiếu &amp; Khán phòng</span>
-                                <span class="bgp-ticket-kv__val">@ticket.RoomName &bull; @ticket.FormattedStartUtc (UTC+7)</span>
+                                <span class="bgp-ticket-kv__val">@ticket.RoomName &bull; @ticket.FormattedStartUtc</span>
                             </div>
                             <div class="bgp-ticket-kv">
                                 <span class="bgp-ticket-kv__label">Thời điểm cấp vé</span>
@@ -298,7 +286,7 @@
                                     <span class="bgp-ticket-kv__label">Thời điểm quét qua cổng</span>
                                     <span class="bgp-ticket-kv__val bgp-ticket-kv__val--used bgp-tk-mono">
                                         @(!string.IsNullOrWhiteSpace(ticket.UsedVietnamText)
-                                            ? $"{ticket.UsedVietnamText} (UTC+7)"
+                                            ? ticket.UsedVietnamText
                                             : "Đã ghi nhận lượt soát vé")
                                     </span>
                                 </div>

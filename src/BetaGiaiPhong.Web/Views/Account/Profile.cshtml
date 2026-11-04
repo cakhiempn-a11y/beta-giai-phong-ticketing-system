@@ -50,7 +50,7 @@
                 <div class="bgp-profile-stat">
                     <span class="bgp-profile-stat__label">Thời điểm khởi tạo</span>
                     <span class="bgp-profile-stat__val bgp-profile-stat__val--mono">
-                        @(string.IsNullOrWhiteSpace(Model.CreatedVietnamText) ? "Đang hoạt động" : $"{Model.CreatedVietnamText} (UTC+7)")
+                        @(string.IsNullOrWhiteSpace(Model.CreatedVietnamText) ? "Đang hoạt động" : Model.CreatedVietnamText)
                     </span>
                 </div>
 

@@ -23,21 +23,22 @@ public sealed class MovieContentSyncTests(TestDatabaseFixture fixture)
     }
 
     [Fact]
-    public async Task TC_SYNC_01_VerifiedShowcaseCatalog_SeedsAll11RealFilmsWithZeroFictionalEntries()
+    public async Task TC_SYNC_01_VerifiedShowcaseCatalog_SeedsAll31RealFilmsWithZeroFictionalEntries()
     {
         await using var db = await fixture.CreateDbContextAsync();
 
         var fictionalExists = await db.Movies.AnyAsync(m => m.Title.Contains("Phim mo phong"));
         Assert.False(fictionalExists);
 
-        var verifiedQids = MovieContentSyncService.VerifiedShowcaseCatalog.Select(x => x.WikidataQid).ToList();
-        Assert.Equal(11, verifiedQids.Count);
+        var verifiedImdbIds = MovieContentSyncService.VerifiedShowcaseCatalog.Select(x => x.ImdbId).ToList();
+        Assert.Equal(31, verifiedImdbIds.Count);
+        Assert.Equal(31, verifiedImdbIds.Distinct(StringComparer.OrdinalIgnoreCase).Count());
 
         var seededMovies = await db.Movies
-            .Where(m => m.WikidataQid != null && verifiedQids.Contains(m.WikidataQid))
+            .Where(m => m.ImdbId != null && verifiedImdbIds.Contains(m.ImdbId))
             .ToListAsync();
 
-        Assert.Equal(11, seededMovies.Count);
+        Assert.Equal(31, seededMovies.Count);
 
         var charade = seededMovies.Single(m => m.WikidataQid == "Q496266");
         Assert.Equal("Mê trong mê", charade.Title);
@@ -51,6 +52,28 @@ public sealed class MovieContentSyncTests(TestDatabaseFixture fixture)
         Assert.Equal("WIKIMEDIA_COMMONS", charade.ArtworkSource);
         Assert.True(charade.IsHeroEligible);
         Assert.Null(charade.AgeLabel);
+
+        var diaDao = seededMovies.Single(m => m.WikidataQid == "Q124694260");
+        Assert.Equal("Địa Đạo: Mặt Trời Trong Bóng Tối", diaDao.Title);
+        Assert.Equal((short)2025, diaDao.ReleaseYear);
+        Assert.Equal("T16", diaDao.AgeLabel);
+        Assert.Equal("TMDB", diaDao.ArtworkSource);
+        Assert.True(diaDao.IsHeroEligible);
+
+        var duneTwo = seededMovies.Single(m => m.WikidataQid == "Q109228991");
+        Assert.Equal("Dune: Hành Tinh Cát — Phần Hai", duneTwo.Title);
+        Assert.Equal((short)2024, duneTwo.ReleaseYear);
+        Assert.Equal(8.5m, duneTwo.RatingValue);
+        Assert.True(duneTwo.IsHeroEligible);
+
+        var latMat7 = seededMovies.Single(m => m.WikidataQid == "Q124984311");
+        Assert.Equal("K", latMat7.AgeLabel);
+        Assert.Equal("VN", latMat7.AgeLabelMarket);
+
+        var latMat8 = seededMovies.Single(m => m.ImdbId == "tt36808524");
+        Assert.Equal("Lật Mặt 8: Vòng Tay Nắng", latMat8.Title);
+        Assert.Equal(1449973, latMat8.TmdbId);
+        Assert.True(latMat8.IsHeroEligible);
 
         var mai = seededMovies.Single(m => m.WikidataQid == "Q124516759");
         Assert.Equal("Mai", mai.Title);

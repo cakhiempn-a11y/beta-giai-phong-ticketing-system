@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loadE2eState } from '../e2e-env';
-import { createRoleSession, loginInBrowser } from './helpers';
+import { createRoleSession, formatVnDateTimeLocal, loginInBrowser } from './helpers';
 
 const VIEWPORTS = [
   { name: 'Desktop', width: 1440, height: 900 },
@@ -43,6 +43,24 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
 
       await loginInBrowser(staffPage, 'staff@demo.invalid', state.demoPassword);
       await loginInBrowser(mgrPage, 'manager@demo.invalid', state.demoPassword);
+
+      // Ensure at least one showtime falls inside the <= 48h gate check-in window when 04 runs standalone
+      await staffPage.goto('/staff/check-in');
+      if ((await staffPage.locator('#showtimeSelect').count()) === 0) {
+        await mgrPage.goto('/management/showtimes/create');
+        const firstMovieVal = (await mgrPage.locator('select[name="MovieId"] option[value]:not([value=""])').first().getAttribute('value'))!;
+        const firstRoomVal = (await mgrPage.locator('select[name="RoomId"] option[value]:not([value=""])').first().getAttribute('value'))!;
+        await mgrPage.selectOption('select[name="MovieId"]', firstMovieVal);
+        await mgrPage.selectOption('select[name="RoomId"]', firstRoomVal);
+        await mgrPage.fill('input[name="StartTimeVn"]', formatVnDateTimeLocal(new Date(Date.now() + 2 * 3600_000)));
+        await mgrPage.fill('input[name="BufferMinutes"]', '15');
+        await mgrPage.fill('input[name="Prices[STANDARD]"]', '75000');
+        await mgrPage.fill('input[name="Prices[VIP]"]', '95000');
+        await Promise.all([
+          mgrPage.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+          mgrPage.click('main button[type="submit"]'),
+        ]);
+      }
 
       // Find an active movie, showtime, and create or find a PAID order for Customer 1 so we can inspect all 9 pages across viewports
       await custPage.goto('/movies?filter=has-showtimes');
@@ -173,20 +191,32 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
       await page.waitForLoadState('networkidle');
 
       const moviesBadges = await page.evaluate(() => {
+        function resolveEffectiveBg(el: HTMLElement): string {
+          let curr: HTMLElement | null = el;
+          while (curr) {
+            const bg = window.getComputedStyle(curr).backgroundColor;
+            if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+              return bg;
+            }
+            curr = curr.parentElement;
+          }
+          return 'rgb(20, 20, 20)';
+        }
+
         const warning = document.querySelector('.bgp-age-badge--t13, .bgp-age-badge--t16') as HTMLElement;
-        const rating = document.querySelector('.bgp-catalog-badge-rating') as HTMLElement;
+        const rating = document.querySelector('.bgp-catalog-badge-rating, .bgp-catalog-inline-rating') as HTMLElement;
         return {
           hasWarning: !!warning,
           warningColor: warning ? window.getComputedStyle(warning).color : '',
-          warningBg: warning ? window.getComputedStyle(warning).backgroundColor : '',
+          warningBg: warning ? resolveEffectiveBg(warning) : '',
           hasRating: !!rating,
           ratingColor: rating ? window.getComputedStyle(rating).color : '',
-          ratingBg: rating ? window.getComputedStyle(rating).backgroundColor : '',
+          ratingBg: rating ? resolveEffectiveBg(rating) : '',
         };
       });
 
       expect(moviesBadges.hasWarning, 'Expected VN age badge (.bgp-age-badge--t13) on /movies').toBe(true);
-      expect(moviesBadges.hasRating, 'Expected grounded rating badge (.bgp-catalog-badge-rating) on /movies').toBe(true);
+      expect(moviesBadges.hasRating, 'Expected rating indicator (.bgp-catalog-inline-rating) on /movies').toBe(true);
 
       const warningRatio = calculateContrast(moviesBadges.warningColor, moviesBadges.warningBg);
       const ratingRatio = calculateContrast(moviesBadges.ratingColor, moviesBadges.ratingBg);
@@ -207,7 +237,7 @@ test.describe('BE-05B Phase 8: Responsive Viewports & Accessibility E2E Checks',
             }
             curr = curr.parentElement;
           }
-          return 'rgb(10, 10, 12)';
+          return 'rgb(20, 20, 20)';
         }
 
         const lightBadgeInCard = document.querySelector('.bgp-upcoming-room-pill, .bgp-badge--imdb-solid') as HTMLElement;

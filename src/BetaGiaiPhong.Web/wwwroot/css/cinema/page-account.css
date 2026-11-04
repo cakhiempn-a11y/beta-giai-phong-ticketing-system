@@ -13,18 +13,19 @@
   justify-content: center;
   padding: 40px var(--bgp-gutter-x) 64px;
   background:
-    radial-gradient(ellipse 68% 54% at 50% 0%, rgba(229, 9, 20, 0.14) 0%, rgba(10, 10, 12, 0) 72%),
-    var(--bgp-bg-canvas);
+    radial-gradient(ellipse 75% 58% at 50% 0%, rgba(229, 9, 20, 0.16) 0%, rgba(20, 20, 20, 0) 68%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.56) 0%, #141414 100%);
 }
 
+/* Figma Node 76:1771 / 212:21962: Authentic Netflix 2024 Sign-In Modal Box (450px, 4px radius, rgba(0,0,0,0.76)) */
 .bgp-auth-card {
   width: 100%;
-  max-width: 460px;
-  padding: 34px 32px 30px;
-  border-radius: 16px;
-  background: rgba(20, 20, 26, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.72);
+  max-width: 450px;
+  padding: 48px 52px 40px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.82);
 }
 
 .bgp-auth-head {
@@ -35,12 +36,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
-  border-radius: var(--bgp-radius-xs);
+  padding: 3px 9px;
+  border-radius: 2px;
   background: rgba(229, 9, 20, 0.16);
   border: 1px solid rgba(229, 9, 20, 0.42);
   color: #FCA5A5;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -48,10 +49,11 @@
 }
 
 .bgp-auth-head__title {
-  margin: 0 0 6px;
-  font-size: 1.75rem;
+  margin: 0 0 8px;
+  font-size: 2rem;
   font-weight: 800;
-  letter-spacing: -0.025em;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   color: #FFFFFF;
 }
 
@@ -59,7 +61,7 @@
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--bgp-text-secondary);
+  color: #B3B3B3;
 }
 
 /* ReturnUrl Preservation Notice */
@@ -93,7 +95,7 @@
   margin-bottom: 18px;
 }
 
-/* Form Controls — WCAG Non-Text Border Contrast >= 3:1 (#7C7C8A on #0E0E13 = 4.68:1) */
+/* Form Controls — WCAG Non-Text Border Contrast >= 3:1 (#808080 on #161616 = 4.58:1) */
 .bgp-auth-form {
   display: flex;
   flex-direction: column;
@@ -107,38 +109,38 @@
 }
 
 .bgp-auth-label {
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 700;
-  color: #F4F4F6;
+  color: #E5E5E5;
 }
 
 .bgp-auth-input {
   width: 100%;
-  height: 46px;
-  padding: 0 14px;
-  border-radius: var(--bgp-radius-sm);
-  background-color: #0E0E13;
-  border: 1.5px solid #7C7C8A;
-  color: #F5F5F7;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 4px;
+  background-color: #161616;
+  border: 1px solid #808080;
+  color: #FFFFFF;
   font-family: var(--bgp-font-sans);
-  font-size: 0.9375rem;
+  font-size: 0.96rem;
   transition: border-color var(--bgp-dur-fast) var(--bgp-ease-out),
               box-shadow var(--bgp-dur-fast) var(--bgp-ease-out);
 }
 
 .bgp-auth-input::placeholder {
-  color: #71717A;
+  color: #8C8C8C;
 }
 
 .bgp-auth-input:hover {
-  border-color: #A1A1AA;
+  border-color: #B3B3B3;
 }
 
 .bgp-auth-input:focus,
 .bgp-auth-input:focus-visible {
   outline: none;
   border-color: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.45);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
 }
 
 .bgp-auth-input[aria-invalid="true"] {
@@ -183,28 +185,27 @@
   user-select: none;
 }
 
-/* Submit CTA */
+/* Submit CTA — Flat Netflix #E50914 -> #C11119 (Figma Node 76:1771) */
 .bgp-auth-submit {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 20px;
-  border-radius: var(--bgp-radius-sm);
-  border: 1px solid #F40612;
-  background: linear-gradient(180deg, #F40612 0%, #C80710 100%);
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  border: 1px solid #E50914;
+  background: #E50914;
   color: #FFFFFF;
   font-family: var(--bgp-font-sans);
-  font-size: 0.96rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(229, 9, 20, 0.36);
-  transition: transform var(--bgp-dur-fast) var(--bgp-ease-out),
-              box-shadow var(--bgp-dur-fast) var(--bgp-ease-out);
+  transition: background-color var(--bgp-dur-fast) ease,
+              border-color var(--bgp-dur-fast) ease;
   margin-top: 4px;
 }
 
 .bgp-auth-submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(229, 9, 20, 0.5);
+  background: #C11119;
+  border-color: #C11119;
 }
 
 /* Development-Only Demo Account Quick-Picker */
@@ -296,9 +297,9 @@
 }
 
 .bgp-profile-card {
-  border-radius: 16px;
-  background: var(--bgp-bg-surface-1);
-  border: 1px solid var(--bgp-border-default);
+  border-radius: 6px;
+  background: #181818;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: var(--bgp-shadow-md);
   overflow: hidden;
 }
@@ -311,8 +312,8 @@
   gap: 18px;
   padding: 28px 28px 24px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(229, 9, 20, 0.22) 0%, rgba(20, 20, 26, 0) 60%),
-    linear-gradient(180deg, #191922 0%, #13131A 100%);
+    radial-gradient(circle at 0% 0%, rgba(229, 9, 20, 0.2) 0%, rgba(24, 24, 24, 0) 60%),
+    linear-gradient(180deg, #232323 0%, #181818 100%);
   border-bottom: 1px solid var(--bgp-border-subtle);
 }
 
@@ -326,9 +327,9 @@
 .bgp-profile-avatar {
   width: 68px;
   height: 68px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #E50914 0%, #99060D 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  background: #E50914;
+  border: 0;
   color: #FFFFFF;
   font-size: 1.75rem;
   font-weight: 800;
@@ -336,7 +337,6 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 10px 24px rgba(229, 9, 20, 0.35);
 }
 
 .bgp-profile-identity__body {

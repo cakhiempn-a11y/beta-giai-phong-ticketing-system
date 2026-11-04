@@ -214,10 +214,7 @@
                     </div>
                     <h1 id="auditorium-heading" class="bgp-auditorium-title">@sm.MovieTitle</h1>
                     <p class="bgp-auditorium-sub">
-                        Suất chiếu <strong>@sm.StartVietnamText</strong> (UTC+7) &bull;
-                        Điều hướng bàn phím: <kbd class="bgp-kbd">Tab</kbd> vào lưới,
-                        <kbd class="bgp-kbd">&uarr;&darr;&larr;&rarr;</kbd> di chuyển,
-                        <kbd class="bgp-kbd">Space</kbd> / <kbd class="bgp-kbd">Enter</kbd> chọn ghế.
+                        Suất chiếu <strong>@sm.StartVietnamText</strong>
                     </p>
                 </div>
 
@@ -482,7 +479,7 @@
                     <span class="bgp-summary-schedule__val">@sm.RoomName</span>
                 </div>
                 <div class="bgp-summary-schedule__row">
-                    <span class="bgp-summary-schedule__label">Bắt đầu (VN):</span>
+                    <span class="bgp-summary-schedule__label">Giờ chiếu:</span>
                     <span class="bgp-summary-schedule__val">@sm.StartVietnamText</span>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(sm.EndVietnamTimeOnlyText))
@@ -490,7 +487,7 @@
                     <div class="bgp-summary-schedule__row">
                         <span class="bgp-summary-schedule__label">Kết thúc dự kiến:</span>
                         <span class="bgp-summary-schedule__val">
-                            @sm.EndVietnamTimeOnlyText (UTC+7)
+                            @sm.EndVietnamTimeOnlyText
                             @if (sm.CrossesMidnight)
                             {
                                 <span class="bgp-midnight-tag" title="Suất chiếu kết thúc sang ngày kế tiếp">+1 ngày</span>
@@ -543,7 +540,7 @@
                 </div>
 
                 <div class="bgp-summary-subtotal">
-                    <span class="bgp-summary-subtotal__label">Tạm tính (VND nguyên):</span>
+                    <span class="bgp-summary-subtotal__label">Tạm tính:</span>
                     <strong id="selectedTotal" class="bgp-summary-total">0 đ</strong>
                 </div>
 

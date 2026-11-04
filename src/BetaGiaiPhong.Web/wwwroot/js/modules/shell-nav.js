@@ -44,21 +44,34 @@
     });
 
     input.addEventListener('blur', () => {
-      if (!input.value.trim()) {
+      window.setTimeout(() => {
+        if (!input.value.trim() && document.activeElement !== trigger) {
+          form.classList.remove('is-expanded');
+        }
+      }, 120);
+    });
+
+    input.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Escape' && !input.value.trim()) {
+        input.blur();
         form.classList.remove('is-expanded');
+        trigger.focus();
       }
     });
 
     trigger.addEventListener('click', () => {
+      const isExpanded = form.classList.contains('is-expanded');
       const trimmed = input.value.trim();
-      if (trimmed.length > 0 || document.activeElement === input) {
+      if ((isExpanded || form.hasAttribute('data-drawer-search')) && trimmed.length > 0) {
         if (typeof form.requestSubmit === 'function') {
           form.requestSubmit();
         } else {
           form.submit();
         }
-      } else {
+      } else if (!isExpanded) {
         form.classList.add('is-expanded');
+        window.requestAnimationFrame(() => input.focus());
+      } else {
         input.focus();
       }
     });
@@ -68,22 +81,36 @@
   wireSearchForm('[data-drawer-search]', '[data-drawer-search-trigger]', '[data-drawer-search-input]');
 
   /* -----------------------------------------------------------------------
-   * 3. Accessible User Menu (<details data-user-menu>)
+   * 3. Accessible Header Dropdowns (<details data-notif-menu / data-user-menu>)
    * ----------------------------------------------------------------------- */
-  const userMenu = document.querySelector('[data-user-menu]');
-  if (userMenu) {
-    document.addEventListener('click', (evt) => {
-      if (userMenu.hasAttribute('open') && !userMenu.contains(evt.target)) {
-        userMenu.removeAttribute('open');
-      }
+  const headerMenus = Array.from(document.querySelectorAll('[data-notif-menu], [data-user-menu]'));
+  if (headerMenus.length > 0) {
+    headerMenus.forEach((menu) => {
+      menu.addEventListener('toggle', () => {
+        if (menu.hasAttribute('open')) {
+          headerMenus.forEach((other) => {
+            if (other !== menu && other.hasAttribute('open')) {
+              other.removeAttribute('open');
+            }
+          });
+        }
+      });
+
+      menu.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Escape' && menu.hasAttribute('open')) {
+          menu.removeAttribute('open');
+          const summary = menu.querySelector('summary');
+          if (summary) summary.focus();
+        }
+      });
     });
 
-    userMenu.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Escape' && userMenu.hasAttribute('open')) {
-        userMenu.removeAttribute('open');
-        const summary = userMenu.querySelector('summary');
-        if (summary) summary.focus();
-      }
+    document.addEventListener('click', (evt) => {
+      headerMenus.forEach((menu) => {
+        if (menu.hasAttribute('open') && !menu.contains(evt.target)) {
+          menu.removeAttribute('open');
+        }
+      });
     });
   }
 

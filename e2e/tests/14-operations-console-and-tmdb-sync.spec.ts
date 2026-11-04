@@ -47,7 +47,7 @@ async function assertZeroBootstrapOpsSurface(page: Page, routeLabel: string) {
     };
   });
 
-  expect(audit.bodyBg, `${routeLabel}: body background`).toBe('rgb(11, 11, 14)');
+  expect(audit.bodyBg, `${routeLabel}: body background`).toBe('rgb(17, 17, 17)');
   expect(audit.hasLegacyCompatClass, `${routeLabel}: no bgp-legacy-compat`).toBe(false);
   expect(audit.hasBootstrapCss, `${routeLabel}: zero bootstrap.min.css`).toBe(false);
   expect(audit.hasDarkCompatCss, `${routeLabel}: zero dark-compat.css`).toBe(false);

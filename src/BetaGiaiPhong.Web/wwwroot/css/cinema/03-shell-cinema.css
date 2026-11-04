@@ -32,15 +32,13 @@ header.bgp-cinema-header.bgp-navbar {
 
 header.bgp-cinema-header.bgp-cinema-header--solid,
 header.bgp-cinema-header.bgp-cinema-header--scrolled {
-  background: var(--bgp-bg-header-solid) !important;
-  background-color: rgba(10, 10, 12, 0.95) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--bgp-border-subtle);
+  background: #141414 !important;
+  background-color: rgb(20, 20, 20) !important;
+  border-bottom: 1px solid transparent;
 }
 
 header.bgp-cinema-header.bgp-cinema-header--scrolled {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.62);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
 }
 
 .bgp-cinema-header__inner {
@@ -58,7 +56,7 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
 .bgp-cinema-header__left {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 40px;
   min-width: 0;
 }
 
@@ -67,7 +65,7 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
 .bgp-cinema-header a.bgp-cinema-brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   min-height: var(--bgp-target-min);
   text-decoration: none !important;
   color: #FFFFFF !important;
@@ -78,11 +76,10 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
   background: var(--bgp-brand-red);
   color: #FFFFFF;
   font-weight: 800;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   letter-spacing: 0.08em;
   padding: 4px 8px;
-  border-radius: var(--bgp-radius-xs);
-  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.42);
+  border-radius: 2px;
   line-height: 1.1;
 }
 
@@ -100,7 +97,7 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
   }
 }
 
-/* --- 3. Primary Desktop Navigation (Strictly Consumer-Facing) --- */
+/* --- 3. Primary Desktop Navigation (Figma Node 94:3305 — 14px, #E5E5E5 -> #B3B3B3, Bold White Active) --- */
 .bgp-cinema-nav {
   display: flex;
   align-items: center;
@@ -117,9 +114,9 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
   align-items: center;
   min-height: var(--bgp-target-min);
   padding: 0 2px;
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: rgba(245, 245, 247, 0.78) !important;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #E5E5E5 !important;
   text-decoration: none !important;
   white-space: nowrap;
   transition: color var(--bgp-duration-fast) ease;
@@ -127,123 +124,227 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
 
 .bgp-cinema-nav__link:hover,
 .bgp-cinema-nav__link:focus-visible,
+.bgp-cinema-header a.bgp-cinema-nav__link:hover {
+  color: #B3B3B3 !important;
+}
+
 .bgp-cinema-nav__link.is-active,
 .bgp-cinema-header a.bgp-cinema-nav__link.is-active {
   color: #FFFFFF !important;
-}
-
-.bgp-cinema-nav__link.is-active {
   font-weight: 700;
 }
 
-.bgp-cinema-nav__link.is-active::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 10px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--bgp-brand-red);
-}
-
-/* --- 4. Right Utilities: Search, Academic Pill, Context Switch & User Menu --- */
+/* --- 4. Right Utilities: Netflix Search Icon, Notification Bell, Context Switch & Avatar --- */
 .bgp-cinema-header__right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   flex-shrink: 0;
 }
 
-/* Expandable / Inline Header Search (GET /movies?q=...) */
+/* Netflix Click-to-Expand Header Search (Icon at rest -> Crisp black rectangle on expand) */
 .bgp-header-search {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 10px 0 4px;
-  background: rgba(16, 16, 20, 0.78);
-  border: 1px solid var(--bgp-border-default);
-  border-radius: var(--bgp-radius-xs);
-  width: 228px;
+  gap: 0;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  width: 36px;
+  overflow: hidden;
   transition:
     width var(--bgp-duration-base) var(--bgp-ease-out),
+    padding var(--bgp-duration-fast) ease,
     border-color var(--bgp-duration-fast) ease,
     background-color var(--bgp-duration-fast) ease;
 }
 
 .bgp-header-search:focus-within,
 .bgp-header-search.is-expanded {
-  background: rgba(10, 10, 12, 0.96);
-  border-color: rgba(255, 255, 255, 0.55);
-  width: 264px;
+  gap: 6px;
+  padding: 0 10px 0 4px;
+  background: rgba(0, 0, 0, 0.88);
+  border-color: rgba(255, 255, 255, 0.88);
+  width: 248px;
 }
 
 @media (min-width: 992px) and (max-width: 1239.98px) {
-  .bgp-header-search {
-    width: 170px;
-  }
   .bgp-header-search:focus-within,
   .bgp-header-search.is-expanded {
-    width: 205px;
+    width: 204px;
   }
 }
 
 .bgp-header-search__btn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: 0;
-  color: var(--bgp-text-secondary);
+  color: #FFFFFF;
   cursor: pointer;
   padding: 0;
   border-radius: var(--bgp-radius-xs);
   flex-shrink: 0;
+  transition: color var(--bgp-duration-fast) ease, transform var(--bgp-duration-fast) ease;
 }
 
 .bgp-header-search__btn:hover {
-  color: #FFFFFF;
+  color: #E5E5E5;
 }
 
 .bgp-header-search__input {
-  width: 100%;
+  width: 0;
   min-width: 0;
+  opacity: 0;
+  pointer-events: none;
   background: transparent !important;
   border: 0 !important;
-  color: var(--bgp-text-primary) !important;
+  color: #FFFFFF !important;
   font-family: var(--bgp-font-sans);
   font-size: 0.84rem;
   outline: none !important;
   box-shadow: none !important;
   padding: 0;
+  transition: opacity var(--bgp-duration-fast) ease;
+}
+
+.bgp-header-search:focus-within .bgp-header-search__input,
+.bgp-header-search.is-expanded .bgp-header-search__input {
+  width: 100%;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .bgp-header-search__input::placeholder {
   color: var(--bgp-text-muted);
 }
 
-/* Subtle Academic Simulation Pill */
-.bgp-sim-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: var(--bgp-radius-pill);
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--bgp-text-secondary);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--bgp-border-subtle);
-  white-space: nowrap;
+/* Netflix Notification Bell Dropdown */
+.bgp-notif-menu {
+  position: relative;
 }
 
-@media (max-width: 1339.98px) {
-  .bgp-sim-pill {
-    display: none;
-  }
+.bgp-notif-menu__trigger {
+  list-style: none;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: #FFFFFF;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--bgp-duration-fast) ease, background-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-notif-menu__trigger:hover {
+  color: #E5E5E5;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bgp-notif-menu__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.bgp-notif-menu__dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #E50914;
+  box-shadow: 0 0 0 1.5px #141414;
+}
+
+.bgp-notif-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -12px;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 2px solid #E5E5E5;
+  border-radius: 0 0 4px 4px;
+  box-shadow: var(--bgp-shadow-popover);
+  padding: 4px 0;
+  z-index: 1050;
+}
+
+.bgp-notif-menu__head {
+  padding: 10px 14px 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #B3B3B3;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bgp-notif-item,
+.bgp-cinema-header a.bgp-notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 14px;
+  text-decoration: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background-color var(--bgp-duration-fast) ease;
+}
+
+.bgp-notif-item:last-child {
+  border-bottom: 0;
+}
+
+.bgp-notif-item:hover,
+.bgp-cinema-header a.bgp-notif-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bgp-notif-item__badge {
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: #E50914;
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.bgp-notif-item__badge--subtle {
+  background: #2F2F2F;
+  color: #E5E5E5;
+}
+
+.bgp-notif-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bgp-notif-item__title {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.3;
+}
+
+.bgp-notif-item__sub {
+  font-size: 0.75rem;
+  color: #B3B3B3;
+  line-height: 1.35;
 }
 
 /* Single Clean Context-Switch Pill for STAFF / MANAGER / ADMIN */
@@ -252,13 +353,13 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 38px;
-  padding: 0 12px;
-  border-radius: var(--bgp-radius-sm);
+  min-height: 36px;
+  padding: 0 11px;
+  border-radius: 4px;
   background: rgba(245, 197, 24, 0.12);
   border: 1px solid rgba(245, 197, 24, 0.38);
   color: var(--bgp-accent-gold) !important;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none !important;
   white-space: nowrap;
@@ -271,70 +372,77 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
   border-color: rgba(245, 197, 24, 0.64);
 }
 
-/* User Menu Dropdown (Zero-Bootstrap Accessible Details/Menu) */
+/* Netflix Square Smiley Avatar + Caret (Figma Node 94:3305) */
 .bgp-user-menu {
   position: relative;
 }
 
-.bgp-user-menu__trigger {
+.bgp-user-menu__trigger,
+.bgp-cinema-header a.bgp-user-menu__trigger {
   list-style: none;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 4px 10px 4px 6px;
-  background: var(--bgp-bg-surface-2);
-  border: 1px solid var(--bgp-border-default);
-  border-radius: var(--bgp-radius-sm);
-  color: var(--bgp-text-primary);
-  font-size: 0.82rem;
-  font-weight: 600;
+  gap: 7px;
+  min-height: 36px;
+  padding: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #FFFFFF !important;
+  text-decoration: none !important;
   cursor: pointer;
   user-select: none;
+  transition: opacity var(--bgp-duration-fast) ease;
+}
+
+.bgp-user-menu__trigger:hover,
+.bgp-cinema-header a.bgp-user-menu__trigger:hover {
+  opacity: 0.9;
 }
 
 .bgp-user-menu__trigger::-webkit-details-marker {
   display: none;
 }
 
-.bgp-user-menu__avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--bgp-radius-xs);
-  background: linear-gradient(135deg, #E50914, #991B1B);
-  color: #FFFFFF;
-  font-size: 0.76rem;
-  font-weight: 800;
-  display: grid;
-  place-items: center;
+.bgp-netflix-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
-.bgp-user-menu__name {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.bgp-netflix-avatar svg {
+  width: 32px;
+  height: 32px;
+  display: block;
 }
 
 .bgp-user-menu__caret {
   font-size: 0.68rem;
-  color: var(--bgp-text-muted);
+  color: #FFFFFF;
+  line-height: 1;
   transition: transform var(--bgp-duration-fast) ease;
 }
 
-.bgp-user-menu[open] .bgp-user-menu__caret {
+.bgp-user-menu[open] .bgp-user-menu__caret,
+.bgp-user-menu__trigger:hover .bgp-user-menu__caret {
   transform: rotate(180deg);
 }
 
 .bgp-user-menu__dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   right: 0;
-  width: 244px;
-  background: var(--bgp-bg-popover);
-  border: 1px solid var(--bgp-border-default);
-  border-radius: var(--bgp-radius-md);
+  width: 236px;
+  background: rgba(0, 0, 0, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-top: 2px solid #E5E5E5;
+  border-radius: 0 0 4px 4px;
   box-shadow: var(--bgp-shadow-popover);
   padding: 6px;
   z-index: 1050;
@@ -394,29 +502,6 @@ header.bgp-cinema-header.bgp-cinema-header--scrolled {
 .bgp-user-menu__item--danger:hover {
   background: var(--bgp-status-danger-bg);
   color: #FFFFFF !important;
-}
-
-/* Login CTA in Header */
-.bgp-header-login-btn,
-.bgp-cinema-header a.bgp-header-login-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: var(--bgp-radius-xs);
-  background: var(--bgp-brand-red);
-  color: #FFFFFF !important;
-  font-size: 0.86rem;
-  font-weight: 700;
-  text-decoration: none !important;
-  white-space: nowrap;
-  transition: background-color var(--bgp-duration-fast) ease;
-}
-
-.bgp-header-login-btn:hover,
-.bgp-cinema-header a.bgp-header-login-btn:hover {
-  background: var(--bgp-brand-red-hover);
 }
 
 /* --- 5. Mobile Controls & Slide-Over Drawer (< 992px) --- */

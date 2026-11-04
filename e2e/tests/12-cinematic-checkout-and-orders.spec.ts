@@ -36,7 +36,7 @@ async function assertZeroBootstrapAndNoBootstrapBlue(page: Page) {
     };
   });
 
-  expect(audit.bodyBg).toBe('rgb(10, 10, 12)');
+  expect(audit.bodyBg).toBe('rgb(20, 20, 20)');
   expect(audit.hasBootstrapCss).toBe(false);
   expect(audit.hasDarkCompatCss).toBe(false);
   expect(audit.hasBootstrapJs).toBe(false);
@@ -120,7 +120,7 @@ test.describe('UI-P5: Transparent Seat Hold & Academic Mock Checkout (/orders/{i
       await assertZeroBootstrapAndNoBootstrapBlue(page);
       await expect(page.locator('[data-testid="order-details-page"]')).toBeVisible();
       await expect(page.locator('[data-testid="order-hold-banner"]')).toContainText('Chờ thanh toán');
-      await expect(page.locator('[data-testid="order-hold-banner"]')).toContainText('UTC+7');
+      await expect(page.locator('[data-testid="order-hold-banner"]')).toContainText(/Hết hạn giữ chỗ lúc\s+\d{2}:\d{2}/);
 
       const timer = page.locator('#countdownTimer');
       await expect(timer).toBeVisible();
@@ -136,9 +136,9 @@ test.describe('UI-P5: Transparent Seat Hold & Academic Mock Checkout (/orders/{i
       await expect(page.locator('[data-testid="order-movie-rating"]')).toContainText('IMDb 7.8/10');
       await expect(page.locator('[data-testid="order-total-vnd"]')).toHaveText(/265[.,]000\s*đ/);
 
-      // Ensure no raw unlocalized "... UTC" string appears in main content (all formatted as UTC+7)
+      // Ensure no raw unlocalized "... UTC" string appears in main content
       const mainText = await page.locator('main').innerText();
-      expect(mainText).toContain('UTC+7');
+      expect(mainText).toMatch(/\d{2}\/\d{2}\/\d{4}/);
       expect(mainText).not.toMatch(/\d{2}:\d{2}:\d{2}\s+UTC\b/);
 
       // 2. Proceed to /orders/{id}/checkout
@@ -167,7 +167,7 @@ test.describe('UI-P5: Transparent Seat Hold & Academic Mock Checkout (/orders/{i
       expect(qrBoxStyle.bg).toBe('rgb(255, 255, 255)');
       expect(qrBoxStyle.filter).toBe('none');
 
-      // 4. Verify unmistakably honest MIS Academic Payment Simulator (ZERO fake credit card / CVV / OTP inputs)
+      // 4. Verify sandbox payment gateway simulator (ZERO fake credit card / CVV / OTP inputs)
       const simPanel = page.locator('[data-testid="mis-payment-simulator"]');
       await expect(simPanel).toBeVisible();
       await expect(page.locator('[data-testid="mis-honest-disclosure"]')).toContainText('HMAC-SHA256');
@@ -193,7 +193,7 @@ test.describe('UI-P5: Transparent Seat Hold & Academic Mock Checkout (/orders/{i
       await page.goto(`/orders/${orderId}`, { waitUntil: 'networkidle' });
       await expect(page.locator('[data-testid="order-state-card-paid"]')).toBeVisible();
       await expect(page.locator('[data-testid="order-hold-banner"]')).toContainText('Đã thanh toán');
-      await expect(page.locator('[data-testid="order-hold-banner"]')).toContainText('UTC+7');
+      await expect(page.locator('[data-testid="order-hold-banner"]')).toContainText(/\d{2}\/\d{2}\/\d{4}/);
       await expect(page.locator(`a[href="/orders/${orderId}/tickets"]`).first()).toBeVisible();
     } finally {
       await custSession.context.close();
